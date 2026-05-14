@@ -12,11 +12,11 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 
 | Dashboard | SSH Terminal |
 |-----------|-------------|
-| ![Dashboard](screenshots/main.png) | ![SSH](screenshots/ssh.png) |
+| ![Dashboard](screenshots/Main.png) | ![SSH](screenshots/SSH.png) |
 
 | DNS Lookup | Port Scanner |
 |------------|-------------|
-| ![DNS](screenshots/dns.png) | ![Port Scanner](screenshots/portscanner.png) |
+| ![DNS](screenshots/DNS.png) | ![Port Scanner](screenshots/port%20scanner.png) |
 
 ---
 
