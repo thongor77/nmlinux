@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=NMLinux
+GenericName=Network Manager
+Comment=Network management tool for Linux
+Exec=nmlinux
+Icon=network-wired
+Terminal=false
+Type=Application
+Categories=Network;System;
+Keywords=network;wifi;ssh;scan;dns;ping;nmap;
+StartupNotify=true
+StartupWMClass=nmlinux

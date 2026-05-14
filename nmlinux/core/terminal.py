@@ -1,0 +1,107 @@
+"""PTY-backed SSH worker — runs in a QThread, emits output as plain text."""
+
+from __future__ import annotations
+
+import os
+import re
+import sys
+import termios
+import ptyprocess
+from PySide6.QtCore import QThread, Signal
+
+_DEBUG = os.environ.get('NMLINUX_DEBUG') == '1'
+
+
+_ANSI_RE = re.compile(
+    r'\x1b(?:'
+    r'\[[0-9;?]*[ -/]*[@-~]'         # CSI  (cursor moves, colors, …)
+    r'|\][^\x07\x1b]*[\x07\x1b]'     # OSC  (set title, …)
+    r'|[@-Z\\-_]'                     # Fe   (SS2, SS3, …)
+    r')'
+)
+# CSI CUB (cursor backward): \x1b[nD — ZSH syntax-highlighting uses this (not \x08)
+# to reposition before rewriting the current character with color.  Convert to \x08
+# BEFORE the generic ANSI stripper removes it, so _on_term_output can handle it.
+_CSI_CUB_RE = re.compile(r'\x1b\[(\d*)D')
+
+# Control chars stripped — keeps \x08 (handled by _on_term_output), \x09 (tab),
+# \x0a (newline).  \x0d (\r) is now stripped here; \r\n pairs become \n because
+# \n is kept, bare \r (ZSH going to line-start) is removed cleanly.
+_CTRL_RE = re.compile(r'[\x00-\x07\x0b-\x1f\x7f]')
+
+
+def strip_ansi(text: str) -> str:
+    # 1. Convert CSI cursor-backward to \x08 before the generic stripper removes it.
+    text = _CSI_CUB_RE.sub(lambda m: '\x08' * (int(m.group(1)) if m.group(1) else 1), text)
+    # 2. Strip remaining ANSI sequences, then remaining control chars.
+    return _CTRL_RE.sub('', _ANSI_RE.sub('', text))
+
+
+class SshWorker(QThread):
+    output = Signal(str)   # stripped text ready to append
+    exited = Signal(int)   # exit code
+
+    def __init__(self, args: list[str]) -> None:
+        super().__init__()
+        self._args  = args
+        self._proc: ptyprocess.PtyProcess | None = None
+
+    def _kill_echo(self) -> None:
+        """Disable local PTY echo via termios (more reliable than ptyprocess.setecho)."""
+        try:
+            fd = self._proc.fd
+            attrs = termios.tcgetattr(fd)
+            if attrs[3] & termios.ECHO:
+                attrs[3] &= ~(termios.ECHO | termios.ECHOE | termios.ECHOK | termios.ECHONL)
+                termios.tcsetattr(fd, termios.TCSANOW, attrs)
+        except Exception:
+            pass
+
+    def run(self) -> None:
+        code = -1
+        try:
+            self._proc = ptyprocess.PtyProcess.spawn(self._args, echo=False)
+            self._kill_echo()
+
+            # SSH resets termios during its handshake and may re-enable ECHO.
+            # Enforce echo=off on the first several reads (covers the handshake window).
+            _echo_checks = 0
+            while self._proc.isalive():
+                try:
+                    raw = self._proc.read(4096)
+                    if _echo_checks < 8:
+                        _echo_checks += 1
+                        self._kill_echo()
+                    if _DEBUG:
+                        print(f'READ  {raw!r}', file=sys.stderr, flush=True)
+                    text = strip_ansi(raw.decode('utf-8', errors='replace'))
+                    if text:
+                        self.output.emit(text)
+                except EOFError:
+                    break
+            code = self._proc.exitstatus or 0
+        except Exception as exc:
+            self.output.emit(f"\n[Erreur démarrage SSH : {exc}]\n")
+        finally:
+            self.exited.emit(code)
+
+    def write(self, text: str) -> None:
+        if self._proc and self._proc.isalive():
+            if _DEBUG:
+                print(f'WRITE {text!r}', file=sys.stderr, flush=True)
+            self._proc.write(text.encode('utf-8'))
+
+    def resize(self, rows: int, cols: int) -> None:
+        if self._proc and self._proc.isalive():
+            try:
+                self._proc.setwinsize(rows, cols)
+            except Exception:
+                pass
+
+    def stop(self) -> None:
+        if self._proc and self._proc.isalive():
+            try:
+                self._proc.terminate(force=True)
+            except Exception:
+                pass
+        self.wait(2000)
