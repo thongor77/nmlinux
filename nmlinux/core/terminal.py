@@ -24,10 +24,10 @@ _ANSI_RE = re.compile(
 # BEFORE the generic ANSI stripper removes it, so _on_term_output can handle it.
 _CSI_CUB_RE = re.compile(r'\x1b\[(\d*)D')
 
-# Control chars stripped — keeps \x08 (handled by _on_term_output), \x09 (tab),
-# \x0a (newline).  \x0d (\r) is now stripped here; \r\n pairs become \n because
-# \n is kept, bare \r (ZSH going to line-start) is removed cleanly.
-_CTRL_RE = re.compile(r'[\x00-\x07\x0b-\x1f\x7f]')
+# Control chars stripped — keeps \x08 (backspace), \x09 (tab), \x0a (newline),
+# \x0d (\r, carriage return).  \r is kept and handled by _on_term_output as
+# "go to start of current line" so ZSH CR-based redraws overwrite in place.
+_CTRL_RE = re.compile(r'[\x00-\x07\x0b-\x0c\x0e-\x1f\x7f]')
 
 
 def strip_ansi(text: str) -> str:
@@ -41,9 +41,11 @@ class SshWorker(QThread):
     output = Signal(str)   # stripped text ready to append
     exited = Signal(int)   # exit code
 
-    def __init__(self, args: list[str]) -> None:
+    def __init__(self, args: list[str], rows: int = 24, cols: int = 80) -> None:
         super().__init__()
         self._args  = args
+        self._rows  = rows
+        self._cols  = cols
         self._proc: ptyprocess.PtyProcess | None = None
 
     def _kill_echo(self) -> None:
@@ -60,7 +62,11 @@ class SshWorker(QThread):
     def run(self) -> None:
         code = -1
         try:
-            self._proc = ptyprocess.PtyProcess.spawn(self._args, echo=False)
+            _env = dict(os.environ)
+            _env.setdefault('TERM', 'xterm-256color')
+            self._proc = ptyprocess.PtyProcess.spawn(
+                self._args, echo=False, dimensions=(self._rows, self._cols), env=_env
+            )
             self._kill_echo()
 
             # SSH resets termios during its handshake and may re-enable ECHO.

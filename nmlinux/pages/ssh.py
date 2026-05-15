@@ -15,7 +15,7 @@ from PySide6.QtGui import (
     QIcon, QFont, QColor, QPalette, QKeyEvent,
     QFontDatabase, QTextCursor,
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 
 from nmlinux.core.ssh import SshConnection, SshGroup, SshStore, build_ssh_args
 from nmlinux.core.terminal import SshWorker
@@ -69,6 +69,11 @@ class _TerminalView(QWidget):
         self._dedup_ts: int = -1
         self._dedup_sig: tuple = ()
         self._dedup_mono: float = 0.0
+
+        self._resize_timer = QTimer(self)
+        self._resize_timer.setSingleShot(True)
+        self._resize_timer.setInterval(200)
+        self._resize_timer.timeout.connect(self._notify_pty_resize)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -155,6 +160,36 @@ class _TerminalView(QWidget):
         if txt:
             w.write('\x7f' if txt == '\x08' else txt)
             event.accept()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._resize_timer.start()  # restart — fires 200 ms after last resize
+
+    def _notify_pty_resize(self) -> None:
+        w = self._wref[0]
+        if w is None:
+            return
+        fm = self._out.fontMetrics()
+        char_w = fm.horizontalAdvance('M')
+        char_h = fm.height()
+        if char_w <= 0 or char_h <= 0:
+            return
+        vp = self._out.viewport()
+        cols = max(20, vp.width()  // char_w)
+        rows = max(5,  vp.height() // char_h)
+        w.resize(rows, cols)
+
+    def pty_dims(self) -> tuple[int, int]:
+        """Return (rows, cols) based on current widget size."""
+        fm = self._out.fontMetrics()
+        char_w = fm.horizontalAdvance('M')
+        char_h = fm.height()
+        if char_w <= 0 or char_h <= 0:
+            return (24, 80)
+        vp = self._out.viewport()
+        cols = max(20, vp.width()  // char_w)
+        rows = max(5,  vp.height() // char_h)
+        return (rows, cols)
 
     def clear(self)                    -> None:    self._out.clear()
     def textCursor(self):                          return self._out.textCursor()
@@ -763,7 +798,8 @@ class SshPage(QWidget):
 
     def _start_session(self, conn: SshConnection) -> None:
         self._stop_worker()
-        worker = SshWorker(build_ssh_args(conn))
+        rows, cols = self._term_view.pty_dims()
+        worker = SshWorker(build_ssh_args(conn), rows=rows, cols=cols)
         worker.output.connect(self._on_term_output)
         worker.exited.connect(self._on_term_exited)
         self._worker_box[0] = worker
@@ -776,47 +812,48 @@ class SshPage(QWidget):
         worker.start()
 
     def _on_term_output(self, text: str) -> None:
-        text = text.replace('\r\n', '\n').replace('\r', '\n')
-
-        if '\x08' not in text:
-            cursor = self._term_view.textCursor()
-            cursor.movePosition(QTextCursor.MoveOperation.End)
-            cursor.insertText(text)
-            self._term_view.setTextCursor(cursor)
-            self._term_view.ensureCursorVisible()
-            return
-
-        n_back = 0
-        while n_back < len(text) and text[n_back] == '\x08':
-            n_back += 1
-
-        buf: list[str] = []
-        for ch in text[n_back:]:
-            if ch == '\x08':
-                if buf:
-                    buf.pop()
-            else:
-                buf.append(ch)
-        to_insert = ''.join(buf)
-
+        # Process character by character to handle \r and \x08 correctly.
+        # \r\n  → newline
+        # bare \r → go to start of current line and erase to end (ZSH CR-redraws)
+        # \x08  → backspace (delete previous char, handles inline CUB sequences)
+        # \n    → newline
         cursor = self._term_view.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
 
-        if n_back and to_insert:
-            cursor.movePosition(
-                QTextCursor.MoveOperation.Left,
-                QTextCursor.MoveMode.KeepAnchor,
-                n_back,
-            )
-            cursor.insertText(to_insert)
-        elif n_back:
-            cursor.movePosition(
-                QTextCursor.MoveOperation.Left,
-                QTextCursor.MoveMode.MoveAnchor,
-                n_back,
-            )
-        else:
-            cursor.insertText(to_insert)
+        i = 0
+        n = len(text)
+        while i < n:
+            ch = text[i]
+
+            if ch == '\r':
+                if i + 1 < n and text[i + 1] == '\n':
+                    cursor.insertText('\n')
+                    i += 2
+                else:
+                    # bare CR: overwrite current line from the start
+                    cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
+                    cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock,
+                                       QTextCursor.MoveMode.KeepAnchor)
+                    cursor.removeSelectedText()
+                    i += 1
+
+            elif ch == '\x08':
+                if not cursor.atBlockStart():
+                    cursor.movePosition(QTextCursor.MoveOperation.Left,
+                                       QTextCursor.MoveMode.KeepAnchor)
+                    cursor.removeSelectedText()
+                i += 1
+
+            elif ch == '\n':
+                cursor.insertText('\n')
+                i += 1
+
+            else:
+                j = i + 1
+                while j < n and text[j] not in ('\r', '\x08', '\n'):
+                    j += 1
+                cursor.insertText(text[i:j])
+                i = j
 
         self._term_view.setTextCursor(cursor)
         self._term_view.ensureCursorVisible()
