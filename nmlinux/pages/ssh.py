@@ -819,12 +819,20 @@ class SshPage(QWidget):
         worker.start()
 
     def _on_term_output(self, text: str) -> None:
-        # Character-by-character terminal output processor.
-        # The cursor is NOT reset to End on each call — it persists between reads
-        # so that \r in one read and CUF/EL in the next read work as a unit.
-        # Normal text always ends up appending because the cursor stays at End
-        # after any plain-text insert, and is only moved by \r / ERASE_EOL / CURSOR_RIGHT.
+        # Character-by-character terminal output processor with overwrite semantics.
+        #
+        # Real terminals default to OVERWRITE mode: writing a char replaces the cell
+        # under the cursor instead of pushing existing content right.  QPlainTextEdit
+        # always inserts, so we emulate overwrite by selecting the existing char(s)
+        # before calling insertText() whenever the cursor is mid-line.
+        #
+        # \x08 (BS / CUB)  → move cursor left only — NO delete (terminal semantics).
+        #                     The next overwrite-mode write will replace in place.
+        # \r               → move cursor to start of block (erase comes from ERASE_EOL)
+        # ERASE_EOL        → select to end of block and delete (from \x1b[K)
+        # CURSOR_RIGHT     → move cursor right without inserting (from \x1b[nC)
         cursor = self._term_view.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
 
         i = 0
         n = len(text)
@@ -836,7 +844,6 @@ class SshPage(QWidget):
                     cursor.insertText('\n')
                     i += 2
                 else:
-                    # bare CR: reposition to start of line; erase comes from \x1b[K
                     cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
                     i += 1
 
@@ -852,10 +859,9 @@ class SshPage(QWidget):
                 i += 1
 
             elif ch == '\x08':
+                # Move left only — terminal BS repositions, it does not erase.
                 if not cursor.atBlockStart():
-                    cursor.movePosition(QTextCursor.MoveOperation.Left,
-                                       QTextCursor.MoveMode.KeepAnchor)
-                    cursor.removeSelectedText()
+                    cursor.movePosition(QTextCursor.MoveOperation.Left)
                 i += 1
 
             elif ch == '\n':
@@ -866,7 +872,14 @@ class SshPage(QWidget):
                 j = i + 1
                 while j < n and text[j] not in ('\r', '\x08', '\n', ERASE_EOL, CURSOR_RIGHT):
                     j += 1
-                cursor.insertText(text[i:j])
+                run = text[i:j]
+                # Overwrite existing chars when cursor is mid-line.
+                remaining = cursor.block().length() - 1 - cursor.positionInBlock()
+                if remaining > 0:
+                    cursor.movePosition(QTextCursor.MoveOperation.Right,
+                                       QTextCursor.MoveMode.KeepAnchor,
+                                       min(len(run), remaining))
+                cursor.insertText(run)
                 i = j
 
         self._term_view.setTextCursor(cursor)
