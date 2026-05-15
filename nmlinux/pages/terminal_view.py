@@ -1,6 +1,7 @@
 """Real terminal widget backed by pyte (VT100/VT220/xterm emulator).
 
 Renders pyte.Screen directly with QPainter — no manual ANSI parsing needed.
+Scrollback via pyte.HistoryScreen + QScrollBar.
 """
 
 from __future__ import annotations
@@ -8,16 +9,16 @@ from __future__ import annotations
 import pyte
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QKeyEvent, QPainter
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication, QScrollBar, QWidget
 
 # ── Colour palette ──────────────────────────────────────────────────────────
 
-# Catppuccin Mocha — same palette used in the old QPlainTextEdit terminal
+# Catppuccin Mocha
 _NAMED: dict[str, str] = {
     'black':         '#1e1e2e',
     'red':           '#f38ba8',
     'green':         '#a6e3a1',
-    'brown':         '#f9e2af',   # dark yellow
+    'brown':         '#f9e2af',
     'blue':          '#89b4fa',
     'magenta':       '#cba6f7',
     'cyan':          '#89dceb',
@@ -35,19 +36,17 @@ _NAMED: dict[str, str] = {
 _DEFAULT_FG = QColor('#cdd6f4')
 _DEFAULT_BG = QColor('#1e1e2e')
 
-# Build full 256-colour palette once at import time
 _P256: dict[int, QColor] = {}
 
 def _build_palette() -> None:
-    named_hex = list(_NAMED.values())           # 0-15
-    for i, h in enumerate(named_hex):
+    for i, h in enumerate(_NAMED.values()):
         _P256[i] = QColor(h)
-    for i in range(216):                         # 16-231  (6×6×6 cube)
+    for i in range(216):
         r = (i // 36) * 51
         g = ((i // 6) % 6) * 51
         b = (i % 6) * 51
         _P256[16 + i] = QColor(r, g, b)
-    for i in range(24):                          # 232-255 (grayscale)
+    for i in range(24):
         v = 8 + i * 10
         _P256[232 + i] = QColor(v, v, v)
 
@@ -55,7 +54,6 @@ _build_palette()
 
 
 def _qcolor(spec: 'str | int | None', default: QColor) -> QColor:
-    """Resolve a pyte colour spec to a QColor."""
     if spec is None or spec == 'default':
         return default
     if isinstance(spec, int):
@@ -63,7 +61,7 @@ def _qcolor(spec: 'str | int | None', default: QColor) -> QColor:
     if isinstance(spec, str):
         if spec in _NAMED:
             return QColor(_NAMED[spec])
-        if len(spec) == 6:          # pyte true-colour: 'rrggbb' hex string
+        if len(spec) == 6:
             return QColor('#' + spec)
     return default
 
@@ -104,14 +102,7 @@ _MODIFIER_KEYS = frozenset([
 # ── Widget ──────────────────────────────────────────────────────────────────
 
 class TerminalView(QWidget):
-    """QPainter-rendered terminal backed by a pyte.Screen.
-
-    Usage:
-        view = TerminalView()
-        view.set_writer(worker.write)           # bytes → PTY
-        view.resize_pty.connect(worker.resize)  # rows, cols → SIGWINCH
-        worker.output.connect(view.feed)        # raw bytes → pyte
-    """
+    """QPainter-rendered terminal backed by pyte.HistoryScreen with scrollback."""
 
     resize_pty = Signal(int, int)   # (rows, cols)
 
@@ -131,7 +122,7 @@ class TerminalView(QWidget):
         self._ch        = fm.height()
         self._ascent    = fm.ascent()
 
-        self._screen = pyte.Screen(80, 24)
+        self._screen = pyte.HistoryScreen(80, 24, history=2000)
         self._stream = pyte.ByteStream(self._screen)
 
         self._cursor_on = True
@@ -142,66 +133,102 @@ class TerminalView(QWidget):
 
         self._writer: 'Callable[[bytes], None] | None' = None
 
+        self._vbar = QScrollBar(Qt.Orientation.Vertical, self)
+        self._vbar.setRange(0, 0)
+        self._vbar.setSingleStep(3)
+        self._vbar.valueChanged.connect(self._on_scroll_changed)
+        self._at_bottom = True
+
     # ── Public API ──────────────────────────────────────────────────────────
 
-    def set_writer(self, fn: 'Callable[[bytes], None]') -> None:
-        """Register callback that forwards keyboard input to the PTY."""
+    def set_writer(self, fn: 'Callable[[bytes], None] | None') -> None:
         self._writer = fn
 
     def feed(self, data: bytes) -> None:
-        """Feed raw PTY output into pyte and schedule a repaint."""
         self._stream.feed(data)
+        self._sync_scrollbar()
         self.update()
 
     def reset_screen(self) -> None:
-        """Hard-reset the pyte screen (new session)."""
         self._screen.reset()
+        self._vbar.blockSignals(True)
+        self._vbar.setRange(0, 0)
+        self._vbar.setValue(0)
+        self._vbar.blockSignals(False)
+        self._at_bottom = True
         self.update()
+
+    # ── Scrollbar ───────────────────────────────────────────────────────────
+
+    def _sync_scrollbar(self) -> None:
+        hist_size = len(self._screen.history.top)
+        self._vbar.setRange(0, hist_size)
+        self._vbar.setPageStep(self._screen.lines)
+        if self._at_bottom:
+            self._vbar.blockSignals(True)
+            self._vbar.setValue(hist_size)
+            self._vbar.blockSignals(False)
+
+    def _on_scroll_changed(self, value: int) -> None:
+        self._at_bottom = (value == self._vbar.maximum())
+        self.update()
+
+    def wheelEvent(self, event) -> None:          # noqa: N802
+        delta = event.angleDelta().y()
+        lines = max(1, abs(delta) // 40)
+        self._vbar.setValue(self._vbar.value() + (-lines if delta > 0 else lines))
 
     # ── Rendering ───────────────────────────────────────────────────────────
 
     def _toggle_cursor(self) -> None:
         self._cursor_on = not self._cursor_on
-        cx = self._screen.cursor.x * self._cw
-        cy = self._screen.cursor.y * self._ch
-        self.update(cx, cy, self._cw + 1, self._ch + 1)
+        if self._at_bottom:
+            cx = self._screen.cursor.x * self._cw
+            cy = self._screen.cursor.y * self._ch
+            self.update(cx, cy, self._cw + 1, self._ch + 1)
 
     def paintEvent(self, _event) -> None:                   # noqa: N802
         p = QPainter(self)
-        p.fillRect(self.rect(), _DEFAULT_BG)
+        bar_w = self._vbar.width()
+        canvas_w = self.width() - bar_w
+
+        p.fillRect(0, 0, canvas_w, self.height(), _DEFAULT_BG)
         p.setFont(self._font)
 
-        buf = self._screen.buffer
+        hist = self._screen.history.top
+        hist_size = len(hist)
+        scroll_offset = self._vbar.maximum() - self._vbar.value()
+        viewport_start = hist_size - scroll_offset
+
         for y in range(self._screen.lines):
-            row = buf.get(y, {})
+            abs_idx = viewport_start + y
+            if abs_idx < 0:
+                continue
+            if abs_idx < hist_size:
+                row = hist[abs_idx]
+            else:
+                row = self._screen.buffer.get(abs_idx - hist_size, {})
+
             for x in range(self._screen.columns):
                 cell = row.get(x)
                 if cell is None:
                     continue
-
                 char = cell.data or ' '
                 rev  = getattr(cell, 'reverse', False)
-
-                fg_spec = cell.bg if rev else cell.fg
-                bg_spec = cell.fg if rev else cell.bg
-
-                fg = _qcolor(fg_spec, _DEFAULT_FG)
-                bg = _qcolor(bg_spec, _DEFAULT_BG)
-
+                fg = _qcolor(cell.bg if rev else cell.fg, _DEFAULT_FG)
+                bg = _qcolor(cell.fg if rev else cell.bg, _DEFAULT_BG)
                 rx = x * self._cw
                 ry = y * self._ch
-
                 if bg != _DEFAULT_BG:
                     p.fillRect(rx, ry, self._cw, self._ch, bg)
-
                 if char != ' ':
                     p.setFont(self._font_bold if getattr(cell, 'bold', False)
                               else self._font)
                     p.setPen(fg)
                     p.drawText(rx, ry + self._ascent, char)
 
-        # Block cursor
-        if self._cursor_on and self.hasFocus():
+        # Block cursor — only when viewport is at the live screen
+        if self._at_bottom and self._cursor_on and self.hasFocus():
             cx = self._screen.cursor.x * self._cw
             cy = self._screen.cursor.y * self._ch
             p.fillRect(cx, cy, self._cw, self._ch, QColor(200, 200, 200, 170))
@@ -210,20 +237,28 @@ class TerminalView(QWidget):
 
     def resizeEvent(self, event) -> None:                   # noqa: N802
         super().resizeEvent(event)
-        cols = max(10, self.width()  // self._cw)
+        bar_w = self._vbar.sizeHint().width()
+        self._vbar.setGeometry(self.width() - bar_w, 0, bar_w, self.height())
+        canvas_w = self.width() - bar_w
+        cols = max(10, canvas_w // self._cw)
         rows = max(3,  self.height() // self._ch)
         if cols != self._screen.columns or rows != self._screen.lines:
             self._screen.resize(rows, cols)
+            self._sync_scrollbar()
             self.resize_pty.emit(rows, cols)
 
     # ── Keyboard ────────────────────────────────────────────────────────────
 
     def focusNextPrevChild(self, _next: bool) -> bool:
-        return False   # prevent Tab from moving focus
+        return False
 
     def keyPressEvent(self, event: QKeyEvent) -> None:      # noqa: N802
         if self._writer is None:
             return
+
+        # Any keypress snaps back to the live screen
+        if not self._at_bottom:
+            self._vbar.setValue(self._vbar.maximum())
 
         key  = event.key()
         mods = event.modifiers()
@@ -231,7 +266,6 @@ class TerminalView(QWidget):
         if key in _MODIFIER_KEYS:
             return
 
-        # Ctrl+Shift+C/V — copy / paste
         cs = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
         if mods == cs:
             if key == Qt.Key.Key_V:
@@ -240,25 +274,21 @@ class TerminalView(QWidget):
                     self._writer(txt.encode('utf-8'))
             return
 
-        # Ctrl sequences
         if mods == Qt.KeyboardModifier.ControlModifier:
             seq = _CTRL_MAP.get(key)
             if seq:
                 self._writer(seq)
                 return
 
-        # Tab (must come before KEY_MAP check so it isn't swallowed)
         if key == Qt.Key.Key_Tab:
             self._writer(b'\t')
             return
 
-        # Special keys (arrows, F-keys, …)
         seq = _KEY_MAP.get(key)
         if seq:
             self._writer(seq)
             return
 
-        # Printable text
         txt = event.text()
         if txt:
             self._writer(b'\x7f' if txt == '\x08' else txt.encode('utf-8'))
