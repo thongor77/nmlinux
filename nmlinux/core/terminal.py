@@ -37,9 +37,13 @@ def strip_ansi(text: str) -> str:
     return _CTRL_RE.sub('', _ANSI_RE.sub('', text))
 
 
+_CLEAR_SCREEN_RE = re.compile(r'\x1b\[\d*J')   # \x1b[J / \x1b[2J / \x1b[3J
+
+
 class SshWorker(QThread):
-    output = Signal(str)   # stripped text ready to append
-    exited = Signal(int)   # exit code
+    output       = Signal(str)   # stripped text ready to append
+    exited       = Signal(int)   # exit code
+    clear_screen = Signal()      # terminal sent an erase-display sequence
 
     def __init__(self, args: list[str], rows: int = 24, cols: int = 80) -> None:
         super().__init__()
@@ -80,7 +84,10 @@ class SshWorker(QThread):
                         self._kill_echo()
                     if _DEBUG:
                         print(f'READ  {raw!r}', file=sys.stderr, flush=True)
-                    text = strip_ansi(raw.decode('utf-8', errors='replace'))
+                    raw_str = raw.decode('utf-8', errors='replace')
+                    if _CLEAR_SCREEN_RE.search(raw_str):
+                        self.clear_screen.emit()
+                    text = strip_ansi(raw_str)
                     if text:
                         self.output.emit(text)
                 except EOFError:

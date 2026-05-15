@@ -55,6 +55,7 @@ _KEY_MAP = {
     Qt.Key.Key_F3:       '\x1bOR',
     Qt.Key.Key_F4:       '\x1bOS',
     Qt.Key.Key_F5:       '\x1b[15~',
+    Qt.Key.Key_Backtab:  '\x1b[Z',    # Shift+Tab (reverse completion)
 }
 
 
@@ -95,6 +96,11 @@ class _TerminalView(QWidget):
         self._out.setPalette(pal)
         self._out.viewport().installEventFilter(self)
         layout.addWidget(self._out)
+
+    def focusNextPrevChild(self, next: bool) -> bool:
+        # Prevent Qt from using Tab/Shift-Tab for focus traversal so the
+        # key reaches keyPressEvent and is forwarded to the remote shell.
+        return False
 
     def eventFilter(self, obj, event) -> bool:
         from PySide6.QtCore import QEvent
@@ -802,6 +808,7 @@ class SshPage(QWidget):
         worker = SshWorker(build_ssh_args(conn), rows=rows, cols=cols)
         worker.output.connect(self._on_term_output)
         worker.exited.connect(self._on_term_exited)
+        worker.clear_screen.connect(self._term_view.clear)
         self._worker_box[0] = worker
 
         self._term_view.clear()
@@ -880,6 +887,7 @@ class SshPage(QWidget):
         if w is not None:
             w.output.disconnect()
             w.exited.disconnect()
+            w.clear_screen.disconnect()
             w.stop()
             self._worker_box[0] = None
 
