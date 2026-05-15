@@ -279,13 +279,24 @@ class _MapWidget(QWidget):
 
 # ── Page ─────────────────────────────────────────────────────────────────────
 
+def _is_private(ip: str) -> bool:
+    """Return True for RFC-1918 / loopback / link-local addresses."""
+    return (
+        ip.startswith('10.') or
+        ip.startswith('127.') or
+        ip.startswith('169.254.') or
+        ip.startswith('192.168.') or
+        (ip.startswith('172.') and
+         16 <= int(ip.split('.')[1]) <= 31)
+    )
+
+
 class TraceroutePage(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self._hops: dict[int, dict] = {}
-        self._worker:  TracerouteWorker | None = None
-        self._geoloc:  GeolocWorker    | None = None
-        self._pending: dict[str, int]  = {}    # ip → hop_num (awaiting geoloc)
+        self._worker: TracerouteWorker | None = None
+        self._geo_workers: list[GeolocWorker] = []
         self._build_ui()
 
     # ── Layout ──────────────────────────────────────────────────────────────
@@ -361,7 +372,6 @@ class TraceroutePage(QWidget):
             return
         self._stop_all()
         self._hops.clear()
-        self._pending.clear()
         self._table.setRowCount(0)
         self._map.set_hops([])
 
@@ -390,10 +400,10 @@ class TraceroutePage(QWidget):
                 pass
             self._worker.stop()
             self._worker = None
-        if self._geoloc:
-            try: self._geoloc.result.disconnect()
+        for geo in self._geo_workers:
+            try: geo.result.disconnect()
             except Exception: pass
-            self._geoloc = None
+        self._geo_workers.clear()
         self._btn_go.setEnabled(True)
         self._btn_stop.setEnabled(False)
 
@@ -405,11 +415,9 @@ class TraceroutePage(QWidget):
             'lat': None, 'lon': None, 'location': '',
         }
         self._table_add(num, ip, hostname, rtt, '')
-        if ip and ip != '*':
-            self._pending[ip] = num
-        # Batch geolocate every 8 new IPs, or immediately on star
-        if len(self._pending) >= 8:
-            self._flush_geo()
+        # Geolocate immediately — skip private/loopback IPs
+        if ip and ip != '*' and not _is_private(ip):
+            self._geolocate(ip)
 
     def _on_star(self, num: int) -> None:
         self._hops[num] = {
@@ -422,7 +430,6 @@ class TraceroutePage(QWidget):
         self._lbl_status.setText(f"Erreur : {msg}")
 
     def _on_finished(self) -> None:
-        self._flush_geo()
         n = sum(1 for h in self._hops.values() if h['ip'] != '*')
         self._lbl_status.setText(f"Terminé — {len(self._hops)} hops ({n} répondants)")
         self._btn_go.setEnabled(True)
@@ -431,32 +438,26 @@ class TraceroutePage(QWidget):
 
     # ── Geolocation ──────────────────────────────────────────────────────────
 
-    def _flush_geo(self) -> None:
-        ips = list(self._pending)
-        self._pending.clear()
-        if not ips:
-            return
-        geo = GeolocWorker(ips)
+    def _geolocate(self, ip: str) -> None:
+        geo = GeolocWorker([ip])
         geo.result.connect(self._on_geo_result)
-        self._geoloc = geo
+        self._geo_workers.append(geo)
         geo.start()
 
     def _on_geo_result(self, results: list) -> None:
         for r in results:
             if r.get('status') != 'success':
                 continue
-            ip = r['query']
+            ip  = r['query']
             lat, lon = r['lat'], r['lon']
             city    = r.get('city', '')
             country = r.get('country', '')
             loc = f"{city}, {country}" if city else country
-            for hop in self._hops.values():
+            for num, hop in self._hops.items():
                 if hop['ip'] == ip:
                     hop['lat'] = lat
                     hop['lon'] = lon
                     hop['location'] = loc
-            for num, hop in self._hops.items():
-                if hop['ip'] == ip:
                     self._table_update_location(num, loc)
         self._refresh_map()
 
