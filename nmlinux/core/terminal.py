@@ -37,7 +37,7 @@ def strip_ansi(text: str) -> str:
     return _CTRL_RE.sub('', _ANSI_RE.sub('', text))
 
 
-_CLEAR_SCREEN_RE = re.compile(r'\x1b\[\d*J')   # \x1b[J / \x1b[2J / \x1b[3J
+_CLEAR_SCREEN_RE = re.compile(r'\x1b\[2J')   # erase entire display (clear command)
 
 
 class SshWorker(QThread):
