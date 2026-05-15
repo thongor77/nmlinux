@@ -36,7 +36,8 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 | **Whois** | Raw whois output in monospace |
 | **SNMP** | `snmpwalk`/`snmpget`, v1/v2c, 10 OID presets, results table |
 | **SNTP / NTP** | Pure Python RFC 4330 UDP client, offset/delay/stratum/reference |
-| **SSH** | Embedded PTY terminal, saved connections (JSON), key auth support |
+| **SSH** | Embedded PTY terminal (pyte/VT100), saved connections (JSON), key auth, scrollback |
+| **Visual Traceroute** | Hop-by-hop route on a world map, live geolocation (ip-api.com), zoom & pan |
 | **Settings** | Language selection (French, English, Spanish, German), persisted |
 
 ---
@@ -52,7 +53,7 @@ Most are already present on a standard Linux install:
 sudo apt install iproute2 network-manager dnsutils nmap whois snmp
 
 # Arch / EndeavourOS
-sudo pacman -S iproute2 networkmanager bind-tools nmap whois net-snmp
+sudo pacman -S iproute2 networkmanager bind-tools nmap whois net-snmp iputils
 
 # Fedora
 sudo dnf install iproute NetworkManager bind-utils nmap whois net-snmp-utils
@@ -63,6 +64,7 @@ sudo dnf install iproute NetworkManager bind-utils nmap whois net-snmp-utils
 - Python 3.11+
 - PySide6 6.6+
 - ptyprocess 0.7+
+- pyte 0.8+ (`pip install pyte` or `sudo pacman -S python-pyte`)
 
 ---
 
@@ -114,29 +116,33 @@ python3 -m nmlinux.main
 ```
 nmlinux/
   core/
-    i18n.py       — Translation system (fr/en/es/de), tr(key) function
-    icons.py      — themed_icon() with cross-desktop fallback chains
-    settings.py   — AppSettings dataclass, JSON persistence
-    ssh.py        — SshConnection dataclass, SshStore
-    terminal.py   — SshWorker (QThread) + PTY via ptyprocess
+    i18n.py         — Translation system (fr/en/es/de), tr(key) function
+    icons.py        — themed_icon() with cross-desktop fallback chains
+    settings.py     — AppSettings dataclass, JSON persistence
+    ssh.py          — SshConnection dataclass, SshStore
+    terminal.py     — SshWorker (QThread) + PTY via ptyprocess, emits raw bytes
   pages/
-    about.py      — About page (credits, links)
-    dashboard.py  — Dashboard
-    dns.py        — DNS Lookup
-    interfaces.py — Network Interfaces
-    ip_scanner.py — IP Scanner
-    nmap_scan.py  — Nmap
-    ping.py       — Ping Monitor
+    about.py        — About page (credits, links)
+    dashboard.py    — Dashboard
+    dns.py          — DNS Lookup
+    interfaces.py   — Network Interfaces
+    ip_scanner.py   — IP Scanner
+    nmap_scan.py    — Nmap
+    ping.py         — Ping Monitor
     port_scanner.py — Port Scanner
-    settings.py   — Settings page
-    snmp.py       — SNMP
-    sntp.py       — SNTP / NTP
-    ssh.py        — SSH page + embedded terminal
-    subnet.py     — Subnet Calculator
-    whois.py      — Whois
-    wifi.py       — Wi-Fi
-  window.py       — MainWindow (sidebar + QStackedWidget)
-  main.py         — Entry point
+    settings.py     — Settings page
+    snmp.py         — SNMP
+    sntp.py         — SNTP / NTP
+    ssh.py          — SSH page (connection manager + terminal)
+    subnet.py       — Subnet Calculator
+    terminal_view.py — TerminalView: pyte VT100 emulator + QPainter renderer
+    traceroute.py   — Visual Traceroute: world map, geolocation, zoom/pan
+    whois.py        — Whois
+    wifi.py         — Wi-Fi
+  assets/
+    world.geojson   — Natural Earth 110m countries (map background)
+  window.py         — MainWindow (sidebar + QStackedWidget)
+  main.py           — Entry point
 ```
 
 ---
