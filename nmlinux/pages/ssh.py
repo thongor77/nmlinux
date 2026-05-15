@@ -820,14 +820,11 @@ class SshPage(QWidget):
 
     def _on_term_output(self, text: str) -> None:
         # Character-by-character terminal output processor.
-        # \r       → move to start of current line (erase comes from ERASE_EOL)
-        # \r\n     → plain newline
-        # ERASE_EOL→ erase from cursor to end of line (sentinel for \x1b[K)
-        # CURSOR_RIGHT → move cursor right 1 col without inserting (sentinel for \x1b[nC)
-        # \x08    → backspace: delete previous character
-        # \n      → newline
+        # The cursor is NOT reset to End on each call — it persists between reads
+        # so that \r in one read and CUF/EL in the next read work as a unit.
+        # Normal text always ends up appending because the cursor stays at End
+        # after any plain-text insert, and is only moved by \r / ERASE_EOL / CURSOR_RIGHT.
         cursor = self._term_view.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.End)
 
         i = 0
         n = len(text)

@@ -23,8 +23,8 @@ _ANSI_RE = re.compile(
 _CSI_CUB_RE = re.compile(r'\x1b\[(\d*)D')
 # CSI CUF (cursor forward): \x1b[nC — ZSH Up-arrow skips over the prompt with this.
 _CSI_CUF_RE = re.compile(r'\x1b\[(\d*)C')
-# CSI EL (erase to end of line): \x1b[K or \x1b[0K — ZSH clears the input area.
-_CSI_EL_RE  = re.compile(r'\x1b\[0?K')
+# CSI EL (erase line variants): \x1b[K / \x1b[0K / \x1b[2K — ZSH clears the input area.
+_CSI_EL_RE  = re.compile(r'\x1b\[[012]?K')
 
 # Private-Unicode sentinels: survive strip_ansi and are handled by _on_term_output.
 ERASE_EOL    = ''   # erase from cursor to end of current line
