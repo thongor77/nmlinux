@@ -1,206 +1,28 @@
 from __future__ import annotations
 
-import time as _time
-
 from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QFormLayout,
     QTreeWidget, QTreeWidgetItem,
     QStackedWidget,
     QLabel, QLineEdit, QSpinBox, QPushButton, QTextEdit,
     QFrame, QGroupBox, QSplitter, QFileDialog,
-    QMessageBox, QToolButton, QApplication, QPlainTextEdit,
+    QMessageBox, QToolButton, QApplication,
     QComboBox, QInputDialog, QMenu,
 )
 from PySide6.QtGui import (
-    QIcon, QFont, QColor, QPalette, QKeyEvent,
-    QFontDatabase, QTextCursor,
+    QIcon, QFontDatabase,
 )
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt
 
 from nmlinux.core.ssh import SshConnection, SshGroup, SshStore, build_ssh_args
-from nmlinux.core.terminal import SshWorker, ERASE_EOL, CURSOR_RIGHT
+from nmlinux.core.terminal import SshWorker
 from nmlinux.core.i18n import tr
+from nmlinux.pages.terminal_view import TerminalView
 
 _EMPTY    = 0
 _DETAIL   = 1
 _FORM     = 2
 _TERMINAL = 3
-
-_CTRL_MAP = {
-    Qt.Key.Key_C: '\x03',
-    Qt.Key.Key_D: '\x04',
-    Qt.Key.Key_Z: '\x1a',
-    Qt.Key.Key_L: '\x0c',
-    Qt.Key.Key_A: '\x01',
-    Qt.Key.Key_E: '\x05',
-    Qt.Key.Key_U: '\x15',
-    Qt.Key.Key_K: '\x0b',
-    Qt.Key.Key_W: '\x17',
-    Qt.Key.Key_R: '\x12',
-}
-
-_KEY_MAP = {
-    Qt.Key.Key_Up:       '\x1b[A',
-    Qt.Key.Key_Down:     '\x1b[B',
-    Qt.Key.Key_Right:    '\x1b[C',
-    Qt.Key.Key_Left:     '\x1b[D',
-    Qt.Key.Key_Home:     '\x1b[H',
-    Qt.Key.Key_End:      '\x1b[F',
-    Qt.Key.Key_Delete:   '\x1b[3~',
-    Qt.Key.Key_PageUp:   '\x1b[5~',
-    Qt.Key.Key_PageDown: '\x1b[6~',
-    Qt.Key.Key_Insert:   '\x1b[2~',
-    Qt.Key.Key_F1:       '\x1bOP',
-    Qt.Key.Key_F2:       '\x1bOQ',
-    Qt.Key.Key_F3:       '\x1bOR',
-    Qt.Key.Key_F4:       '\x1bOS',
-    Qt.Key.Key_F5:       '\x1b[15~',
-    Qt.Key.Key_Backtab:  '\x1b[Z',    # Shift+Tab (reverse completion)
-}
-
-
-# ── Terminal output widget ─────────────────────────────────────────────────
-
-class _TerminalView(QWidget):
-    def __init__(self, worker_box: list[SshWorker | None]) -> None:
-        super().__init__()
-        self._wref = worker_box
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        self.setAttribute(Qt.WidgetAttribute.WA_InputMethodEnabled, False)
-        self._dedup_ts: int = -1
-        self._dedup_sig: tuple = ()
-        self._dedup_mono: float = 0.0
-
-        self._resize_timer = QTimer(self)
-        self._resize_timer.setSingleShot(True)
-        self._resize_timer.setInterval(200)
-        self._resize_timer.timeout.connect(self._notify_pty_resize)
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-
-        self._out = QPlainTextEdit()
-        self._out.setReadOnly(True)
-        self._out.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self._out.setMaximumBlockCount(8000)
-
-        mono = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
-        self._out.setFont(mono)
-
-        pal = QPalette(self._out.palette())
-        pal.setColor(QPalette.ColorRole.Base,            QColor("#1e1e2e"))
-        pal.setColor(QPalette.ColorRole.Text,            QColor("#cdd6f4"))
-        pal.setColor(QPalette.ColorRole.Highlight,       QColor("#313244"))
-        pal.setColor(QPalette.ColorRole.HighlightedText, QColor("#cdd6f4"))
-        self._out.setPalette(pal)
-        self._out.viewport().installEventFilter(self)
-        layout.addWidget(self._out)
-
-    def focusNextPrevChild(self, next: bool) -> bool:
-        # Prevent Qt from using Tab/Shift-Tab for focus traversal so the
-        # key reaches keyPressEvent and is forwarded to the remote shell.
-        return False
-
-    def eventFilter(self, obj, event) -> bool:
-        from PySide6.QtCore import QEvent
-        if obj is self._out.viewport() and event.type() in (
-            QEvent.Type.MouseButtonPress,
-            QEvent.Type.MouseButtonDblClick,
-        ):
-            self.setFocus()
-        return False
-
-    def keyPressEvent(self, event: QKeyEvent) -> None:
-        w = self._wref[0]
-        if w is None:
-            return
-
-        key = event.key()
-        if key in (Qt.Key.Key_Shift, Qt.Key.Key_Control, Qt.Key.Key_Alt,
-                   Qt.Key.Key_Meta, Qt.Key.Key_AltGr, Qt.Key.Key_CapsLock,
-                   Qt.Key.Key_NumLock, Qt.Key.Key_ScrollLock, Qt.Key.Key_Super_L,
-                   Qt.Key.Key_Super_R, Qt.Key.Key_Hyper_L, Qt.Key.Key_Hyper_R):
-            event.accept()
-            return
-
-        ts = event.timestamp()
-        if ts:
-            if ts == self._dedup_ts:
-                event.accept()
-                return
-            self._dedup_ts = ts
-        else:
-            now = _time.monotonic()
-            sig = (key, event.text(), int(event.modifiers()))
-            if sig == self._dedup_sig and now - self._dedup_mono < 0.010:
-                event.accept()
-                return
-            self._dedup_sig = sig
-            self._dedup_mono = now
-
-        mods = event.modifiers()
-
-        if mods == (Qt.KeyboardModifier.ControlModifier |
-                    Qt.KeyboardModifier.ShiftModifier):
-            if key == Qt.Key.Key_C:
-                self._out.copy(); event.accept(); return
-            if key == Qt.Key.Key_V:
-                txt = QApplication.clipboard().text()
-                if txt:
-                    w.write(txt)
-                event.accept(); return
-
-        if mods == Qt.KeyboardModifier.ControlModifier:
-            seq = _CTRL_MAP.get(key)
-            if seq:
-                w.write(seq); event.accept(); return
-
-        if mods in (Qt.KeyboardModifier.NoModifier,
-                    Qt.KeyboardModifier.ShiftModifier):
-            seq = _KEY_MAP.get(key)
-            if seq:
-                w.write(seq); event.accept(); return
-
-        txt = event.text()
-        if txt:
-            w.write('\x7f' if txt == '\x08' else txt)
-            event.accept()
-
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
-        self._resize_timer.start()  # restart — fires 200 ms after last resize
-
-    def _notify_pty_resize(self) -> None:
-        w = self._wref[0]
-        if w is None:
-            return
-        fm = self._out.fontMetrics()
-        char_w = fm.horizontalAdvance('M')
-        char_h = fm.height()
-        if char_w <= 0 or char_h <= 0:
-            return
-        vp = self._out.viewport()
-        cols = max(20, vp.width()  // char_w)
-        rows = max(5,  vp.height() // char_h)
-        w.resize(rows, cols)
-
-    def pty_dims(self) -> tuple[int, int]:
-        """Return (rows, cols) based on current widget size."""
-        fm = self._out.fontMetrics()
-        char_w = fm.horizontalAdvance('M')
-        char_h = fm.height()
-        if char_w <= 0 or char_h <= 0:
-            return (24, 80)
-        vp = self._out.viewport()
-        cols = max(20, vp.width()  // char_w)
-        rows = max(5,  vp.height() // char_h)
-        return (rows, cols)
-
-    def clear(self)                    -> None:    self._out.clear()
-    def textCursor(self):                          return self._out.textCursor()
-    def setTextCursor(self, c)         -> None:    self._out.setTextCursor(c)
-    def ensureCursorVisible(self)      -> None:    self._out.ensureCursorVisible()
 
 
 # ── SSH page ───────────────────────────────────────────────────────────────
@@ -211,7 +33,7 @@ class SshPage(QWidget):
         self._store       = SshStore()
         self._groups, self._connections = self._store.load()
         self._editing_id: str | None = None
-        self._worker_box: list[SshWorker | None] = [None]
+        self._worker: SshWorker | None = None
 
         self._build_ui()
         self._refresh_list()
@@ -404,7 +226,7 @@ class SshPage(QWidget):
         h_row.addWidget(btn_disc)
         layout.addWidget(header)
 
-        self._term_view = _TerminalView(self._worker_box)
+        self._term_view = TerminalView()
         layout.addWidget(self._term_view, 1)
         return w
 
@@ -651,7 +473,6 @@ class SshPage(QWidget):
     # ── Slots — form ───────────────────────────────────────────────────────
 
     def _on_new(self) -> None:
-        # Pre-select the group that is currently highlighted in the tree
         preselect = ""
         item = self._tree.currentItem()
         if item:
@@ -724,7 +545,6 @@ class SshPage(QWidget):
         if not ok or not name.strip():
             return
 
-        # Ask for parent only if there are existing top-level groups
         top_groups = [g for g in self._groups if not g.parent_id]
         parent_id = ""
         if top_groups:
@@ -781,7 +601,6 @@ class SshPage(QWidget):
         if ans != QMessageBox.StandardButton.Yes:
             return
 
-        # Collect the group + all its subgroups
         ids_to_remove: set[str] = set()
 
         def collect(gid: str) -> None:
@@ -804,95 +623,26 @@ class SshPage(QWidget):
 
     def _start_session(self, conn: SshConnection) -> None:
         self._stop_worker()
-        rows, cols = self._term_view.pty_dims()
-        worker = SshWorker(build_ssh_args(conn), rows=rows, cols=cols)
-        worker.output.connect(self._on_term_output)
+        worker = SshWorker(build_ssh_args(conn))
+        self._worker = worker
+        worker.output.connect(self._term_view.feed)
         worker.exited.connect(self._on_term_exited)
-        worker.clear_screen.connect(self._term_view.clear)
-        self._worker_box[0] = worker
+        self._term_view.set_writer(worker.write)
+        self._term_view.resize_pty.connect(worker.resize)
+        self._term_view.reset_screen()
 
-        self._term_view.clear()
         self._term_label.setText(f"{conn.display_name}  —  {conn.subtitle}")
         self._term_dot.setStyleSheet("color: #a6e3a1; font-size: 16px;")
         self._right.setCurrentIndex(_TERMINAL)
         self._term_view.setFocus()
         worker.start()
 
-    def _on_term_output(self, text: str) -> None:
-        # Character-by-character terminal output processor with overwrite semantics.
-        #
-        # Real terminals default to OVERWRITE mode: writing a char replaces the cell
-        # under the cursor instead of pushing existing content right.  QPlainTextEdit
-        # always inserts, so we emulate overwrite by selecting the existing char(s)
-        # before calling insertText() whenever the cursor is mid-line.
-        #
-        # \x08 (BS / CUB)  → move cursor left only — NO delete (terminal semantics).
-        #                     The next overwrite-mode write will replace in place.
-        # \r               → move cursor to start of block (erase comes from ERASE_EOL)
-        # ERASE_EOL        → select to end of block and delete (from \x1b[K)
-        # CURSOR_RIGHT     → move cursor right without inserting (from \x1b[nC)
-        cursor = self._term_view.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.End)
-
-        i = 0
-        n = len(text)
-        while i < n:
-            ch = text[i]
-
-            if ch == '\r':
-                if i + 1 < n and text[i + 1] == '\n':
-                    cursor.insertText('\n')
-                    i += 2
-                else:
-                    cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
-                    i += 1
-
-            elif ch == ERASE_EOL:
-                cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock,
-                                   QTextCursor.MoveMode.KeepAnchor)
-                cursor.removeSelectedText()
-                i += 1
-
-            elif ch == CURSOR_RIGHT:
-                if not cursor.atBlockEnd():
-                    cursor.movePosition(QTextCursor.MoveOperation.Right)
-                i += 1
-
-            elif ch == '\x08':
-                # Move left only — terminal BS repositions, it does not erase.
-                if not cursor.atBlockStart():
-                    cursor.movePosition(QTextCursor.MoveOperation.Left)
-                i += 1
-
-            elif ch == '\n':
-                cursor.insertText('\n')
-                i += 1
-
-            else:
-                j = i + 1
-                while j < n and text[j] not in ('\r', '\x08', '\n', ERASE_EOL, CURSOR_RIGHT):
-                    j += 1
-                run = text[i:j]
-                # Overwrite existing chars when cursor is mid-line.
-                remaining = cursor.block().length() - 1 - cursor.positionInBlock()
-                if remaining > 0:
-                    cursor.movePosition(QTextCursor.MoveOperation.Right,
-                                       QTextCursor.MoveMode.KeepAnchor,
-                                       min(len(run), remaining))
-                cursor.insertText(run)
-                i = j
-
-        self._term_view.setTextCursor(cursor)
-        self._term_view.ensureCursorVisible()
-
     def _on_term_exited(self, code: int) -> None:
-        self._worker_box[0] = None
+        self._worker = None
         self._term_dot.setStyleSheet("color: #f38ba8; font-size: 16px;")
-        cursor = self._term_view.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.End)
-        cursor.insertText(f"\n\n── Session terminée (code {code}) ──\n")
-        self._term_view.setTextCursor(cursor)
-        self._term_view.ensureCursorVisible()
+        self._term_view.feed(
+            f"\r\n\r\n── Session terminée (code {code}) ──\r\n".encode('utf-8')
+        )
 
     def _on_disconnect(self) -> None:
         self._stop_worker()
@@ -903,13 +653,20 @@ class SshPage(QWidget):
             self._right.setCurrentIndex(_EMPTY)
 
     def _stop_worker(self) -> None:
-        w = self._worker_box[0]
+        w = self._worker
         if w is not None:
-            w.output.disconnect()
-            w.exited.disconnect()
-            w.clear_screen.disconnect()
+            try:
+                w.output.disconnect()
+                w.exited.disconnect()
+            except Exception:
+                pass
+            try:
+                self._term_view.resize_pty.disconnect(w.resize)
+            except Exception:
+                pass
+            self._term_view.set_writer(None)
             w.stop()
-            self._worker_box[0] = None
+            self._worker = None
 
     def closeEvent(self, event) -> None:  # type: ignore[override]
         self._stop_worker()
