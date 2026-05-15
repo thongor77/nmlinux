@@ -43,20 +43,33 @@ def _rtt_color(rtt: float) -> QColor:
 
 # ── Workers ──────────────────────────────────────────────────────────────────
 
-# Matches:  " 3  hostname (1.2.3.4)  5.1 ms  6.2 ms  5.9 ms"
-# Also:     " 3  1.2.3.4  5.1 ms  6.2 ms  5.9 ms"  (traceroute -n)
-_HOP_RE = re.compile(
+import shutil as _shutil
+_CMD_TRACEROUTE = _shutil.which('traceroute')
+_CMD_TRACEPATH  = _shutil.which('tracepath')
+
+# traceroute: " 3  hostname (1.2.3.4)  5.1 ms  6.2 ms"  or  " 3  1.2.3.4  5.1 ms"
+_TR_HOP_RE  = re.compile(
     r'^\s*(\d+)\s+'
-    r'(?:(\S+)\s+\(([^)]+)\)|(\S+))'   # host (ip)  OR  ip-only
-    r'((?:\s+[\d.]+\s+ms)*)'           # RTT fields
+    r'(?:(\S+)\s+\(([^)]+)\)|(\S+))'
+    r'((?:\s+[\d.]+\s+ms)*)'
 )
-_RTT_RE = re.compile(r'([\d.]+)\s+ms')
-_STAR_RE = re.compile(r'^\s*(\d+)\s+\*')
+_TR_RTT_RE  = re.compile(r'([\d.]+)\s+ms')
+_TR_STAR_RE = re.compile(r'^\s*(\d+)\s+\*')
+
+# tracepath -b: " 4:  hostname (1.2.3.4)                16.3ms"
+#               " 2:  no reply"
+_TP_HOP_RE  = re.compile(
+    r'^\s*(\d+):\s+'
+    r'(\S+)\s+\(([^)]+)\)'         # hostname (ip)
+    r'.*?([\d.]+)ms'               # RTT (no space before ms)
+)
+_TP_STAR_RE = re.compile(r'^\s*(\d+):\s+no reply')
 
 
 class TracerouteWorker(QThread):
     hop_found  = Signal(int, str, str, float)   # num, ip, hostname, avg_rtt
     star_found = Signal(int)
+    error      = Signal(str)
     finished   = Signal()
 
     def __init__(self, target: str) -> None:
@@ -65,30 +78,75 @@ class TracerouteWorker(QThread):
         self._proc: subprocess.Popen | None = None
 
     def run(self) -> None:
+        if _CMD_TRACEROUTE:
+            self._run_traceroute()
+        elif _CMD_TRACEPATH:
+            self._run_tracepath()
+        else:
+            self.error.emit("traceroute et tracepath sont introuvables.\n"
+                            "Installe l'un des deux : sudo pacman -S traceroute")
+            self.finished.emit()
+
+    def _run_traceroute(self) -> None:
         try:
             self._proc = subprocess.Popen(
-                ['traceroute', '-w', '2', '-q', '3', self._target],
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                text=True,
+                [_CMD_TRACEROUTE, '-w', '2', '-q', '3', self._target],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
             )
+            seen: set[int] = set()
             for line in self._proc.stdout:
-                m = _HOP_RE.match(line)
+                m = _TR_HOP_RE.match(line)
                 if m:
                     num = int(m.group(1))
-                    if m.group(2):          # hostname (ip) form
-                        hostname, ip = m.group(2), m.group(3)
-                    else:                   # ip-only form
-                        hostname = ip = m.group(4)
-                    rtts = [float(v) for v in _RTT_RE.findall(m.group(5))]
-                    avg = sum(rtts) / len(rtts) if rtts else 0.0
+                    if num in seen:
+                        continue
+                    seen.add(num)
+                    hostname = m.group(2) or m.group(4)
+                    ip       = m.group(3) or m.group(4)
+                    rtts = [float(v) for v in _TR_RTT_RE.findall(m.group(5))]
+                    avg  = sum(rtts) / len(rtts) if rtts else 0.0
                     self.hop_found.emit(num, ip, hostname, avg)
                     continue
-                sm = _STAR_RE.match(line)
+                sm = _TR_STAR_RE.match(line)
                 if sm:
-                    self.star_found.emit(int(sm.group(1)))
+                    num = int(sm.group(1))
+                    if num not in seen:
+                        seen.add(num)
+                        self.star_found.emit(num)
             self._proc.wait()
-        except Exception:
-            pass
+        except Exception as exc:
+            self.error.emit(str(exc))
+        finally:
+            self.finished.emit()
+
+    def _run_tracepath(self) -> None:
+        try:
+            self._proc = subprocess.Popen(
+                [_CMD_TRACEPATH, '-b', self._target],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+            )
+            seen: set[int] = set()
+            for line in self._proc.stdout:
+                m = _TP_HOP_RE.match(line)
+                if m:
+                    num = int(m.group(1))
+                    if num in seen:
+                        continue
+                    seen.add(num)
+                    hostname = m.group(2)
+                    ip       = m.group(3)
+                    rtt      = float(m.group(4))
+                    self.hop_found.emit(num, ip, hostname, rtt)
+                    continue
+                sm = _TP_STAR_RE.match(line)
+                if sm:
+                    num = int(sm.group(1))
+                    if num not in seen:
+                        seen.add(num)
+                        self.star_found.emit(num)
+            self._proc.wait()
+        except Exception as exc:
+            self.error.emit(str(exc))
         finally:
             self.finished.emit()
 
@@ -310,6 +368,7 @@ class TraceroutePage(QWidget):
         self._worker = TracerouteWorker(target)
         self._worker.hop_found.connect(self._on_hop)
         self._worker.star_found.connect(self._on_star)
+        self._worker.error.connect(self._on_error)
         self._worker.finished.connect(self._on_finished)
         self._btn_go.setEnabled(False)
         self._btn_stop.setEnabled(True)
@@ -325,6 +384,7 @@ class TraceroutePage(QWidget):
             try:
                 self._worker.hop_found.disconnect()
                 self._worker.star_found.disconnect()
+                self._worker.error.disconnect()
                 self._worker.finished.disconnect()
             except Exception:
                 pass
@@ -357,6 +417,9 @@ class TraceroutePage(QWidget):
             'lat': None, 'lon': None, 'location': '',
         }
         self._table_add(num, '*', '—', -1, '')
+
+    def _on_error(self, msg: str) -> None:
+        self._lbl_status.setText(f"Erreur : {msg}")
 
     def _on_finished(self) -> None:
         self._flush_geo()
