@@ -20,6 +20,7 @@ from nmlinux.pages.whois import WhoisPage
 from nmlinux.pages.snmp import SnmpPage
 from nmlinux.pages.sntp import SntpPage
 from nmlinux.pages.ssh import SshPage
+from nmlinux.pages.traceroute import TraceroutePage
 from nmlinux.pages.settings import SettingsPage
 from nmlinux.pages.about import AboutPage
 
@@ -38,6 +39,7 @@ _TOOLS = [
     (("preferences-system", "system-settings", "configure"),                        "SNMP",         SnmpPage),
     (("clock", "chronometer", "appointment-soon"),                                   "SNTP / NTP",   SntpPage),
     (("utilities-terminal", "terminal", "gnome-terminal"),                           "SSH",          SshPage),
+    (("network-wired", "network-transmit-receive"),                                  "Traceroute",   TraceroutePage),
 ]
 
 
