@@ -8,9 +8,9 @@ import subprocess
 from pathlib import Path
 from urllib.request import urlopen, Request
 
-from PySide6.QtCore import Qt, QThread, Signal, QPointF
+from PySide6.QtCore import Qt, QPoint, QPointF, QThread, Signal
 from PySide6.QtGui import (
-    QBrush, QColor, QFont, QPainter, QPainterPath, QPen,
+    QBrush, QColor, QFont, QPainter, QPainterPath, QPen, QTransform,
 )
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
@@ -187,6 +187,14 @@ class _MapWidget(QWidget):
         self.setMinimumHeight(280)
         self._country_paths: list[QPainterPath] = []
         self._hops: list[tuple[float, float, int, float]] = []
+        # Zoom / pan state
+        self._zoom: float = 1.0
+        self._cx:   float = 0.5    # world-x of viewport centre (0-1)
+        self._cy:   float = 0.5    # world-y of viewport centre (0-1)
+        self._drag_origin: QPointF | None = None
+        self._drag_cx0:    float = 0.5
+        self._drag_cy0:    float = 0.5
+        self.setMouseTracking(False)
         self._load_geo()
 
     def _load_geo(self) -> None:
@@ -219,58 +227,133 @@ class _MapWidget(QWidget):
         self._hops = hops
         self.update()
 
-    def _to_px(self, lat: float, lon: float) -> QPointF:
-        return QPointF(
-            (lon + 180) / 360 * self.width(),
-            (90 - lat)  / 180 * self.height(),
-        )
+    # ── Zoom / pan ───────────────────────────────────────────────────────────
 
-    def paintEvent(self, _event) -> None:                  # noqa: N802
+    def _make_transform(self) -> QTransform:
+        """World [0,1]² → screen pixels, honouring current zoom and centre."""
+        w, h = self.width(), self.height()
+        t = QTransform()
+        t.translate(w / 2, h / 2)
+        t.scale(self._zoom * w, self._zoom * h)
+        t.translate(-self._cx, -self._cy)
+        return t
+
+    def _world_of(self, sx: float, sy: float) -> tuple[float, float]:
+        inv, _ = self._make_transform().inverted()
+        p = inv.map(QPointF(sx, sy))
+        return p.x(), p.y()
+
+    def _world_to_screen(self, lat: float, lon: float) -> QPointF:
+        wx = (lon + 180) / 360
+        wy = (90 - lat) / 180
+        return self._make_transform().map(QPointF(wx, wy))
+
+    def _zoom_at(self, sx: float, sy: float, factor: float) -> None:
+        wx, wy = self._world_of(sx, sy)
+        new_zoom = max(1.0, min(30.0, self._zoom * factor))
+        w, h = self.width(), self.height()
+        self._cx = wx - (sx - w / 2) / (new_zoom * w)
+        self._cy = wy - (sy - h / 2) / (new_zoom * h)
+        self._zoom = new_zoom
+        self._clamp()
+        self.update()
+
+    def _clamp(self) -> None:
+        hw = 1 / (2 * self._zoom)
+        hh = 1 / (2 * self._zoom)
+        self._cx = max(hw, min(1 - hw, self._cx))
+        self._cy = max(hh, min(1 - hh, self._cy))
+
+    def reset_view(self) -> None:
+        self._zoom = 1.0
+        self._cx = 0.5
+        self._cy = 0.5
+        self.update()
+
+    # ── Mouse events ─────────────────────────────────────────────────────────
+
+    def wheelEvent(self, event) -> None:                    # noqa: N802
+        factor = 1.20 if event.angleDelta().y() > 0 else 1 / 1.20
+        pos = event.position()
+        self._zoom_at(pos.x(), pos.y(), factor)
+
+    def mousePressEvent(self, event) -> None:               # noqa: N802
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._drag_origin = event.position()
+            self._drag_cx0    = self._cx
+            self._drag_cy0    = self._cy
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
+
+    def mouseMoveEvent(self, event) -> None:                # noqa: N802
+        if self._drag_origin is not None:
+            d = event.position() - self._drag_origin
+            w, h = self.width(), self.height()
+            self._cx = self._drag_cx0 - d.x() / (self._zoom * w)
+            self._cy = self._drag_cy0 - d.y() / (self._zoom * h)
+            self._clamp()
+            self.update()
+
+    def mouseReleaseEvent(self, event) -> None:             # noqa: N802
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._drag_origin = None
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+
+    def mouseDoubleClickEvent(self, event) -> None:         # noqa: N802
+        if event.button() == Qt.MouseButton.LeftButton:
+            pos = event.position()
+            self._zoom_at(pos.x(), pos.y(), 2.0)
+
+    def contextMenuEvent(self, event) -> None:              # noqa: N802
+        self.reset_view()
+
+    # ── Rendering ────────────────────────────────────────────────────────────
+
+    def paintEvent(self, _event) -> None:                   # noqa: N802
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        w, h = self.width(), self.height()
 
         p.fillRect(self.rect(), _BG)
 
-        # Countries
+        t = self._make_transform()
+
+        # Countries (drawn in world coords via transform)
         if self._country_paths:
+            border = QPen(_SURFACE0, 0)   # cosmetic hairline — 1 px at any zoom
             p.save()
-            p.scale(w, h)
-            p.setPen(QPen(_SURFACE0, 0))
+            p.setTransform(t)
+            p.setPen(border)
             p.setBrush(QBrush(_SURFACE1))
             for path in self._country_paths:
                 p.drawPath(path)
             p.restore()
 
+        # Hint when no hops yet
         if not self._hops:
             p.setPen(_OVERLAY0)
             p.setFont(QFont('Sans', 10))
             p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter,
-                       "Lance un traceroute pour voir la route sur la carte")
+                       "Lance un traceroute pour voir la route sur la carte\n"
+                       "Molette = zoom · Glisser = déplacer · Dbl-clic = zoom ×2 · Clic droit = réinitialiser")
             return
 
-        # Route lines
+        # Route lines (screen coords, so thickness is constant regardless of zoom)
         if len(self._hops) >= 2:
-            pen = QPen(_BLUE, 1.5, Qt.PenStyle.DashLine)
-            p.setPen(pen)
+            p.setPen(QPen(_BLUE, 1.5, Qt.PenStyle.DashLine))
             for i in range(len(self._hops) - 1):
-                a = self._to_px(self._hops[i][0], self._hops[i][1])
-                b = self._to_px(self._hops[i + 1][0], self._hops[i + 1][1])
+                a = self._world_to_screen(self._hops[i][0],     self._hops[i][1])
+                b = self._world_to_screen(self._hops[i + 1][0], self._hops[i + 1][1])
                 p.drawLine(a, b)
 
-        # Hop dots + labels
+        # Hop dots + labels (screen coords — constant pixel size)
         p.setPen(Qt.PenStyle.NoPen)
         label_font = QFont('Monospace', 7)
         for i, (lat, lon, num, rtt) in enumerate(self._hops):
-            pt = self._to_px(lat, lon)
+            pt = self._world_to_screen(lat, lon)
             radius = 7 if i in (0, len(self._hops) - 1) else 5
-            # Glow ring
             p.setBrush(QBrush(_rtt_color(rtt).darker(160)))
             p.drawEllipse(pt, radius + 2, radius + 2)
-            # Fill
             p.setBrush(QBrush(_rtt_color(rtt)))
             p.drawEllipse(pt, radius, radius)
-            # Number
             p.setPen(_TEXT)
             p.setFont(label_font)
             p.drawText(int(pt.x()) + radius + 2, int(pt.y()) + 4, str(num))
