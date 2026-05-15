@@ -18,7 +18,7 @@ from PySide6.QtGui import (
 from PySide6.QtCore import Qt, QTimer
 
 from nmlinux.core.ssh import SshConnection, SshGroup, SshStore, build_ssh_args
-from nmlinux.core.terminal import SshWorker
+from nmlinux.core.terminal import SshWorker, ERASE_EOL, CURSOR_RIGHT
 from nmlinux.core.i18n import tr
 
 _EMPTY    = 0
@@ -819,11 +819,13 @@ class SshPage(QWidget):
         worker.start()
 
     def _on_term_output(self, text: str) -> None:
-        # Process character by character to handle \r and \x08 correctly.
-        # \r\n  → newline
-        # bare \r → go to start of current line and erase to end (ZSH CR-redraws)
-        # \x08  → backspace (delete previous char, handles inline CUB sequences)
-        # \n    → newline
+        # Character-by-character terminal output processor.
+        # \r       → move to start of current line (erase comes from ERASE_EOL)
+        # \r\n     → plain newline
+        # ERASE_EOL→ erase from cursor to end of line (sentinel for \x1b[K)
+        # CURSOR_RIGHT → move cursor right 1 col without inserting (sentinel for \x1b[nC)
+        # \x08    → backspace: delete previous character
+        # \n      → newline
         cursor = self._term_view.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
 
@@ -837,12 +839,20 @@ class SshPage(QWidget):
                     cursor.insertText('\n')
                     i += 2
                 else:
-                    # bare CR: overwrite current line from the start
+                    # bare CR: reposition to start of line; erase comes from \x1b[K
                     cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
-                    cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock,
-                                       QTextCursor.MoveMode.KeepAnchor)
-                    cursor.removeSelectedText()
                     i += 1
+
+            elif ch == ERASE_EOL:
+                cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock,
+                                   QTextCursor.MoveMode.KeepAnchor)
+                cursor.removeSelectedText()
+                i += 1
+
+            elif ch == CURSOR_RIGHT:
+                if not cursor.atBlockEnd():
+                    cursor.movePosition(QTextCursor.MoveOperation.Right)
+                i += 1
 
             elif ch == '\x08':
                 if not cursor.atBlockStart():
@@ -857,7 +867,7 @@ class SshPage(QWidget):
 
             else:
                 j = i + 1
-                while j < n and text[j] not in ('\r', '\x08', '\n'):
+                while j < n and text[j] not in ('\r', '\x08', '\n', ERASE_EOL, CURSOR_RIGHT):
                     j += 1
                 cursor.insertText(text[i:j])
                 i = j

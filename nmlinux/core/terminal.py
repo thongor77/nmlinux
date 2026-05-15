@@ -19,10 +19,16 @@ _ANSI_RE = re.compile(
     r'|[@-Z\\-_]'                     # Fe   (SS2, SS3, …)
     r')'
 )
-# CSI CUB (cursor backward): \x1b[nD — ZSH syntax-highlighting uses this (not \x08)
-# to reposition before rewriting the current character with color.  Convert to \x08
-# BEFORE the generic ANSI stripper removes it, so _on_term_output can handle it.
+# CSI CUB (cursor backward): \x1b[nD → convert to \x08 backspaces.
 _CSI_CUB_RE = re.compile(r'\x1b\[(\d*)D')
+# CSI CUF (cursor forward): \x1b[nC — ZSH Up-arrow skips over the prompt with this.
+_CSI_CUF_RE = re.compile(r'\x1b\[(\d*)C')
+# CSI EL (erase to end of line): \x1b[K or \x1b[0K — ZSH clears the input area.
+_CSI_EL_RE  = re.compile(r'\x1b\[0?K')
+
+# Private-Unicode sentinels: survive strip_ansi and are handled by _on_term_output.
+ERASE_EOL    = ''   # erase from cursor to end of current line
+CURSOR_RIGHT = ''   # move cursor right 1 column (one unit of CUF)
 
 # Control chars stripped — keeps \x08 (backspace), \x09 (tab), \x0a (newline),
 # \x0d (\r, carriage return).  \r is kept and handled by _on_term_output as
@@ -31,9 +37,10 @@ _CTRL_RE = re.compile(r'[\x00-\x07\x0b-\x0c\x0e-\x1f\x7f]')
 
 
 def strip_ansi(text: str) -> str:
-    # 1. Convert CSI cursor-backward to \x08 before the generic stripper removes it.
+    # Convert cursor-movement sequences to sentinels BEFORE generic stripping.
     text = _CSI_CUB_RE.sub(lambda m: '\x08' * (int(m.group(1)) if m.group(1) else 1), text)
-    # 2. Strip remaining ANSI sequences, then remaining control chars.
+    text = _CSI_CUF_RE.sub(lambda m: CURSOR_RIGHT * (int(m.group(1)) if m.group(1) else 1), text)
+    text = _CSI_EL_RE.sub(ERASE_EOL, text)
     return _CTRL_RE.sub('', _ANSI_RE.sub('', text))
 
 
