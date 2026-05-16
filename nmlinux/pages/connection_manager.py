@@ -366,15 +366,22 @@ class ConnectionManagerPage(QWidget):
         self._status.setWordWrap(True)
         rv.addWidget(self._status)
 
+        # CLI bar — right panel only, with pedagogical caption
+        cli_caption = QHBoxLayout()
+        cli_caption.setContentsMargins(0, 4, 0, 0)
+        lbl_cmd = QLabel(tr('conn_cli_header'))
+        lbl_cmd.setStyleSheet('font-size: 10px; color: #6c7086;')
+        cli_caption.addWidget(lbl_cmd)
+        lbl_learn = QLabel(tr('conn_cli_about'))
+        lbl_learn.setStyleSheet('font-size: 10px; color: #45475a; font-style: italic;')
+        lbl_learn.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        cli_caption.addWidget(lbl_learn, 1)
+        rv.addLayout(cli_caption)
+        rv.addWidget(self._cli_bar)
+
         splitter.addWidget(right)
         splitter.setSizes([380, 520])
         root.addWidget(splitter, 1)
-
-        # CLI bar — full width at the bottom
-        cli_wrap = QHBoxLayout()
-        cli_wrap.setContentsMargins(12, 6, 12, 10)
-        cli_wrap.addWidget(self._cli_bar)
-        root.addLayout(cli_wrap)
 
         self._set_actions_enabled(False)
 
