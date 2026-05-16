@@ -297,7 +297,9 @@ class ConnectionManagerPage(QWidget):
         self._table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         self._table.verticalHeader().setVisible(False)
         self._table.setAlternatingRowColors(True)
-        self._table.currentRowChanged.connect(self._on_select)
+        self._table.currentCellChanged.connect(
+            lambda cur_row, _cur_col, _prev_row, _prev_col: self._on_select(cur_row)
+        )
         lv.addWidget(self._table)
         splitter.addWidget(left)
 
