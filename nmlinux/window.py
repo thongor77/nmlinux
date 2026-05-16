@@ -31,6 +31,7 @@ from nmlinux.pages.about import AboutPage
 
 _TOOLS = [
     (("go-home", "user-home", "folder-home"),                                        "Dashboard",    DashboardPage),
+    (("network-wired", "network-manager", "preferences-system-network"),            "Connexions",   ConnectionManagerPage),
     (("network-connect", "network-transmit-receive", "network-wired"),               "Interfaces",   InterfacesPage),
     (("network-wireless", "network-wireless-signal-excellent"),                      "Wi-Fi",        WifiPage),
     (("network-wired", "network-server"),                                            "Sous-réseau",  SubnetPage),
@@ -46,7 +47,6 @@ _TOOLS = [
     (("network-wired", "network-transmit-receive"),                                  "Traceroute",   TraceroutePage),
     (("network-transmit-receive", "network-wired", "utilities-system-monitor"),      "Bandwidth",    BandwidthPage),
     (("system-shutdown", "system-reboot", "media-playback-start"),                  "Wake on LAN",  WolPage),
-    (("network-wired", "network-manager", "preferences-system-network"),            "Connexions",   ConnectionManagerPage),
 ]
 
 

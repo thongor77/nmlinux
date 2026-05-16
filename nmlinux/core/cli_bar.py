@@ -50,7 +50,7 @@ class CliBar(QWidget):
         btn_copy.setFlat(True)
         btn_copy.setFixedHeight(22)
         btn_copy.setStyleSheet(
-            'color: #585b70; font-size: 10px; background: transparent;'
+            'color: #7f849c; font-size: 10px; background: transparent;'
             'border: none; padding: 0 4px;'
         )
         btn_copy.clicked.connect(self._copy)
@@ -58,7 +58,7 @@ class CliBar(QWidget):
 
         lbl_about = QLabel(tr('cli_bar_about'))
         lbl_about.setStyleSheet(
-            'color: #313244; font-size: 9px; font-style: italic; background: transparent;'
+            'color: #585b70; font-size: 9px; font-style: italic; background: transparent;'
         )
         layout.addWidget(lbl_about)
 
