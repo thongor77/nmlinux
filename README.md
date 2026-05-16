@@ -91,23 +91,33 @@ sudo dnf install iproute NetworkManager bind-utils nmap whois net-snmp-utils
 
 ## Installation
 
-### Option 1 — pip (recommended)
+### Option 1 — Arch Linux / Manjaro / EndeavourOS (AUR)
 
 ```bash
-pip install PySide6 ptyprocess
-git clone <this-repo>
-cd nmlinux
-./nmlinux.sh
+yay -S nmlinux
 ```
 
-### Option 2 — install as a package
+All dependencies (PySide6, ptyprocess, pyte, nmcli, …) are handled automatically.
+
+### Option 2 — Wheel (all distros)
+
+Download the `.whl` from the [latest release](https://github.com/thongor77/nmlinux/releases/latest) and install it:
 
 ```bash
-pip install .
+pip install nmlinux-1.1.1-py3-none-any.whl
 nmlinux
 ```
 
-### Option 3 — Desktop entry (KDE / GNOME / etc.)
+### Option 3 — From source
+
+```bash
+git clone https://github.com/thongor77/nmlinux.git
+cd nmlinux
+pip install PySide6 ptyprocess pyte
+python3 -m nmlinux.main
+```
+
+### Option 4 — Desktop entry (KDE / GNOME / etc.)
 
 Copy the `.desktop` file to make NMLinux appear in your application launcher:
 
