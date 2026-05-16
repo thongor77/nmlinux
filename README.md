@@ -1,4 +1,4 @@
-# NMLinux
+# NMLinux · v1.1.1
 
 **A free Linux adaptation of [NETworkManager](https://github.com/BornToBeRoot/NETworkManager) by BornToBeRoot.**
 
@@ -20,6 +20,23 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 
 ---
 
+## Changelog
+
+### v1.1.1 — 2026-05-16
+
+- **SSH terminal** — complete rewrite with [pyte](https://github.com/selectel/pyte) (VT100/xterm emulator) + QPainter renderer; 2000-line scrollback, cursor blink, 256-colour support
+- **Visual Traceroute** — world map (Natural Earth 110m), live geolocation per hop (ip-api.com), interactive zoom/pan, dual parser (`traceroute` / `tracepath` fallback)
+- **Bandwidth Monitor** — real-time per-interface throughput, 60s sliding graph, live speeds, session totals and peaks
+- **Wake on LAN** — pure Python magic packet (UDP broadcast), persistent host book (JSON)
+- **IP Scanner** — hostname resolution via `getent`/`avahi`/`nmblookup`; MAC address, vendor (IEEE OUI 39K entries), interface columns; CSV/TXT export updated
+- **i18n** — full fr/en/es/de translation for all new pages
+
+### v1.0.0 — 2026-05-14
+
+Initial public release — 13 modules: Dashboard, Interfaces, Wi-Fi, Subnet Calculator, DNS Lookup, Ping Monitor, IP Scanner, Port Scanner, Nmap, Whois, SNMP, SNTP/NTP, SSH.
+
+---
+
 ## Features
 
 | Module | Description |
@@ -30,7 +47,7 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 | **Subnet Calculator** | Network/broadcast/host range from CIDR, host table up to 4096 entries |
 | **DNS Lookup** | `dig`-based lookup for A, AAAA, MX, TXT, NS, CNAME, PTR, SOA, ANY |
 | **Ping Monitor** | Continuous ping to multiple hosts, RTT stats, packet loss % |
-| **IP Scanner** | CIDR/range ping scan, 50 concurrent threads, CSV + TXT export |
+| **IP Scanner** | CIDR/range ping scan, 50 threads, hostname (DNS/mDNS/NetBIOS), MAC address, vendor (OUI), interface, CSV + TXT export |
 | **Port Scanner** | TCP connect scan, 200 threads, service presets, CSV + TXT export |
 | **Nmap** | 7 scan modes, XML output parsing, Host/Port/Protocol/State/Service table |
 | **Whois** | Raw whois output in monospace |
@@ -39,6 +56,7 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 | **SSH** | Embedded PTY terminal (pyte/VT100), saved connections (JSON), key auth, scrollback |
 | **Visual Traceroute** | Hop-by-hop route on a world map, live geolocation (ip-api.com), zoom & pan |
 | **Bandwidth** | Real-time per-interface throughput: 60s sliding graph, live speeds, session totals, peak |
+| **Wake on LAN** | Pure Python magic packet (UDP broadcast), persistent host book, no external tool required |
 | **Settings** | Language selection (French, English, Spanish, German), persisted |
 
 ---
@@ -139,6 +157,7 @@ nmlinux/
     terminal_view.py — TerminalView: pyte VT100 emulator + QPainter renderer
     traceroute.py   — Visual Traceroute: world map, geolocation, zoom/pan
     bandwidth.py    — Bandwidth Monitor: per-interface 60s graph, live stats
+    wol.py          — Wake on LAN: magic packet, persistent host book
     whois.py        — Whois
     wifi.py         — Wi-Fi
   assets/

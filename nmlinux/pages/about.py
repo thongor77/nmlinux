@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
 
+from nmlinux import __version__
 from nmlinux.core.i18n import tr
 from nmlinux.core.icons import themed_icon
 
@@ -58,7 +59,7 @@ class AboutPage(QWidget):
         name_lbl.setStyleSheet("font-size: 22px; font-weight: bold;")
         center.addWidget(name_lbl)
 
-        self._version_lbl = QLabel(tr("about_version"))
+        self._version_lbl = QLabel(f"Version {__version__}")
         self._version_lbl.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         self._version_lbl.setStyleSheet("font-size: 12px; color: palette(mid);")
         center.addWidget(self._version_lbl)
