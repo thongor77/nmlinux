@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import ipaddress
 import re
-import socket
+import shutil
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+_CMD_AVAHI     = shutil.which('avahi-resolve')
+_CMD_NMBLOOKUP = shutil.which('nmblookup')
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
@@ -64,10 +67,7 @@ class ScanWorker(QThread):
             if proc.returncode == 0:
                 m = re.search(r'time=(\d+\.?\d*)', proc.stdout)
                 rtt = float(m.group(1)) if m else 0.0
-                try:
-                    hostname = socket.gethostbyaddr(ip)[0]
-                except Exception:
-                    hostname = ""
+                hostname = _resolve_hostname(ip, self._timeout)
                 return True, rtt, hostname
         except Exception:
             pass
@@ -75,6 +75,50 @@ class ScanWorker(QThread):
 
     def cancel(self) -> None:
         self._cancelled = True
+
+
+def _resolve_hostname(ip: str, timeout: int = 2) -> str:
+    """Try reverse DNS → mDNS (avahi) → NetBIOS (nmblookup)."""
+    # 1. Standard reverse DNS via getent (respects /etc/nsswitch.conf, timeout-safe)
+    try:
+        proc = subprocess.run(
+            ['getent', 'hosts', ip],
+            capture_output=True, text=True, timeout=timeout,
+        )
+        if proc.returncode == 0:
+            parts = proc.stdout.strip().split()
+            if len(parts) >= 2:
+                return parts[-1]
+    except Exception:
+        pass
+
+    # 2. mDNS via avahi-resolve
+    if _CMD_AVAHI:
+        try:
+            proc = subprocess.run(
+                [_CMD_AVAHI, '-a', ip],
+                capture_output=True, text=True, timeout=timeout,
+            )
+            if proc.returncode == 0 and '\t' in proc.stdout:
+                return proc.stdout.strip().split('\t')[-1].strip()
+        except Exception:
+            pass
+
+    # 3. NetBIOS via nmblookup (Windows / Samba machines)
+    if _CMD_NMBLOOKUP:
+        try:
+            proc = subprocess.run(
+                [_CMD_NMBLOOKUP, '-A', ip],
+                capture_output=True, text=True, timeout=timeout + 1,
+            )
+            for line in proc.stdout.splitlines():
+                line = line.strip()
+                if '<00>' in line and 'GROUP' not in line:
+                    return line.split('<')[0].strip()
+        except Exception:
+            pass
+
+    return ""
 
 
 def _parse_range(text: str) -> list[str] | str:
