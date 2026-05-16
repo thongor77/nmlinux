@@ -357,6 +357,32 @@ _T: dict[str, dict[str, str]] = {
         "common_proto":        "Proto",
         "common_version":      "Version",
         "common_na":           "N/A",
+
+        # ── Traceroute ──────────────────────────────────────────────────────
+        "trace_target_lbl":  "Cible :",
+        "trace_target_ph":   "8.8.8.8  ou  example.com",
+        "trace_start_btn":   "▶  Démarrer",
+        "trace_stop_btn":    "■  Arrêter",
+        "trace_col_hop":     "Hop",
+        "trace_col_ip":      "Adresse IP",
+        "trace_col_host":    "Hôte",
+        "trace_col_rtt":     "RTT moy.",
+        "trace_col_loc":     "Localisation",
+        "trace_status_run":  "Traceroute vers {target}…",
+        "trace_status_stop": "Arrêté.",
+        "trace_status_done": "Terminé — {total} hops ({n} répondants)",
+        "trace_err_no_cmd":  "traceroute et tracepath sont introuvables.\nInstallez l'un des deux : sudo pacman -S traceroute",
+        "trace_map_hint":    "Lance un traceroute pour voir la route sur la carte\nMolette = zoom · Glisser = déplacer · Dbl-clic = zoom ×2 · Clic droit = réinitialiser",
+        "trace_legend_to":   "timeout",
+
+        # ── Bandwidth ────────────────────────────────────────────────────────
+        "bw_ifaces_lbl":     "Interfaces",
+        "bw_download":       "↓ Téléchargement",
+        "bw_upload":         "↑ Envoi",
+        "bw_total_dl":       "Total ↓",
+        "bw_total_ul":       "Total ↑",
+        "bw_peak_dl":        "Pic ↓",
+        "bw_peak_ul":        "Pic ↑",
     },
 
     "en": {
@@ -695,6 +721,32 @@ _T: dict[str, dict[str, str]] = {
         "common_proto":         "Proto",
         "common_version":       "Version",
         "common_na":            "N/A",
+
+        # ── Traceroute ──────────────────────────────────────────────────────
+        "trace_target_lbl":  "Target:",
+        "trace_target_ph":   "8.8.8.8  or  example.com",
+        "trace_start_btn":   "▶  Start",
+        "trace_stop_btn":    "■  Stop",
+        "trace_col_hop":     "Hop",
+        "trace_col_ip":      "IP Address",
+        "trace_col_host":    "Host",
+        "trace_col_rtt":     "Avg RTT",
+        "trace_col_loc":     "Location",
+        "trace_status_run":  "Traceroute to {target}…",
+        "trace_status_stop": "Stopped.",
+        "trace_status_done": "Done — {total} hops ({n} responding)",
+        "trace_err_no_cmd":  "traceroute and tracepath not found.\nInstall one: sudo pacman -S traceroute",
+        "trace_map_hint":    "Run a traceroute to display the route on the map\nScroll = zoom · Drag = pan · Dbl-click = zoom ×2 · Right-click = reset",
+        "trace_legend_to":   "timeout",
+
+        # ── Bandwidth ────────────────────────────────────────────────────────
+        "bw_ifaces_lbl":     "Interfaces",
+        "bw_download":       "↓ Download",
+        "bw_upload":         "↑ Upload",
+        "bw_total_dl":       "Total ↓",
+        "bw_total_ul":       "Total ↑",
+        "bw_peak_dl":        "Peak ↓",
+        "bw_peak_ul":        "Peak ↑",
     },
 
     "es": {
@@ -1034,6 +1086,32 @@ _T: dict[str, dict[str, str]] = {
         "common_proto":         "Proto",
         "common_version":       "Versión",
         "common_na":            "N/D",
+
+        # ── Traceroute ──────────────────────────────────────────────────────
+        "trace_target_lbl":  "Destino:",
+        "trace_target_ph":   "8.8.8.8  o  example.com",
+        "trace_start_btn":   "▶  Iniciar",
+        "trace_stop_btn":    "■  Detener",
+        "trace_col_hop":     "Hop",
+        "trace_col_ip":      "Dirección IP",
+        "trace_col_host":    "Host",
+        "trace_col_rtt":     "RTT prom.",
+        "trace_col_loc":     "Ubicación",
+        "trace_status_run":  "Traceroute a {target}…",
+        "trace_status_stop": "Detenido.",
+        "trace_status_done": "Listo — {total} saltos ({n} responden)",
+        "trace_err_no_cmd":  "traceroute y tracepath no encontrados.\nInstale uno: sudo pacman -S traceroute",
+        "trace_map_hint":    "Ejecuta un traceroute para ver la ruta en el mapa\nRueda = zoom · Arrastrar = mover · Doble clic = zoom ×2 · Clic derecho = reiniciar",
+        "trace_legend_to":   "timeout",
+
+        # ── Bandwidth ────────────────────────────────────────────────────────
+        "bw_ifaces_lbl":     "Interfaces",
+        "bw_download":       "↓ Descarga",
+        "bw_upload":         "↑ Subida",
+        "bw_total_dl":       "Total ↓",
+        "bw_total_ul":       "Total ↑",
+        "bw_peak_dl":        "Pico ↓",
+        "bw_peak_ul":        "Pico ↑",
     },
 
     "de": {
@@ -1373,6 +1451,32 @@ _T: dict[str, dict[str, str]] = {
         "common_proto":         "Proto",
         "common_version":       "Version",
         "common_na":            "N/V",
+
+        # ── Traceroute ──────────────────────────────────────────────────────
+        "trace_target_lbl":  "Ziel:",
+        "trace_target_ph":   "8.8.8.8  oder  example.com",
+        "trace_start_btn":   "▶  Starten",
+        "trace_stop_btn":    "■  Stopp",
+        "trace_col_hop":     "Hop",
+        "trace_col_ip":      "IP-Adresse",
+        "trace_col_host":    "Host",
+        "trace_col_rtt":     "Ø RTT",
+        "trace_col_loc":     "Standort",
+        "trace_status_run":  "Traceroute zu {target}…",
+        "trace_status_stop": "Gestoppt.",
+        "trace_status_done": "Fertig — {total} Hops ({n} antwortend)",
+        "trace_err_no_cmd":  "traceroute und tracepath nicht gefunden.\nInstalliere eines: sudo pacman -S traceroute",
+        "trace_map_hint":    "Starte ein Traceroute, um die Route auf der Karte anzuzeigen\nRad = Zoom · Ziehen = Schwenken · Doppelklick = Zoom ×2 · Rechtsklick = zurücksetzen",
+        "trace_legend_to":   "Timeout",
+
+        # ── Bandwidth ────────────────────────────────────────────────────────
+        "bw_ifaces_lbl":     "Interfaces",
+        "bw_download":       "↓ Download",
+        "bw_upload":         "↑ Upload",
+        "bw_total_dl":       "Gesamt ↓",
+        "bw_total_ul":       "Gesamt ↑",
+        "bw_peak_dl":        "Spitze ↓",
+        "bw_peak_ul":        "Spitze ↑",
     },
 }
 

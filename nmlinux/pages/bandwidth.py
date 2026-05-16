@@ -16,6 +16,8 @@ from PySide6.QtWidgets import (
     QSplitter, QVBoxLayout, QWidget,
 )
 
+from nmlinux.core.i18n import tr
+
 # ── Palette ──────────────────────────────────────────────────────────────────
 
 _BG      = QColor('#1e1e2e')
@@ -155,7 +157,8 @@ class _Graph(QWidget):
 
         # Legend
         p.setFont(QFont('Sans', 8))
-        for col, label, ox in ((_RX_LINE, '↓ Download', 0), (_TX_LINE, '↑ Upload', 90)):
+        for col, label, ox in ((
+                _RX_LINE, tr("bw_download"), 0), (_TX_LINE, tr("bw_upload"), 90)):
             p.setPen(col)
             p.drawText(PL + ox, H - 4, label)
 
@@ -194,7 +197,7 @@ class BandwidthPage(QWidget):
         left.setFrameShape(QFrame.Shape.NoFrame)
         lv = QVBoxLayout(left)
         lv.setContentsMargins(8, 8, 4, 8)
-        lv.addWidget(QLabel("Interfaces"))
+        lv.addWidget(QLabel(tr("bw_ifaces_lbl")))
         self._iface_list = QListWidget()
         self._iface_list.setFrameShape(QFrame.Shape.NoFrame)
         self._iface_list.currentItemChanged.connect(self._on_iface_changed)
@@ -228,10 +231,10 @@ class BandwidthPage(QWidget):
 
         # Stats row
         stats = QHBoxLayout()
-        self._lbl_total_rx  = self._stat_label("Total ↓", "—")
-        self._lbl_total_tx  = self._stat_label("Total ↑", "—")
-        self._lbl_peak_rx   = self._stat_label("Pic ↓", "—")
-        self._lbl_peak_tx   = self._stat_label("Pic ↑", "—")
+        self._lbl_total_rx  = self._stat_label(tr("bw_total_dl"), "—")
+        self._lbl_total_tx  = self._stat_label(tr("bw_total_ul"), "—")
+        self._lbl_peak_rx   = self._stat_label(tr("bw_peak_dl"), "—")
+        self._lbl_peak_tx   = self._stat_label(tr("bw_peak_ul"), "—")
         for w in (self._lbl_total_rx, self._lbl_total_tx,
                   self._lbl_peak_rx,  self._lbl_peak_tx):
             stats.addWidget(w)
@@ -289,10 +292,10 @@ class BandwidthPage(QWidget):
                 self._lbl_tx.setText(f'↑  {_fmt_speed(tx_bps)}')
                 total_rx = rx - self._start_rx.get(iface, rx)
                 total_tx = tx - self._start_tx.get(iface, tx)
-                self._set_stat(self._lbl_total_rx, 'Total ↓', _fmt_total(total_rx))
-                self._set_stat(self._lbl_total_tx, 'Total ↑', _fmt_total(total_tx))
-                self._set_stat(self._lbl_peak_rx,  'Pic ↓',   _fmt_speed(self._peak_rx[iface]))
-                self._set_stat(self._lbl_peak_tx,  'Pic ↑',   _fmt_speed(self._peak_tx[iface]))
+                self._set_stat(self._lbl_total_rx, tr("bw_total_dl"), _fmt_total(total_rx))
+                self._set_stat(self._lbl_total_tx, tr("bw_total_ul"), _fmt_total(total_tx))
+                self._set_stat(self._lbl_peak_rx,  tr("bw_peak_dl"),  _fmt_speed(self._peak_rx[iface]))
+                self._set_stat(self._lbl_peak_tx,  tr("bw_peak_ul"),  _fmt_speed(self._peak_tx[iface]))
 
         self._prev = current
 
@@ -306,10 +309,10 @@ class BandwidthPage(QWidget):
         self._graph.clear()
         self._lbl_rx.setText('↓  —')
         self._lbl_tx.setText('↑  —')
-        self._set_stat(self._lbl_total_rx, 'Total ↓', '—')
-        self._set_stat(self._lbl_total_tx, 'Total ↑', '—')
-        self._set_stat(self._lbl_peak_rx,  'Pic ↓',   '—')
-        self._set_stat(self._lbl_peak_tx,  'Pic ↑',   '—')
+        self._set_stat(self._lbl_total_rx, tr("bw_total_dl"), '—')
+        self._set_stat(self._lbl_total_tx, tr("bw_total_ul"), '—')
+        self._set_stat(self._lbl_peak_rx,  tr("bw_peak_dl"),  '—')
+        self._set_stat(self._lbl_peak_tx,  tr("bw_peak_ul"),  '—')
 
     def hideEvent(self, event) -> None:                    # noqa: N802
         self._timer.stop()

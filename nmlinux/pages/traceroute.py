@@ -18,6 +18,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
+from nmlinux.core.i18n import tr
+
 _GEOJSON = Path(__file__).parent.parent / "assets" / "world.geojson"
 
 # Catppuccin Mocha colours
@@ -83,8 +85,7 @@ class TracerouteWorker(QThread):
         elif _CMD_TRACEPATH:
             self._run_tracepath()
         else:
-            self.error.emit("traceroute et tracepath sont introuvables.\n"
-                            "Installe l'un des deux : sudo pacman -S traceroute")
+            self.error.emit(tr("trace_err_no_cmd"))
             self.finished.emit()
 
     def _run_traceroute(self) -> None:
@@ -331,9 +332,7 @@ class _MapWidget(QWidget):
         if not self._hops:
             p.setPen(_OVERLAY0)
             p.setFont(QFont('Sans', 10))
-            p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter,
-                       "Lance un traceroute pour voir la route sur la carte\n"
-                       "Molette = zoom · Glisser = déplacer · Dbl-clic = zoom ×2 · Clic droit = réinitialiser")
+            p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, tr("trace_map_hint"))
             return
 
         # Route lines (screen coords, so thickness is constant regardless of zoom)
@@ -391,14 +390,14 @@ class TraceroutePage(QWidget):
 
         # Toolbar
         bar = QHBoxLayout()
-        bar.addWidget(QLabel("Cible :"))
+        bar.addWidget(QLabel(tr("trace_target_lbl")))
         self._input = QLineEdit()
-        self._input.setPlaceholderText("8.8.8.8  ou  example.com")
+        self._input.setPlaceholderText(tr("trace_target_ph"))
         self._input.returnPressed.connect(self._on_start)
-        self._btn_go   = QPushButton("▶  Démarrer")
+        self._btn_go   = QPushButton(tr("trace_start_btn"))
         self._btn_go.setDefault(True)
         self._btn_go.clicked.connect(self._on_start)
-        self._btn_stop = QPushButton("■  Arrêter")
+        self._btn_stop = QPushButton(tr("trace_stop_btn"))
         self._btn_stop.clicked.connect(self._on_stop)
         self._btn_stop.setEnabled(False)
         self._lbl_status = QLabel("")
@@ -414,7 +413,7 @@ class TraceroutePage(QWidget):
         legend.addStretch()
         for color, label in [(_GREEN, "< 20 ms"), (_YELLOW, "20-80 ms"),
                               (_ORANGE, "80-200 ms"), (_RED, "> 200 ms"),
-                              (_OVERLAY0, "timeout")]:
+                              (_OVERLAY0, tr("trace_legend_to"))]:
             dot = QLabel("●")
             dot.setStyleSheet(f"color: {color.name()}; font-size: 10px;")
             legend.addWidget(dot)
@@ -430,9 +429,10 @@ class TraceroutePage(QWidget):
         splitter.addWidget(self._map)
 
         self._table = QTableWidget(0, 5)
-        self._table.setHorizontalHeaderLabels(
-            ["Hop", "Adresse IP", "Hôte", "RTT moy.", "Localisation"]
-        )
+        self._table.setHorizontalHeaderLabels([
+            tr("trace_col_hop"), tr("trace_col_ip"), tr("trace_col_host"),
+            tr("trace_col_rtt"), tr("trace_col_loc"),
+        ])
         hh = self._table.horizontalHeader()
         hh.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         hh.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
@@ -465,12 +465,12 @@ class TraceroutePage(QWidget):
         self._worker.finished.connect(self._on_finished)
         self._btn_go.setEnabled(False)
         self._btn_stop.setEnabled(True)
-        self._lbl_status.setText(f"Traceroute vers {target}…")
+        self._lbl_status.setText(tr("trace_status_run", target=target))
         self._worker.start()
 
     def _on_stop(self) -> None:
         self._stop_all()
-        self._lbl_status.setText("Arrêté.")
+        self._lbl_status.setText(tr("trace_status_stop"))
 
     def _stop_all(self) -> None:
         if self._worker:
@@ -510,11 +510,11 @@ class TraceroutePage(QWidget):
         self._table_add(num, '*', '—', -1, '')
 
     def _on_error(self, msg: str) -> None:
-        self._lbl_status.setText(f"Erreur : {msg}")
+        self._lbl_status.setText(tr("common_error_prefix", msg=msg))
 
     def _on_finished(self) -> None:
         n = sum(1 for h in self._hops.values() if h['ip'] != '*')
-        self._lbl_status.setText(f"Terminé — {len(self._hops)} hops ({n} répondants)")
+        self._lbl_status.setText(tr("trace_status_done", total=len(self._hops), n=n))
         self._btn_go.setEnabled(True)
         self._btn_stop.setEnabled(False)
         self._worker = None
