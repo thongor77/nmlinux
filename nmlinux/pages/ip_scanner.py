@@ -5,9 +5,7 @@ import re
 import shutil
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
-_CMD_AVAHI     = shutil.which('avahi-resolve')
-_CMD_NMBLOOKUP = shutil.which('nmblookup')
+from pathlib import Path
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
@@ -21,12 +19,69 @@ from PySide6.QtCore import Qt, QThread, Signal
 from nmlinux.core.i18n import tr
 
 
-_C_DOT, _C_IP, _C_HOST, _C_RTT = range(4)
+_C_DOT, _C_IP, _C_HOST, _C_MAC, _C_VENDOR, _C_IFACE, _C_RTT = range(7)
 _GREEN = QColor("#a6e3a1")
+
+_CMD_AVAHI     = shutil.which('avahi-resolve')
+_CMD_NMBLOOKUP = shutil.which('nmblookup')
+
+# OUI database — loaded once on first scan
+_OUI_DB: dict[str, str] = {}
+_OUI_PATHS = [
+    '/usr/share/hwdata/oui.txt',
+    '/usr/share/misc/oui.txt',
+    '/var/lib/ieee-data/oui.txt',
+    '/usr/share/ieee-data/oui.txt',
+    '/usr/share/arp-scan/ieee-oui.txt',
+]
+
+
+def _ensure_oui_db() -> None:
+    global _OUI_DB
+    if _OUI_DB:
+        return
+    for path in _OUI_PATHS:
+        p = Path(path)
+        if not p.exists():
+            continue
+        try:
+            db: dict[str, str] = {}
+            for line in p.read_text(errors='replace').splitlines():
+                if '(hex)' in line:
+                    # "28-6F-B9   (hex)    Nokia Shanghai Bell Co., Ltd."
+                    oui_raw, _, vendor = line.partition('(hex)')
+                    oui = oui_raw.strip().replace('-', ':').upper()  # "28:6F:B9"
+                    db[oui] = vendor.strip()
+            if db:
+                _OUI_DB = db
+                return
+        except Exception:
+            continue
+
+
+def _vendor_of(mac: str) -> str:
+    if not mac:
+        return ""
+    oui = mac[:8].upper()   # "AA:BB:CC"
+    return _OUI_DB.get(oui, "")
+
+
+def _arp_entry(ip: str) -> tuple[str, str]:
+    """Return (mac_upper, iface) from /proc/net/arp, or ('', '') if absent."""
+    try:
+        for line in Path('/proc/net/arp').read_text().splitlines()[1:]:
+            parts = line.split()
+            if len(parts) >= 6 and parts[0] == ip:
+                mac = parts[3].upper()
+                if mac != '00:00:00:00:00:00':
+                    return mac, parts[5]
+    except Exception:
+        pass
+    return '', ''
 
 
 class ScanWorker(QThread):
-    found    = Signal(str, str, float)
+    found    = Signal(str, str, float, str, str, str)  # ip, host, rtt, mac, vendor, iface
     progress = Signal(int, int)
     finished = Signal()
 
@@ -38,6 +93,7 @@ class ScanWorker(QThread):
         self._cancelled = False
 
     def run(self) -> None:
+        _ensure_oui_db()
         total = len(self._hosts)
         done  = 0
         with ThreadPoolExecutor(max_workers=self._n_threads) as pool:
@@ -49,29 +105,32 @@ class ScanWorker(QThread):
                     break
                 ip = futures[future]
                 try:
-                    alive, rtt, hostname = future.result()
+                    result = future.result()
                 except Exception:
-                    alive, rtt, hostname = False, -1.0, ""
+                    result = (False, -1.0, "", "", "", "")
                 done += 1
                 self.progress.emit(done, total)
-                if alive:
-                    self.found.emit(ip, hostname, rtt)
+                if result[0]:
+                    _, rtt, hostname, mac, vendor, iface = result
+                    self.found.emit(ip, hostname, rtt, mac, vendor, iface)
         self.finished.emit()
 
-    def _ping_one(self, ip: str) -> tuple[bool, float, str]:
+    def _ping_one(self, ip: str) -> tuple[bool, float, str, str, str, str]:
         try:
             proc = subprocess.run(
                 ['ping', '-c', '1', '-W', str(self._timeout), ip],
                 capture_output=True, text=True, timeout=self._timeout + 2,
             )
             if proc.returncode == 0:
-                m = re.search(r'time=(\d+\.?\d*)', proc.stdout)
-                rtt = float(m.group(1)) if m else 0.0
-                hostname = _resolve_hostname(ip, self._timeout)
-                return True, rtt, hostname
+                m    = re.search(r'time=(\d+\.?\d*)', proc.stdout)
+                rtt  = float(m.group(1)) if m else 0.0
+                host = _resolve_hostname(ip, self._timeout)
+                mac, iface = _arp_entry(ip)
+                vendor = _vendor_of(mac)
+                return True, rtt, host, mac, vendor, iface
         except Exception:
             pass
-        return False, -1.0, ""
+        return False, -1.0, "", "", "", ""
 
     def cancel(self) -> None:
         self._cancelled = True
@@ -199,13 +258,16 @@ class IpScannerPage(QWidget):
         self._progress.setVisible(False)
         layout.addWidget(self._progress)
 
-        self._table = QTableWidget(0, 4)
+        self._table = QTableWidget(0, 7)
         self._table.setHorizontalHeaderLabels([
-            "", tr("ipscan_col_ip"), tr("ipscan_col_host"), tr("ipscan_col_rtt"),
+            "", tr("ipscan_col_ip"), tr("ipscan_col_host"),
+            tr("ipscan_col_mac"), tr("ipscan_col_vendor"),
+            tr("ipscan_col_iface"), tr("ipscan_col_rtt"),
         ])
         hdr = self._table.horizontalHeader()
         hdr.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        hdr.setSectionResizeMode(_C_HOST, QHeaderView.ResizeMode.Stretch)
+        hdr.setSectionResizeMode(_C_HOST,   QHeaderView.ResizeMode.Stretch)
+        hdr.setSectionResizeMode(_C_VENDOR, QHeaderView.ResizeMode.Stretch)
         self._table.setColumnWidth(_C_DOT, 28)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -267,7 +329,8 @@ class IpScannerPage(QWidget):
         self._worker.finished.connect(self._on_finished)
         self._worker.start()
 
-    def _on_found(self, ip: str, hostname: str, rtt: float) -> None:
+    def _on_found(self, ip: str, hostname: str, rtt: float,
+                  mac: str, vendor: str, iface: str) -> None:
         r = self._table.rowCount()
         self._table.insertRow(r)
         self._table.setVisible(True)
@@ -275,10 +338,12 @@ class IpScannerPage(QWidget):
         dot = QTableWidgetItem("●")
         dot.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         dot.setForeground(_GREEN)
-        self._table.setItem(r, _C_DOT, dot)
-
-        self._table.setItem(r, _C_IP, QTableWidgetItem(ip))
-        self._table.setItem(r, _C_HOST, QTableWidgetItem(hostname))
+        self._table.setItem(r, _C_DOT,   dot)
+        self._table.setItem(r, _C_IP,    QTableWidgetItem(ip))
+        self._table.setItem(r, _C_HOST,  QTableWidgetItem(hostname))
+        self._table.setItem(r, _C_MAC,   QTableWidgetItem(mac))
+        self._table.setItem(r, _C_VENDOR,QTableWidgetItem(vendor))
+        self._table.setItem(r, _C_IFACE, QTableWidgetItem(iface))
         rtt_item = QTableWidgetItem(f"{rtt:.1f}")
         rtt_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         self._table.setItem(r, _C_RTT, rtt_item)
@@ -298,13 +363,17 @@ class IpScannerPage(QWidget):
             self._btn_csv.setVisible(True)
             self._btn_txt.setVisible(True)
 
-    def _table_rows(self) -> list[tuple[str, str, str]]:
+    def _table_rows(self) -> list[tuple[str, str, str, str, str, str]]:
         rows = []
         for r in range(self._table.rowCount()):
-            ip       = self._table.item(r, _C_IP).text()
-            hostname = self._table.item(r, _C_HOST).text()
-            rtt      = self._table.item(r, _C_RTT).text()
-            rows.append((ip, hostname, rtt))
+            rows.append((
+                self._table.item(r, _C_IP).text(),
+                self._table.item(r, _C_HOST).text(),
+                self._table.item(r, _C_MAC).text(),
+                self._table.item(r, _C_VENDOR).text(),
+                self._table.item(r, _C_IFACE).text(),
+                self._table.item(r, _C_RTT).text(),
+            ))
         return rows
 
     def _export_csv(self) -> None:
@@ -316,9 +385,9 @@ class IpScannerPage(QWidget):
             return
         try:
             with open(path, 'w', encoding='utf-8') as f:
-                f.write("IP,Hostname,RTT_ms\n")
-                for ip, hostname, rtt in self._table_rows():
-                    f.write(f"{ip},{hostname},{rtt}\n")
+                f.write("IP,Hostname,MAC,Vendor,Interface,RTT_ms\n")
+                for ip, host, mac, vendor, iface, rtt in self._table_rows():
+                    f.write(f"{ip},{host},{mac},{vendor},{iface},{rtt}\n")
         except OSError as exc:
             QMessageBox.critical(self, "Error", str(exc))
 
@@ -330,23 +399,26 @@ class IpScannerPage(QWidget):
         if not path:
             return
         try:
-            rows = self._table_rows()
-            h_ip   = tr("ipscan_txt_ip_hdr")
-            h_host = tr("ipscan_txt_host_hdr")
-            h_rtt  = tr("ipscan_txt_rtt_hdr")
-            w_ip   = max(len(h_ip),   max((len(r[0]) for r in rows), default=0))
-            w_host = max(len(h_host), max((len(r[1]) for r in rows), default=0))
-            w_rtt  = max(len(h_rtt),  max((len(r[2]) for r in rows), default=0))
-            sep    = f"+{'-'*(w_ip+2)}+{'-'*(w_host+2)}+{'-'*(w_rtt+2)}+"
-            header = f"| {h_ip:<{w_ip}} | {h_host:<{w_host}} | {h_rtt:<{w_rtt}} |"
+            rows   = self._table_rows()
+            h_ip   = tr("ipscan_col_ip")
+            h_host = tr("ipscan_col_host")
+            h_mac  = tr("ipscan_col_mac")
+            h_vend = tr("ipscan_col_vendor")
+            h_if   = tr("ipscan_col_iface")
+            h_rtt  = tr("ipscan_col_rtt")
+            cols   = list(zip(
+                [h_ip, h_host, h_mac, h_vend, h_if, h_rtt],
+                [[r[i] for r in rows] for i in range(6)],
+            ))
+            widths = [max(len(hdr), max((len(v) for v in vals), default=0))
+                      for hdr, vals in cols]
+            sep    = "+" + "+".join("-" * (w + 2) for w in widths) + "+"
+            hrow   = "| " + " | ".join(f"{h:<{w}}" for (h, _), w in zip(cols, widths)) + " |"
             with open(path, 'w', encoding='utf-8') as f:
-                f.write(f"{self._input.text().strip()}\n")
-                f.write(f"{self._status.text()}\n\n")
-                f.write(sep + "\n")
-                f.write(header + "\n")
-                f.write(sep + "\n")
-                for ip, hostname, rtt in rows:
-                    f.write(f"| {ip:<{w_ip}} | {hostname:<{w_host}} | {rtt:<{w_rtt}} |\n")
+                f.write(f"{self._input.text().strip()}\n{self._status.text()}\n\n")
+                f.write(sep + "\n" + hrow + "\n" + sep + "\n")
+                for row in rows:
+                    f.write("| " + " | ".join(f"{v:<{w}}" for v, w in zip(row, widths)) + " |\n")
                 f.write(sep + "\n")
         except OSError as exc:
             QMessageBox.critical(self, "Error", str(exc))
