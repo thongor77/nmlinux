@@ -21,6 +21,7 @@ from nmlinux.pages.snmp import SnmpPage
 from nmlinux.pages.sntp import SntpPage
 from nmlinux.pages.ssh import SshPage
 from nmlinux.pages.traceroute import TraceroutePage
+from nmlinux.pages.bandwidth import BandwidthPage
 from nmlinux.pages.settings import SettingsPage
 from nmlinux.pages.about import AboutPage
 
@@ -40,6 +41,7 @@ _TOOLS = [
     (("clock", "chronometer", "appointment-soon"),                                   "SNTP / NTP",   SntpPage),
     (("utilities-terminal", "terminal", "gnome-terminal"),                           "SSH",          SshPage),
     (("network-wired", "network-transmit-receive"),                                  "Traceroute",   TraceroutePage),
+    (("network-transmit-receive", "network-wired", "utilities-system-monitor"),      "Bandwidth",    BandwidthPage),
 ]
 
 
