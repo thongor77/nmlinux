@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QSplitter, QVBoxLayout, QWidget,
 )
 
+from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 
 _STORE_PATH = Path.home() / '.local' / 'share' / 'nmlinux' / 'wol_hosts.json'
@@ -145,6 +146,9 @@ class WolPage(QWidget):
         self._f_mac.setPlaceholderText("AA:BB:CC:DD:EE:FF")
         self._f_broadcast.setPlaceholderText("255.255.255.255")
         self._f_port.setPlaceholderText("9")
+        self._f_mac.textChanged.connect(self._update_cli)
+        self._f_broadcast.textChanged.connect(self._update_cli)
+        self._f_port.textChanged.connect(self._update_cli)
 
         form.addRow(tr("wol_lbl_name"),      self._f_name)
         form.addRow(tr("wol_lbl_mac"),       self._f_mac)
@@ -267,6 +271,15 @@ class WolPage(QWidget):
         else:
             self._clear_form()
         self._lbl_status.setText("")
+
+    def _update_cli(self) -> None:
+        bar = get_cli_bar()
+        if not bar:
+            return
+        mac  = self._f_mac.text().strip()
+        bcast = self._f_broadcast.text().strip() or '255.255.255.255'
+        port = self._f_port.text().strip() or '9'
+        bar.set_cmd(f'wakeonlan -b {bcast} -p {port} {mac}' if mac else '')
 
     # ── Wake ─────────────────────────────────────────────────────────────────
 

@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt, QThread, Signal
 
+from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 
 
@@ -139,10 +140,12 @@ class PortScannerPage(QWidget):
         self._host_input = QLineEdit()
         self._host_input.setPlaceholderText(tr("pscan_host_ph"))
         self._host_input.returnPressed.connect(self._on_scan)
+        self._host_input.textChanged.connect(self._update_cli)
 
         self._ports_input = QLineEdit()
         self._ports_input.setPlaceholderText(tr("pscan_ports_ph"))
         self._ports_input.setFixedWidth(220)
+        self._ports_input.textChanged.connect(self._update_cli)
 
         self._preset_cb = QComboBox()
         self._preset_keys = list(_PRESETS_VALUES.keys())
@@ -215,6 +218,18 @@ class PortScannerPage(QWidget):
         value = _PRESETS_VALUES.get(key, "")
         if value:
             self._ports_input.setText(value)
+
+    def _update_cli(self) -> None:
+        bar = get_cli_bar()
+        if not bar:
+            return
+        host  = self._host_input.text().strip()
+        ports = self._ports_input.text().strip()
+        if not host:
+            bar.set_cmd('')
+            return
+        p = f'-p {ports}' if ports else '-p 1-1024'
+        bar.set_cmd(f'nmap -sT {p} {host}')
 
     def _on_scan(self) -> None:
         if self._worker and self._worker.isRunning():

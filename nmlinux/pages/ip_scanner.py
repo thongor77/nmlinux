@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt, QThread, Signal
 
+from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 
 
@@ -236,12 +237,14 @@ class IpScannerPage(QWidget):
             "192.168.1.0/24   ou   192.168.1.1-254   ou   10.0.0.1-10.0.0.50"
         )
         self._input.returnPressed.connect(self._on_scan)
+        self._input.textChanged.connect(self._update_cli)
 
         self._timeout_sb = QSpinBox()
         self._timeout_sb.setRange(1, 10)
         self._timeout_sb.setValue(1)
         self._timeout_sb.setSuffix(" s")
         self._timeout_sb.setFixedWidth(64)
+        self._timeout_sb.valueChanged.connect(self._update_cli)
 
         self._btn = QPushButton(tr("ipscan_scan_btn"))
         self._btn.setDefault(True)
@@ -294,6 +297,14 @@ class IpScannerPage(QWidget):
         bottom.addWidget(self._btn_txt)
         layout.addLayout(bottom)
         layout.addStretch(1)
+
+    def _update_cli(self) -> None:
+        bar = get_cli_bar()
+        if not bar:
+            return
+        target = self._input.text().strip()
+        t = self._timeout_sb.value()
+        bar.set_cmd(f'ping -c 1 -W {t} <ip>  # sur chaque adresse de {target}' if target else '')
 
     def _on_scan(self) -> None:
         if self._worker and self._worker.isRunning():

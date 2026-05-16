@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QThread, Signal
 
+from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 
 
@@ -139,6 +140,9 @@ class SntpPage(QWidget):
         self._server = QLineEdit()
         self._server.setPlaceholderText("pool.ntp.org")
         self._server.returnPressed.connect(self._query)
+        self._server.textChanged.connect(lambda t: get_cli_bar() and get_cli_bar().set_cmd(
+            f'ntpdate -q -u {t.strip()}' if t.strip() else ''
+        ))
         self._preset = QComboBox()
         self._preset.addItem(tr("sntp_preset_ph"))
         for s in _SERVERS:

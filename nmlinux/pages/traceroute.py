@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
+from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 
 _GEOJSON = Path(__file__).parent.parent / "assets" / "world.geojson"
@@ -394,6 +395,9 @@ class TraceroutePage(QWidget):
         self._input = QLineEdit()
         self._input.setPlaceholderText(tr("trace_target_ph"))
         self._input.returnPressed.connect(self._on_start)
+        self._input.textChanged.connect(lambda t: get_cli_bar() and get_cli_bar().set_cmd(
+            (f'traceroute {t.strip()}' if _CMD_TRACEROUTE else f'tracepath -b {t.strip()}') if t.strip() else ''
+        ))
         self._btn_go   = QPushButton(tr("trace_start_btn"))
         self._btn_go.setDefault(True)
         self._btn_go.clicked.connect(self._on_start)

@@ -16,6 +16,7 @@ from PySide6.QtCore import Qt
 
 from nmlinux.core.ssh import SshConnection, SshGroup, SshStore, build_ssh_args
 from nmlinux.core.terminal import SshWorker
+from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 from nmlinux.pages.terminal_view import TerminalView
 
@@ -428,6 +429,9 @@ class SshPage(QWidget):
         self._det["command"].setText(conn.ssh_command)
         self._det["notes"].setText(conn.notes or "")
         self._right.setCurrentIndex(_DETAIL)
+        bar = get_cli_bar()
+        if bar:
+            bar.set_cmd(' '.join(build_ssh_args(conn)))
 
     def _on_connect(self) -> None:
         conn = self._current_conn()

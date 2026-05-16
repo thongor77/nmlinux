@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtGui import QFont
 
+from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 
 
@@ -57,6 +58,9 @@ class WhoisPage(QWidget):
         self._input = QLineEdit()
         self._input.setPlaceholderText(tr("whois_placeholder"))
         self._input.returnPressed.connect(self._lookup)
+        self._input.textChanged.connect(
+            lambda t: get_cli_bar() and get_cli_bar().set_cmd(f'whois {t.strip()}' if t.strip() else '')
+        )
         self._btn = QPushButton(tr("whois_search_btn"))
         self._btn.setDefault(True)
         self._btn.clicked.connect(self._lookup)

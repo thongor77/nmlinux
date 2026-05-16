@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QSplitter, QVBoxLayout, QWidget,
 )
 
+from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 
 # ── Palette ──────────────────────────────────────────────────────────────────
@@ -305,6 +306,9 @@ class BandwidthPage(QWidget):
         if item is None:
             return
         self._selected = item.text()
+        bar = get_cli_bar()
+        if bar:
+            bar.set_cmd(f'cat /proc/net/dev  # interface : {self._selected}')
         self._lbl_iface.setText(self._selected)
         self._graph.clear()
         self._lbl_rx.setText('↓  —')

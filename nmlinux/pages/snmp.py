@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import QThread, Signal
 
+from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 
 
@@ -120,27 +121,32 @@ class SnmpPage(QWidget):
         grid.addWidget(QLabel(tr("snmp_host_lbl")), 0, 0)
         self._host = QLineEdit()
         self._host.setPlaceholderText("192.168.1.1")
+        self._host.textChanged.connect(self._update_cli)
         grid.addWidget(self._host, 0, 1)
 
         grid.addWidget(QLabel(tr("snmp_port_lbl")), 0, 2)
         self._port = QLineEdit("161")
         self._port.setFixedWidth(70)
+        self._port.textChanged.connect(self._update_cli)
         grid.addWidget(self._port, 0, 3)
 
         grid.addWidget(QLabel(tr("snmp_community_lbl")), 1, 0)
         self._community = QLineEdit("public")
+        self._community.textChanged.connect(self._update_cli)
         grid.addWidget(self._community, 1, 1)
 
         grid.addWidget(QLabel(tr("snmp_version_lbl")), 1, 2)
         self._version = QComboBox()
         self._version.addItems(["2c", "1"])
         self._version.setFixedWidth(70)
+        self._version.currentIndexChanged.connect(self._update_cli)
         grid.addWidget(self._version, 1, 3)
 
         grid.addWidget(QLabel(tr("snmp_oid_lbl")), 2, 0)
         oid_row = QHBoxLayout()
         self._oid_input = QLineEdit()
         self._oid_input.setPlaceholderText("1.3.6.1.2.1.1.1.0")
+        self._oid_input.textChanged.connect(self._update_cli)
         self._oid_preset = QComboBox()
         self._oid_preset.addItem(tr("snmp_oid_preset_0"))
         for i in range(1, 12):
@@ -153,6 +159,7 @@ class SnmpPage(QWidget):
         grid.addWidget(QLabel(tr("snmp_mode_lbl")), 3, 0)
         self._mode = QComboBox()
         self._mode.addItems([tr("snmp_mode_walk"), tr("snmp_mode_get")])
+        self._mode.currentIndexChanged.connect(self._update_cli)
         grid.addWidget(self._mode, 3, 1)
 
         layout.addLayout(grid)
@@ -178,6 +185,22 @@ class SnmpPage(QWidget):
         hdr.setSectionResizeMode(_COL_VALUE, QHeaderView.ResizeMode.Stretch)
         layout.addWidget(self._table, 10)
         layout.addStretch(1)
+
+    def _update_cli(self) -> None:
+        bar = get_cli_bar()
+        if not bar:
+            return
+        host = self._host.text().strip()
+        oid  = self._oid_input.text().strip()
+        if not host or not oid:
+            bar.set_cmd('')
+            return
+        mode = 'snmpwalk' if self._mode.currentIndex() == 0 else 'snmpget'
+        ver  = self._version.currentText()
+        comm = self._community.text().strip() or 'public'
+        port = self._port.text().strip()
+        target = f'{host}:{port}' if port and port != '161' else host
+        bar.set_cmd(f'{mode} -v{ver} -c {comm} {target} {oid}')
 
     def _on_preset(self, idx: int) -> None:
         if idx > 0:

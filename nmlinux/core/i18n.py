@@ -446,6 +446,11 @@ _T: dict[str, dict[str, str]] = {
         "conn_status_disconnecting": "Déconnexion de {name}…",
         "conn_status_deleting":      "Suppression de {name}…",
         "conn_status_ok":            "Opération réussie.",
+
+        # ── Barre CLI globale ────────────────────────────────────────────────
+        "cli_bar_idle":  "sélectionnez un outil et renseignez les paramètres…",
+        "cli_bar_copy":  "Copier",
+        "cli_bar_about": "équivalent CLI · à des fins pédagogiques",
     },
 
     "en": {
@@ -873,6 +878,11 @@ _T: dict[str, dict[str, str]] = {
         "conn_status_disconnecting": "Disconnecting from {name}…",
         "conn_status_deleting":      "Deleting {name}…",
         "conn_status_ok":            "Operation successful.",
+
+        # ── Global CLI bar ───────────────────────────────────────────────────
+        "cli_bar_idle":  "select a tool and fill in the parameters…",
+        "cli_bar_copy":  "Copy",
+        "cli_bar_about": "CLI equivalent · for learning purposes",
     },
 
     "es": {
@@ -1301,6 +1311,11 @@ _T: dict[str, dict[str, str]] = {
         "conn_status_disconnecting": "Desconectando de {name}…",
         "conn_status_deleting":      "Eliminando {name}…",
         "conn_status_ok":            "Operación exitosa.",
+
+        # ── Barra CLI global ─────────────────────────────────────────────────
+        "cli_bar_idle":  "selecciona una herramienta y completa los parámetros…",
+        "cli_bar_copy":  "Copiar",
+        "cli_bar_about": "equivalente CLI · con fines pedagógicos",
     },
 
     "de": {
@@ -1729,6 +1744,11 @@ _T: dict[str, dict[str, str]] = {
         "conn_status_disconnecting": "Trenne {name}…",
         "conn_status_deleting":      "{name} löschen…",
         "conn_status_ok":            "Vorgang erfolgreich.",
+
+        # ── Globale CLI-Leiste ───────────────────────────────────────────────
+        "cli_bar_idle":  "Werkzeug wählen und Parameter eingeben…",
+        "cli_bar_copy":  "Kopieren",
+        "cli_bar_about": "CLI-Äquivalent · zu Lernzwecken",
     },
 }
 

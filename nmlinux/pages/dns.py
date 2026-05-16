@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QThread, Signal
 
+from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 
 
@@ -111,10 +112,12 @@ class DnsPage(QWidget):
         self._input = QLineEdit()
         self._input.setPlaceholderText(tr("dns_placeholder"))
         self._input.returnPressed.connect(self._on_query)
+        self._input.textChanged.connect(self._update_cli)
 
         self._rtype_cb = QComboBox()
         self._rtype_cb.addItems(_RTYPES)
         self._rtype_cb.setFixedWidth(72)
+        self._rtype_cb.currentIndexChanged.connect(self._update_cli)
 
         self._server_cb = QComboBox()
         self._server_cb.setEditable(True)
@@ -122,6 +125,7 @@ class DnsPage(QWidget):
             label = tr("dns_server_system") if key == "system" else key
             self._server_cb.addItem(label)
         self._server_cb.setFixedWidth(210)
+        self._server_cb.currentIndexChanged.connect(self._update_cli)
 
         self._btn = QPushButton(tr("dns_resolve_btn"))
         self._btn.setDefault(True)
@@ -150,6 +154,25 @@ class DnsPage(QWidget):
         self._status.setWordWrap(True)
         layout.addWidget(self._status)
         layout.addStretch(1)
+
+    def _update_cli(self) -> None:
+        bar = get_cli_bar()
+        if not bar:
+            return
+        host = self._input.text().strip()
+        rtype = self._rtype_cb.currentText()
+        ns = self._nameserver()
+        if not host:
+            bar.set_cmd('')
+            return
+        parts = ['dig']
+        if ns:
+            parts.append(f'@{ns}')
+        if rtype == 'PTR':
+            parts += ['-x', host]
+        else:
+            parts += [host, rtype]
+        bar.set_cmd(' '.join(parts))
 
     def _nameserver(self) -> str | None:
         text = self._server_cb.currentText().strip()

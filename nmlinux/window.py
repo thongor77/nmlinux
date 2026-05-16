@@ -6,6 +6,7 @@ from PySide6.QtCore import QSize
 
 from nmlinux.core.i18n import tr
 from nmlinux.core.icons import themed_icon
+from nmlinux.core.cli_bar import CliBar
 
 from nmlinux.pages.dashboard import DashboardPage
 from nmlinux.pages.interfaces import InterfacesPage
@@ -63,7 +64,14 @@ class MainWindow(QMainWindow):
         root.setSpacing(0)
 
         root.addWidget(self._build_sidebar())
-        root.addWidget(self._build_stack(), 1)
+
+        right = QWidget()
+        rv = QVBoxLayout(right)
+        rv.setContentsMargins(0, 0, 0, 0)
+        rv.setSpacing(0)
+        rv.addWidget(self._build_stack(), 1)
+        rv.addWidget(CliBar())
+        root.addWidget(right, 1)
 
     def _build_sidebar(self) -> QFrame:
         frame = QFrame()

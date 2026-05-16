@@ -8,13 +8,14 @@ import subprocess
 from typing import NamedTuple
 
 from PySide6.QtCore import Qt, QThread, QTimer, Signal
-from PySide6.QtGui import QBrush, QColor, QFont
+from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
-    QApplication, QComboBox, QFormLayout, QFrame, QHBoxLayout, QHeaderView,
+    QComboBox, QFormLayout, QFrame, QHBoxLayout, QHeaderView,
     QLabel, QLineEdit, QMessageBox, QPushButton, QScrollArea,
     QSplitter, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 
 _CMD_NMCLI = shutil.which('nmcli')
@@ -156,66 +157,28 @@ class _ActionWorker(QThread):
 
 # ── CLI bar ───────────────────────────────────────────────────────────────────
 
-class _CliBar(QWidget):
-    """Terminal-style bar — shows the nmcli command that will be / was executed."""
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self.setFixedHeight(38)
-        self.setStyleSheet('background-color: #11111b; border-radius: 4px;')
-
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 0, 6, 0)
-        layout.setSpacing(6)
-
-        mono = QFont('Monospace', 9)
-
-        prompt = QLabel('$')
-        prompt.setFont(mono)
-        prompt.setStyleSheet('color: #a6e3a1; font-weight: bold;')
-        layout.addWidget(prompt)
-
-        self._lbl = QLabel(tr('conn_cli_idle'))
-        self._lbl.setFont(mono)
-        self._lbl.setStyleSheet('color: #cdd6f4;')
-        self._lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        layout.addWidget(self._lbl, 1)
-
-        self._btn = QPushButton(tr('conn_cli_copy'))
-        self._btn.setFlat(True)
-        self._btn.setStyleSheet('color: #6c7086; font-size: 10px;')
-        self._btn.clicked.connect(self._copy)
-        layout.addWidget(self._btn)
-
-    def set_cmd(self, cmd: str) -> None:
-        self._lbl.setText(cmd)
-
-    def get_cmd(self) -> str:
-        return self._lbl.text()
-
-    def _copy(self) -> None:
-        QApplication.clipboard().setText(self._lbl.text())
-
-
 class _CliButton(QPushButton):
-    """Button that previews its nmcli command in the CLI bar when hovered."""
+    """Button that previews its nmcli command in the global CLI bar when hovered."""
 
-    def __init__(self, label: str, bar: _CliBar,
-                 cmd_fn, parent: QWidget | None = None) -> None:
+    def __init__(self, label: str, cmd_fn,
+                 parent: QWidget | None = None) -> None:
         super().__init__(label, parent)
-        self._bar    = bar
         self._cmd_fn = cmd_fn
         self._saved  = ''
 
     def enterEvent(self, event) -> None:                    # noqa: N802
-        self._saved = self._bar.get_cmd()
-        cmd = self._cmd_fn()
-        if cmd:
-            self._bar.set_cmd(cmd)
+        bar = get_cli_bar()
+        if bar:
+            self._saved = bar.get_cmd()
+            cmd = self._cmd_fn()
+            if cmd:
+                bar.set_cmd(cmd)
         super().enterEvent(event)
 
     def leaveEvent(self, event) -> None:                    # noqa: N802
-        self._bar.set_cmd(self._saved)
+        bar = get_cli_bar()
+        if bar:
+            bar.set_cmd(self._saved)
         super().leaveEvent(event)
 
 
@@ -263,11 +226,9 @@ class ConnectionManagerPage(QWidget):
         self._search.textChanged.connect(self._apply_filter)
         bar.addWidget(self._search, 1)
 
-        self._cli_bar = _CliBar()
-
         self._btn_refresh = _CliButton(
-            tr('conn_refresh_btn'), self._cli_bar,
-            lambda: f'nmcli connection show',
+            tr('conn_refresh_btn'),
+            lambda: 'nmcli connection show',
         )
         self._btn_refresh.clicked.connect(self._refresh)
         bar.addWidget(self._btn_refresh)
@@ -333,22 +294,22 @@ class ConnectionManagerPage(QWidget):
         # Action buttons
         acts = QHBoxLayout()
         self._btn_connect = _CliButton(
-            tr('conn_connect_btn'), self._cli_bar,
+            tr('conn_connect_btn'),
             lambda: (f'nmcli connection up "{self._current.name}"'
                      if self._current else ''),
         )
         self._btn_disconnect = _CliButton(
-            tr('conn_disconnect_btn'), self._cli_bar,
+            tr('conn_disconnect_btn'),
             lambda: (f'nmcli connection down "{self._current.name}"'
                      if self._current else ''),
         )
         self._btn_edit = _CliButton(
-            tr('conn_edit_btn'), self._cli_bar,
+            tr('conn_edit_btn'),
             lambda: (f'nm-connection-editor --edit {self._current.uuid}'
                      if self._current else ''),
         )
         self._btn_delete = _CliButton(
-            tr('conn_delete_btn'), self._cli_bar,
+            tr('conn_delete_btn'),
             lambda: (f'nmcli connection delete "{self._current.name}"'
                      if self._current else ''),
         )
@@ -366,19 +327,6 @@ class ConnectionManagerPage(QWidget):
         self._status.setWordWrap(True)
         rv.addWidget(self._status)
 
-        # CLI bar — right panel only, with pedagogical caption
-        cli_caption = QHBoxLayout()
-        cli_caption.setContentsMargins(0, 4, 0, 0)
-        lbl_cmd = QLabel(tr('conn_cli_header'))
-        lbl_cmd.setStyleSheet('font-size: 10px; color: #6c7086;')
-        cli_caption.addWidget(lbl_cmd)
-        lbl_learn = QLabel(tr('conn_cli_about'))
-        lbl_learn.setStyleSheet('font-size: 10px; color: #45475a; font-style: italic;')
-        lbl_learn.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        cli_caption.addWidget(lbl_learn, 1)
-        rv.addLayout(cli_caption)
-        rv.addWidget(self._cli_bar)
-
         splitter.addWidget(right)
         splitter.setSizes([380, 520])
         root.addWidget(splitter, 1)
@@ -388,7 +336,9 @@ class ConnectionManagerPage(QWidget):
     # ── Refresh ──────────────────────────────────────────────────────────────
 
     def _refresh(self) -> None:
-        self._cli_bar.set_cmd('nmcli connection show')
+        bar = get_cli_bar()
+        if bar:
+            bar.set_cmd('nmcli connection show')
         w = _ListWorker()
         w.result.connect(self._on_list)
         w.error.connect(lambda e: self._status.setText(
@@ -453,7 +403,9 @@ class ConnectionManagerPage(QWidget):
             return
 
         self._det_title.setText(name)
-        self._cli_bar.set_cmd(f'nmcli connection show "{name}"')
+        bar = get_cli_bar()
+        if bar:
+            bar.set_cmd(f'nmcli connection show "{name}"')
         self._set_actions_enabled(True)
         is_active = self._current.state == 'activated'
         self._btn_connect.setEnabled(not is_active)
@@ -516,9 +468,9 @@ class ConnectionManagerPage(QWidget):
         self._run_action(cmd, tr('conn_status_deleting', name=self._current.name))
 
     def _run_action(self, cmd: list[str], status: str) -> None:
-        self._cli_bar.set_cmd(' '.join(
-            f'"{p}"' if ' ' in p else p for p in cmd
-        ))
+        bar = get_cli_bar()
+        if bar:
+            bar.set_cmd(' '.join(f'"{p}"' if ' ' in p else p for p in cmd))
         self._set_status(status, error=False)
         self._set_actions_enabled(False)
         if hasattr(self, '_timer'):

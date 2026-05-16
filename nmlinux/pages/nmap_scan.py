@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QColor
 
+from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 
 
@@ -139,17 +140,20 @@ class NmapPage(QWidget):
         self._target = QLineEdit()
         self._target.setPlaceholderText("192.168.1.0/24  |  hostname  |  10.0.0.1-50")
         self._target.returnPressed.connect(self._scan)
+        self._target.textChanged.connect(self._update_cli)
         grid.addWidget(self._target, 0, 1)
 
         grid.addWidget(QLabel(tr("nmap_mode_lbl")), 1, 0)
         self._mode = QComboBox()
         for i in range(7):
             self._mode.addItem(tr(f"nmap_mode_{i}"))
+        self._mode.currentIndexChanged.connect(self._update_cli)
         grid.addWidget(self._mode, 1, 1)
 
         grid.addWidget(QLabel(tr("nmap_ports_lbl")), 2, 0)
         self._ports = QLineEdit()
         self._ports.setPlaceholderText(tr("nmap_ports_ph"))
+        self._ports.textChanged.connect(self._update_cli)
         grid.addWidget(self._ports, 2, 1)
 
         grid.setColumnStretch(1, 1)
@@ -185,6 +189,22 @@ class NmapPage(QWidget):
         hdr.setSectionResizeMode(_COL_VERSION, QHeaderView.ResizeMode.Stretch)
         layout.addWidget(self._table, 10)
         layout.addStretch(1)
+
+    def _update_cli(self) -> None:
+        bar = get_cli_bar()
+        if not bar:
+            return
+        target = self._target.text().strip()
+        if not target:
+            bar.set_cmd('')
+            return
+        flags = _SCAN_FLAGS[self._mode.currentIndex()]
+        ports = self._ports.text().strip()
+        cmd = ['nmap'] + flags
+        if ports:
+            cmd += ['-p', ports]
+        cmd.append(target)
+        bar.set_cmd(' '.join(cmd))
 
     def _scan(self) -> None:
         target = self._target.text().strip()

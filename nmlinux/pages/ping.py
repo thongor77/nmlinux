@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt, QThread, Signal
 
+from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 
 
@@ -105,11 +106,13 @@ class PingPage(QWidget):
         self._input = QLineEdit()
         self._input.setPlaceholderText(tr("ping_placeholder"))
         self._input.returnPressed.connect(self._on_add)
+        self._input.textChanged.connect(self._update_cli)
 
         self._interval_cb = QComboBox()
         for label, val in [("1 s", 1), ("2 s", 2), ("5 s", 5), ("10 s", 10), ("30 s", 30)]:
             self._interval_cb.addItem(label, val)
         self._interval_cb.setCurrentIndex(1)
+        self._interval_cb.currentIndexChanged.connect(self._update_cli)
 
         btn_add   = QPushButton(tr("ping_add_btn"))
         btn_add.setDefault(True)
@@ -141,6 +144,14 @@ class PingPage(QWidget):
         self._table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self._table.verticalHeader().setVisible(False)
         layout.addWidget(self._table, 1)
+
+    def _update_cli(self) -> None:
+        bar = get_cli_bar()
+        if not bar:
+            return
+        host = self._input.text().strip()
+        interval = self._interval_cb.currentData()
+        bar.set_cmd(f'ping -i {interval} {host}' if host else '')
 
     def _on_add(self) -> None:
         host = self._input.text().strip()
