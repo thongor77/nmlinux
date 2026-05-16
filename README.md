@@ -38,6 +38,7 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 | **SNTP / NTP** | Pure Python RFC 4330 UDP client, offset/delay/stratum/reference |
 | **SSH** | Embedded PTY terminal (pyte/VT100), saved connections (JSON), key auth, scrollback |
 | **Visual Traceroute** | Hop-by-hop route on a world map, live geolocation (ip-api.com), zoom & pan |
+| **Bandwidth** | Real-time per-interface throughput: 60s sliding graph, live speeds, session totals, peak |
 | **Settings** | Language selection (French, English, Spanish, German), persisted |
 
 ---
@@ -137,6 +138,7 @@ nmlinux/
     subnet.py       — Subnet Calculator
     terminal_view.py — TerminalView: pyte VT100 emulator + QPainter renderer
     traceroute.py   — Visual Traceroute: world map, geolocation, zoom/pan
+    bandwidth.py    — Bandwidth Monitor: per-interface 60s graph, live stats
     whois.py        — Whois
     wifi.py         — Wi-Fi
   assets/
