@@ -132,7 +132,7 @@ _T: dict[str, dict[str, str]] = {
         "dns_resolving":       "Résolution en cours…",
         "dns_records_found":   "{n} enregistrement(s) trouvé(s).",
         "dns_server_system":   "Système",
-        "dns_err_no_dig":      "'dig' introuvable — installez bind-tools (pacman -S bind)",
+        "dns_err_no_dig":      "'dig' introuvable — apt install dnsutils  /  pacman -S bind",
         "dns_err_timeout":     "Délai d'attente dépassé (10 s)",
         "dns_err_nxdomain":    "Domaine introuvable : {host}",
         "dns_err_servfail":    "Serveur DNS : SERVFAIL",
@@ -214,7 +214,7 @@ _T: dict[str, dict[str, str]] = {
         "nmap_scanning":        "Scan en cours…",
         "nmap_interrupted":     "Scan interrompu.",
         "nmap_done":            "{n} hôte(s) actif(s) sur {total} analysé(s)",
-        "nmap_err_not_found":   "La commande 'nmap' est introuvable. Installez nmap.",
+        "nmap_err_not_found":   "'nmap' introuvable — apt install nmap  /  pacman -S nmap",
         "nmap_err_timeout":     "Délai d'attente dépassé (5 min).",
         "nmap_err_xml":         "Erreur XML : {exc}",
 
@@ -224,7 +224,7 @@ _T: dict[str, dict[str, str]] = {
         "whois_search_btn":     "Rechercher",
         "whois_querying":       "Requête en cours…",
         "whois_no_response":    "Aucune réponse du serveur WHOIS.",
-        "whois_err_not_found":  "La commande 'whois' est introuvable. Installez whois.",
+        "whois_err_not_found":  "'whois' introuvable — apt install whois  /  pacman -S whois",
         "whois_err_timeout":    "Délai d'attente dépassé.",
 
         # ── SNMP ────────────────────────────────────────────────────────────
@@ -574,7 +574,7 @@ _T: dict[str, dict[str, str]] = {
         "dns_resolving":        "Resolving…",
         "dns_records_found":    "{n} record(s) found.",
         "dns_server_system":    "System",
-        "dns_err_no_dig":       "'dig' not found — install bind-tools",
+        "dns_err_no_dig":       "'dig' not found — apt install dnsutils  /  pacman -S bind",
         "dns_err_timeout":      "Timeout (10 s)",
         "dns_err_nxdomain":     "Domain not found: {host}",
         "dns_err_servfail":     "DNS server: SERVFAIL",
@@ -652,7 +652,7 @@ _T: dict[str, dict[str, str]] = {
         "nmap_scanning":        "Scanning…",
         "nmap_interrupted":     "Scan interrupted.",
         "nmap_done":            "{n} active host(s) out of {total} scanned",
-        "nmap_err_not_found":   "'nmap' command not found. Install nmap.",
+        "nmap_err_not_found":   "'nmap' not found — apt install nmap  /  pacman -S nmap",
         "nmap_err_timeout":     "Timeout (5 min).",
         "nmap_err_xml":         "XML error: {exc}",
 
@@ -661,7 +661,7 @@ _T: dict[str, dict[str, str]] = {
         "whois_search_btn":     "Search",
         "whois_querying":       "Querying…",
         "whois_no_response":    "No response from WHOIS server.",
-        "whois_err_not_found":  "'whois' command not found. Install whois.",
+        "whois_err_not_found":  "'whois' not found — apt install whois  /  pacman -S whois",
         "whois_err_timeout":    "Timeout.",
 
         "snmp_title":           "SNMP",
@@ -988,7 +988,7 @@ _T: dict[str, dict[str, str]] = {
         "dns_resolving":        "Resolviendo…",
         "dns_records_found":    "{n} registro(s) encontrado(s).",
         "dns_server_system":    "Sistema",
-        "dns_err_no_dig":       "'dig' no encontrado — instale bind-tools",
+        "dns_err_no_dig":       "'dig' no encontrado — apt install dnsutils  /  pacman -S bind",
         "dns_err_timeout":      "Tiempo de espera agotado (10 s)",
         "dns_err_nxdomain":     "Dominio no encontrado: {host}",
         "dns_err_servfail":     "Servidor DNS: SERVFAIL",
@@ -1066,7 +1066,7 @@ _T: dict[str, dict[str, str]] = {
         "nmap_scanning":        "Escaneando…",
         "nmap_interrupted":     "Scan interrumpido.",
         "nmap_done":            "{n} host(s) activo(s) de {total} analizados",
-        "nmap_err_not_found":   "Comando 'nmap' no encontrado. Instale nmap.",
+        "nmap_err_not_found":   "'nmap' no encontrado — apt install nmap  /  pacman -S nmap",
         "nmap_err_timeout":     "Tiempo de espera agotado (5 min).",
         "nmap_err_xml":         "Error XML: {exc}",
 
@@ -1075,7 +1075,7 @@ _T: dict[str, dict[str, str]] = {
         "whois_search_btn":     "Buscar",
         "whois_querying":       "Consultando…",
         "whois_no_response":    "Sin respuesta del servidor WHOIS.",
-        "whois_err_not_found":  "Comando 'whois' no encontrado. Instale whois.",
+        "whois_err_not_found":  "'whois' no encontrado — apt install whois  /  pacman -S whois",
         "whois_err_timeout":    "Tiempo de espera agotado.",
 
         "snmp_title":           "SNMP",
@@ -1421,7 +1421,7 @@ _T: dict[str, dict[str, str]] = {
         "dns_resolving":        "Auflösen…",
         "dns_records_found":    "{n} Eintrag/Einträge gefunden.",
         "dns_server_system":    "System",
-        "dns_err_no_dig":       "'dig' nicht gefunden — installiere bind-tools",
+        "dns_err_no_dig":       "'dig' nicht gefunden — apt install dnsutils  /  pacman -S bind",
         "dns_err_timeout":      "Zeitüberschreitung (10 s)",
         "dns_err_nxdomain":     "Domain nicht gefunden: {host}",
         "dns_err_servfail":     "DNS-Server: SERVFAIL",
@@ -1499,7 +1499,7 @@ _T: dict[str, dict[str, str]] = {
         "nmap_scanning":        "Scannen…",
         "nmap_interrupted":     "Scan unterbrochen.",
         "nmap_done":            "{n} aktiver Host(s) von {total} analysiert",
-        "nmap_err_not_found":   "Befehl 'nmap' nicht gefunden. Installiere nmap.",
+        "nmap_err_not_found":   "'nmap' nicht gefunden — apt install nmap  /  pacman -S nmap",
         "nmap_err_timeout":     "Zeitüberschreitung (5 min).",
         "nmap_err_xml":         "XML-Fehler: {exc}",
 
@@ -1508,7 +1508,7 @@ _T: dict[str, dict[str, str]] = {
         "whois_search_btn":     "Suchen",
         "whois_querying":       "Abfrage läuft…",
         "whois_no_response":    "Keine Antwort vom WHOIS-Server.",
-        "whois_err_not_found":  "Befehl 'whois' nicht gefunden. Installiere whois.",
+        "whois_err_not_found":  "'whois' nicht gefunden — apt install whois  /  pacman -S whois",
         "whois_err_timeout":    "Zeitüberschreitung.",
 
         "snmp_title":           "SNMP",

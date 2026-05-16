@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
-    QListWidget, QListWidgetItem, QStackedWidget, QFrame,
+    QListWidget, QListWidgetItem, QStackedWidget, QFrame, QSizePolicy,
 )
 from PySide6.QtCore import QSize
 
@@ -70,6 +70,13 @@ class MainWindow(QMainWindow):
         rv.setContentsMargins(0, 0, 0, 0)
         rv.setSpacing(0)
         rv.addWidget(self._build_stack(), 1)
+
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setFrameShadow(QFrame.Shadow.Sunken)
+        sep.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        rv.addWidget(sep)
+
         rv.addWidget(CliBar())
         root.addWidget(right, 1)
 
