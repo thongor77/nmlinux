@@ -240,3 +240,7 @@ class PingPage(QWidget):
     def closeEvent(self, event) -> None:
         self._on_clear_all()
         super().closeEvent(event)
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        self._update_cli()
+        super().showEvent(event)

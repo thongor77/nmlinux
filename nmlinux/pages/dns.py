@@ -227,3 +227,7 @@ class DnsPage(QWidget):
             self._table.setItem(r, 2, QTableWidgetItem(value))
 
         self._table.setVisible(True)
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        self._update_cli()
+        super().showEvent(event)

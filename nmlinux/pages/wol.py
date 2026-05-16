@@ -332,3 +332,7 @@ class WolPage(QWidget):
         if view and self._editing is not None:
             h = self._store.all()[self._editing]
             self._form_title.setText(h.name or h.mac)
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        self._update_cli()
+        super().showEvent(event)

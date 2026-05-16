@@ -6,7 +6,7 @@ from PySide6.QtCore import QSize
 
 from nmlinux.core.i18n import tr
 from nmlinux.core.icons import themed_icon
-from nmlinux.core.cli_bar import CliBar
+from nmlinux.core.cli_bar import CliBar, get_cli_bar
 
 from nmlinux.pages.dashboard import DashboardPage
 from nmlinux.pages.interfaces import InterfacesPage
@@ -152,6 +152,9 @@ class MainWindow(QMainWindow):
             self._nav_settings.clearSelection()
             self._nav_settings.setCurrentRow(-1)
             self._nav_settings.blockSignals(False)
+            bar = get_cli_bar()
+            if bar:
+                bar.set_cmd('')
             self._stack.setCurrentIndex(row)
 
     def _on_settings_nav_changed(self, row: int) -> None:

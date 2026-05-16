@@ -166,9 +166,6 @@ class InterfacesPage(QWidget):
         self._btn_refresh = QPushButton(tr("common_refresh"))
         self._btn_refresh.setFixedWidth(100)
         self._btn_refresh.clicked.connect(self._refresh)
-        bar = get_cli_bar()
-        if bar:
-            bar.set_cmd('ip -j addr show  |  nmcli device show')
         header.addWidget(title)
         header.addStretch(1)
         header.addWidget(self._btn_refresh)
@@ -235,3 +232,9 @@ class InterfacesPage(QWidget):
             self._detail.show_iface(self._ifaces[row])
         else:
             self._detail.setVisible(False)
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        bar = get_cli_bar()
+        if bar:
+            bar.set_cmd("ip -j addr show  |  nmcli device show")
+        super().showEvent(event)

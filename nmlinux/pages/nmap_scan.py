@@ -251,3 +251,7 @@ class NmapPage(QWidget):
         self._btn_stop.setEnabled(False)
         self._status.setText(tr("common_error_prefix", msg=msg))
         self._status.setStyleSheet("color: #f38ba8;")
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        self._update_cli()
+        super().showEvent(event)

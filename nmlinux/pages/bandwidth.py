@@ -325,3 +325,10 @@ class BandwidthPage(QWidget):
     def showEvent(self, event) -> None:                    # noqa: N802
         self._timer.start()
         super().showEvent(event)
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        bar = get_cli_bar()
+        if bar:
+            iface = getattr(self, '_selected', None)
+            bar.set_cmd(f'cat /proc/net/dev  # interface : {iface}' if iface else '')
+        super().showEvent(event)

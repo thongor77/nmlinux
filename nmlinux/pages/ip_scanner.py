@@ -439,3 +439,7 @@ class IpScannerPage(QWidget):
             self._worker.cancel()
             self._worker.wait(5000)
         super().closeEvent(event)
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        self._update_cli()
+        super().showEvent(event)
