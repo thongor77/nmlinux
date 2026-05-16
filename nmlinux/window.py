@@ -23,6 +23,7 @@ from nmlinux.pages.ssh import SshPage
 from nmlinux.pages.traceroute import TraceroutePage
 from nmlinux.pages.bandwidth import BandwidthPage
 from nmlinux.pages.wol import WolPage
+from nmlinux.pages.connection_manager import ConnectionManagerPage
 from nmlinux.pages.settings import SettingsPage
 from nmlinux.pages.about import AboutPage
 
@@ -44,6 +45,7 @@ _TOOLS = [
     (("network-wired", "network-transmit-receive"),                                  "Traceroute",   TraceroutePage),
     (("network-transmit-receive", "network-wired", "utilities-system-monitor"),      "Bandwidth",    BandwidthPage),
     (("system-shutdown", "system-reboot", "media-playback-start"),                  "Wake on LAN",  WolPage),
+    (("network-wired", "network-manager", "preferences-system-network"),            "Connexions",   ConnectionManagerPage),
 ]
 
 
