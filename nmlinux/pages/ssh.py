@@ -18,6 +18,7 @@ from nmlinux.core.ssh import SshConnection, SshGroup, SshStore, build_ssh_args
 from nmlinux.core.terminal import SshWorker
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
+from nmlinux.core.theme import color_ok, color_err
 from nmlinux.pages.terminal_view import TerminalView
 
 _EMPTY    = 0
@@ -217,7 +218,7 @@ class SshPage(QWidget):
         h_row = QHBoxLayout(header)
         h_row.setContentsMargins(12, 6, 12, 6)
         self._term_dot   = QLabel("●")
-        self._term_dot.setStyleSheet("color: #a6e3a1; font-size: 16px;")
+        self._term_dot.setStyleSheet(f"color: {color_ok()}; font-size: 16px;")
         self._term_label = QLabel()
         self._term_label.setStyleSheet("font-weight: bold;")
         btn_disc = QPushButton(QIcon.fromTheme("network-disconnect"), " Déconnecter")
@@ -636,14 +637,14 @@ class SshPage(QWidget):
         self._term_view.reset_screen()
 
         self._term_label.setText(f"{conn.display_name}  —  {conn.subtitle}")
-        self._term_dot.setStyleSheet("color: #a6e3a1; font-size: 16px;")
+        self._term_dot.setStyleSheet(f"color: {color_ok()}; font-size: 16px;")
         self._right.setCurrentIndex(_TERMINAL)
         self._term_view.setFocus()
         worker.start()
 
     def _on_term_exited(self, code: int) -> None:
         self._worker = None
-        self._term_dot.setStyleSheet("color: #f38ba8; font-size: 16px;")
+        self._term_dot.setStyleSheet(f"color: {color_err()}; font-size: 16px;")
         self._term_view.feed(
             f"\r\n\r\n── Session terminée (code {code}) ──\r\n".encode('utf-8')
         )

@@ -1,7 +1,7 @@
 """Global CLI preview bar — pedagogical feature shared across all pages."""
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QEvent
 from PySide6.QtGui import QColor, QFont, QPalette
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QWidget
 
@@ -18,6 +18,13 @@ def _dark_mode() -> bool:
     return QApplication.palette().color(QPalette.ColorRole.Window).lightness() < 128
 
 
+def _cli_colors(dark: bool) -> tuple[str, str, str, str, str]:
+    """Return (bg, prompt, text, muted, subtle) for current mode."""
+    if dark:
+        return '#11111b', '#a6e3a1', '#cdd6f4', '#7f849c', '#585b70'
+    return '#dce0e8', '#40a02b', '#4c4f69', '#7c7f93', '#9ca0b0'
+
+
 class CliBar(QWidget):
     """Terminal-style bar at the bottom of MainWindow.
 
@@ -30,21 +37,8 @@ class CliBar(QWidget):
         global _instance
         _instance = self
 
-        dark = _dark_mode()
-
-        # colours — Catppuccin Mocha (dark) / Latte (light)
-        bg     = '#11111b' if dark else '#dce0e8'   # crust
-        prompt = '#a6e3a1' if dark else '#40a02b'   # green
-        text   = '#cdd6f4' if dark else '#4c4f69'   # text
-        muted  = '#7f849c' if dark else '#7c7f93'   # overlay1
-        subtle = '#585b70' if dark else '#9ca0b0'   # surface2 / overlay0
-
         self.setFixedHeight(34)
-        # Use QPalette for background — always respected unlike stylesheet background-color on QWidget
         self.setAutoFillBackground(True)
-        pal = self.palette()
-        pal.setColor(QPalette.ColorRole.Window, QColor(bg))
-        self.setPalette(pal)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(12, 0, 8, 0)
@@ -52,32 +46,25 @@ class CliBar(QWidget):
 
         mono = QFont('Monospace', 9)
 
-        prompt_lbl = QLabel('$')
-        prompt_lbl.setFont(mono)
-        prompt_lbl.setStyleSheet(f'color: {prompt}; font-weight: bold; background: transparent;')
-        layout.addWidget(prompt_lbl)
+        self._prompt_lbl = QLabel('$')
+        self._prompt_lbl.setFont(mono)
+        layout.addWidget(self._prompt_lbl)
 
         self._lbl = QLabel(tr('cli_bar_idle'))
         self._lbl.setFont(mono)
-        self._lbl.setStyleSheet(f'color: {text}; background: transparent;')
         self._lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         layout.addWidget(self._lbl, 1)
 
-        btn_copy = QPushButton(tr('cli_bar_copy'))
-        btn_copy.setFlat(True)
-        btn_copy.setFixedHeight(22)
-        btn_copy.setStyleSheet(
-            f'color: {muted}; font-size: 10px; background: transparent;'
-            'border: none; padding: 0 4px;'
-        )
-        btn_copy.clicked.connect(self._copy)
-        layout.addWidget(btn_copy)
+        self._btn_copy = QPushButton(tr('cli_bar_copy'))
+        self._btn_copy.setFlat(True)
+        self._btn_copy.setFixedHeight(22)
+        self._btn_copy.clicked.connect(self._copy)
+        layout.addWidget(self._btn_copy)
 
-        lbl_about = QLabel(tr('cli_bar_about'))
-        lbl_about.setStyleSheet(
-            f'color: {subtle}; font-size: 9px; font-style: italic; background: transparent;'
-        )
-        layout.addWidget(lbl_about)
+        self._lbl_about = QLabel(tr('cli_bar_about'))
+        layout.addWidget(self._lbl_about)
+
+        self._apply_colors()
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -86,6 +73,31 @@ class CliBar(QWidget):
 
     def get_cmd(self) -> str:
         return self._lbl.text()
+
+    # ── Theme ─────────────────────────────────────────────────────────────────
+
+    def _apply_colors(self) -> None:
+        dark = _dark_mode()
+        bg, prompt, text, muted, subtle = _cli_colors(dark)
+
+        pal = self.palette()
+        pal.setColor(QPalette.ColorRole.Window, QColor(bg))
+        self.setPalette(pal)
+
+        self._prompt_lbl.setStyleSheet(f'color: {prompt}; font-weight: bold; background: transparent;')
+        self._lbl.setStyleSheet(f'color: {text}; background: transparent;')
+        self._btn_copy.setStyleSheet(
+            f'color: {muted}; font-size: 10px; background: transparent;'
+            'border: none; padding: 0 4px;'
+        )
+        self._lbl_about.setStyleSheet(
+            f'color: {subtle}; font-size: 9px; font-style: italic; background: transparent;'
+        )
+
+    def changeEvent(self, event: QEvent) -> None:  # noqa: N802
+        if event.type() == QEvent.Type.ApplicationPaletteChange:
+            self._apply_colors()
+        super().changeEvent(event)
 
     # ── Internal ──────────────────────────────────────────────────────────────
 

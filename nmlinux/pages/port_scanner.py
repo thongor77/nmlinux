@@ -15,10 +15,10 @@ from PySide6.QtCore import Qt, QThread, Signal
 
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
+from nmlinux.core.theme import color_ok, color_err
 
 
 _C_PORT, _C_SERVICE, _C_RTT = range(3)
-_GREEN = QColor("#a6e3a1")
 
 _PRESETS_VALUES: dict[str, str] = {
     "custom":   "",
@@ -243,7 +243,7 @@ class PortScannerPage(QWidget):
 
         ports = _parse_ports(self._ports_input.text())
         if isinstance(ports, str):
-            self._status.setStyleSheet("color: #f38ba8;")
+            self._status.setStyleSheet(f"color: {color_err()};")
             self._status.setText(tr("common_error_prefix", msg=ports))
             return
 
@@ -268,7 +268,7 @@ class PortScannerPage(QWidget):
 
     def _on_found(self, port: int, service: str, rtt: float) -> None:
         if port == -1:
-            self._status.setStyleSheet("color: #f38ba8;")
+            self._status.setStyleSheet(f"color: {color_err()};")
             self._status.setText(tr("common_error_prefix", msg=service))
             return
 
@@ -278,7 +278,7 @@ class PortScannerPage(QWidget):
 
         port_item = QTableWidgetItem(str(port))
         port_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-        port_item.setForeground(_GREEN)
+        port_item.setForeground(QColor(color_ok()))
         self._table.setItem(r, _C_PORT, port_item)
         self._table.setItem(r, _C_SERVICE, QTableWidgetItem(service))
         rtt_item = QTableWidgetItem(f"{rtt:.1f}")

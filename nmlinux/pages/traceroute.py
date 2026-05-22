@@ -13,35 +13,32 @@ from PySide6.QtGui import (
     QBrush, QColor, QFont, QPainter, QPainterPath, QPen, QTransform,
 )
 from PySide6.QtWidgets import (
-    QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
-    QPushButton, QSplitter, QTableWidget, QTableWidgetItem,
+    QFileDialog, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
+    QMessageBox, QPushButton, QSplitter, QTableWidget, QTableWidgetItem,
     QVBoxLayout, QWidget,
 )
 
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
+from nmlinux.core.theme import color_ok, color_err
 
 _GEOJSON = Path(__file__).parent.parent / "assets" / "world.geojson"
 
-# Catppuccin Mocha colours
-_BG        = QColor('#1e1e2e')
-_SURFACE0  = QColor('#313244')
-_SURFACE1  = QColor('#45475a')
-_OVERLAY0  = QColor('#6c7086')
-_TEXT      = QColor('#cdd6f4')
-_GREEN     = QColor('#a6e3a1')
+# Fixed semantic colours (work on both themes)
 _YELLOW    = QColor('#f9e2af')
 _ORANGE    = QColor('#fab387')
-_RED       = QColor('#f38ba8')
 _BLUE      = QColor('#89b4fa')
 
 
 def _rtt_color(rtt: float) -> QColor:
-    if rtt < 0:    return _OVERLAY0
-    if rtt < 20:   return _GREEN
+    from PySide6.QtWidgets import QApplication
+    from PySide6.QtGui import QPalette as _P
+    overlay = QApplication.palette().color(_P.ColorRole.PlaceholderText)
+    if rtt < 0:    return overlay
+    if rtt < 20:   return QColor(color_ok())
     if rtt < 80:   return _YELLOW
     if rtt < 200:  return _ORANGE
-    return _RED
+    return QColor(color_err())
 
 
 # ── Workers ──────────────────────────────────────────────────────────────────
@@ -310,28 +307,43 @@ class _MapWidget(QWidget):
 
     # ── Rendering ────────────────────────────────────────────────────────────
 
+    def changeEvent(self, event) -> None:  # noqa: N802
+        from PySide6.QtCore import QEvent
+        if event.type() == QEvent.Type.ApplicationPaletteChange:
+            self.update()
+        super().changeEvent(event)
+
     def paintEvent(self, _event) -> None:                   # noqa: N802
+        from PySide6.QtGui import QPalette as _P
+        pal       = self.palette()
+        c_bg      = pal.color(_P.ColorRole.Window)
+        c_surface = pal.color(_P.ColorRole.Base)
+        c_border  = pal.color(_P.ColorRole.Mid)
+        c_country = pal.color(_P.ColorRole.AlternateBase)
+        c_overlay = pal.color(_P.ColorRole.PlaceholderText)
+        c_text    = pal.color(_P.ColorRole.Text)
+
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        p.fillRect(self.rect(), _BG)
+        p.fillRect(self.rect(), c_bg)
 
         t = self._make_transform()
 
         # Countries (drawn in world coords via transform)
         if self._country_paths:
-            border = QPen(_SURFACE0, 0)   # cosmetic hairline — 1 px at any zoom
+            border = QPen(c_border, 0)   # cosmetic hairline — 1 px at any zoom
             p.save()
             p.setTransform(t)
             p.setPen(border)
-            p.setBrush(QBrush(_SURFACE1))
+            p.setBrush(QBrush(c_country))
             for path in self._country_paths:
                 p.drawPath(path)
             p.restore()
 
         # Hint when no hops yet
         if not self._hops:
-            p.setPen(_OVERLAY0)
+            p.setPen(c_overlay)
             p.setFont(QFont('Sans', 10))
             p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, tr("trace_map_hint"))
             return
@@ -354,7 +366,7 @@ class _MapWidget(QWidget):
             p.drawEllipse(pt, radius + 2, radius + 2)
             p.setBrush(QBrush(_rtt_color(rtt)))
             p.drawEllipse(pt, radius, radius)
-            p.setPen(_TEXT)
+            p.setPen(c_text)
             p.setFont(label_font)
             p.drawText(int(pt.x()) + radius + 2, int(pt.y()) + 4, str(num))
             p.setPen(Qt.PenStyle.NoPen)
@@ -406,20 +418,33 @@ class TraceroutePage(QWidget):
         self._btn_stop.setEnabled(False)
         self._lbl_status = QLabel("")
         self._lbl_status.setStyleSheet("color: palette(mid);")
+        self._btn_csv = QPushButton(tr("common_export_csv"))
+        self._btn_csv.setVisible(False)
+        self._btn_csv.clicked.connect(self._export_csv)
+        self._btn_txt = QPushButton(tr("common_export_txt"))
+        self._btn_txt.setVisible(False)
+        self._btn_txt.clicked.connect(self._export_txt)
         bar.addWidget(self._input, 1)
         bar.addWidget(self._btn_go)
         bar.addWidget(self._btn_stop)
         bar.addWidget(self._lbl_status)
+        bar.addSpacing(12)
+        bar.addWidget(self._btn_csv)
+        bar.addWidget(self._btn_txt)
         layout.addLayout(bar)
 
         # Legend
         legend = QHBoxLayout()
         legend.addStretch()
-        for color, label in [(_GREEN, "< 20 ms"), (_YELLOW, "20-80 ms"),
-                              (_ORANGE, "80-200 ms"), (_RED, "> 200 ms"),
-                              (_OVERLAY0, tr("trace_legend_to"))]:
+        for color_str, label in [
+            (color_ok(),    "< 20 ms"),
+            (_YELLOW.name(), "20-80 ms"),
+            (_ORANGE.name(), "80-200 ms"),
+            (color_err(),   "> 200 ms"),
+            ("palette(mid)", tr("trace_legend_to")),
+        ]:
             dot = QLabel("●")
-            dot.setStyleSheet(f"color: {color.name()}; font-size: 10px;")
+            dot.setStyleSheet(f"color: {color_str}; font-size: 10px;")
             legend.addWidget(dot)
             legend.addWidget(QLabel(label))
             legend.addSpacing(12)
@@ -462,6 +487,8 @@ class TraceroutePage(QWidget):
         self._table.setRowCount(0)
         self._map.set_hops([])
 
+        self._btn_csv.setVisible(False)
+        self._btn_txt.setVisible(False)
         self._worker = TracerouteWorker(target)
         self._worker.hop_found.connect(self._on_hop)
         self._worker.star_found.connect(self._on_star)
@@ -522,6 +549,9 @@ class TraceroutePage(QWidget):
         self._btn_go.setEnabled(True)
         self._btn_stop.setEnabled(False)
         self._worker = None
+        has_rows = self._table.rowCount() > 0
+        self._btn_csv.setVisible(has_rows)
+        self._btn_txt.setVisible(has_rows)
 
     # ── Geolocation ──────────────────────────────────────────────────────────
 
@@ -571,7 +601,9 @@ class TraceroutePage(QWidget):
             if col == 3 and rtt >= 0:
                 item.setForeground(QBrush(_rtt_color(rtt)))
             elif col == 3:
-                item.setForeground(QBrush(_OVERLAY0))
+                from PySide6.QtWidgets import QApplication
+                from PySide6.QtGui import QPalette as _P
+                item.setForeground(QBrush(QApplication.palette().color(_P.ColorRole.PlaceholderText)))
             self._table.setItem(row, col, item)
 
     def _table_update_location(self, num: int, location: str) -> None:
@@ -580,3 +612,60 @@ class TraceroutePage(QWidget):
             if item and item.data(Qt.ItemDataRole.UserRole) == num:
                 self._table.item(row, 4).setText(location)
                 return
+
+    # ── Export ───────────────────────────────────────────────────────────────
+
+    def _table_rows(self) -> list[tuple[str, ...]]:
+        rows = []
+        for r in range(self._table.rowCount()):
+            rows.append(tuple(
+                (self._table.item(r, c).text() if self._table.item(r, c) else '')
+                for c in range(5)
+            ))
+        return rows
+
+    def _export_csv(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(
+            self, tr("common_export_csv"), "traceroute_result.csv",
+            "CSV (*.csv);;All (*)",
+        )
+        if not path:
+            return
+        try:
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write("Hop,IP,Hostname,RTT,Location\n")
+                for row in self._table_rows():
+                    safe = [v.replace('"', '""') for v in row]
+                    f.write(','.join(f'"{v}"' if ',' in v else v for v in safe) + '\n')
+        except OSError as exc:
+            QMessageBox.critical(self, "Error", str(exc))
+
+    def _export_txt(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(
+            self, tr("common_export_txt"), "traceroute_result.txt",
+            "Text (*.txt);;All (*)",
+        )
+        if not path:
+            return
+        try:
+            rows = self._table_rows()
+            headers = [
+                tr("trace_col_hop"), tr("trace_col_ip"), tr("trace_col_host"),
+                tr("trace_col_rtt"), tr("trace_col_loc"),
+            ]
+            widths = [
+                max(len(h), max((len(r[i]) for r in rows), default=0))
+                for i, h in enumerate(headers)
+            ]
+            sep  = "+" + "+".join("-" * (w + 2) for w in widths) + "+"
+            hrow = "| " + " | ".join(f"{h:<{w}}" for h, w in zip(headers, widths)) + " |"
+            target = self._input.text().strip()
+            with open(path, 'w', encoding='utf-8') as f:
+                if target:
+                    f.write(f"Target: {target}\n{self._lbl_status.text()}\n\n")
+                f.write(sep + "\n" + hrow + "\n" + sep + "\n")
+                for row in rows:
+                    f.write("| " + " | ".join(f"{v:<{w}}" for v, w in zip(row, widths)) + " |\n")
+                f.write(sep + "\n")
+        except OSError as exc:
+            QMessageBox.critical(self, "Error", str(exc))

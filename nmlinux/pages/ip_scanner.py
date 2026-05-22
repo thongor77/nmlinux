@@ -18,10 +18,10 @@ from PySide6.QtCore import Qt, QThread, Signal
 
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
+from nmlinux.core.theme import color_ok, color_err
 
 
 _C_DOT, _C_IP, _C_HOST, _C_MAC, _C_VENDOR, _C_IFACE, _C_RTT = range(7)
-_GREEN = QColor("#a6e3a1")
 
 _CMD_AVAHI     = shutil.which('avahi-resolve')
 _CMD_NMBLOOKUP = shutil.which('nmblookup')
@@ -318,7 +318,7 @@ class IpScannerPage(QWidget):
 
         hosts = _parse_range(text)
         if isinstance(hosts, str):
-            self._status.setStyleSheet("color: #f38ba8;")
+            self._status.setStyleSheet(f"color: {color_err()};")
             self._status.setText(tr("common_error_prefix", msg=hosts))
             return
 
@@ -348,7 +348,7 @@ class IpScannerPage(QWidget):
 
         dot = QTableWidgetItem("●")
         dot.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-        dot.setForeground(_GREEN)
+        dot.setForeground(QColor(color_ok()))
         self._table.setItem(r, _C_DOT,   dot)
         self._table.setItem(r, _C_IP,    QTableWidgetItem(ip))
         self._table.setItem(r, _C_HOST,  QTableWidgetItem(hostname))

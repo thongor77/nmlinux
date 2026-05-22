@@ -7,16 +7,14 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QLineEdit, QPushButton, QComboBox,
     QTableWidget, QTableWidgetItem, QHeaderView,
+    QFileDialog, QMessageBox,
 )
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QColor
 
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
-
-
-_GREEN = '#a6e3a1'
-_RED   = '#f38ba8'
+from nmlinux.core.theme import color_ok, color_err
 
 _SCAN_FLAGS = [
     ['-sn'],
@@ -171,6 +169,15 @@ class NmapPage(QWidget):
         btn_row.addStretch(1)
         self._status = QLabel("")
         btn_row.addWidget(self._status)
+        self._btn_csv = QPushButton(tr("common_export_csv"))
+        self._btn_csv.setVisible(False)
+        self._btn_csv.clicked.connect(self._export_csv)
+        self._btn_txt = QPushButton(tr("common_export_txt"))
+        self._btn_txt.setVisible(False)
+        self._btn_txt.clicked.connect(self._export_txt)
+        btn_row.addSpacing(12)
+        btn_row.addWidget(self._btn_csv)
+        btn_row.addWidget(self._btn_txt)
         layout.addLayout(btn_row)
 
         headers = [
@@ -217,6 +224,8 @@ class NmapPage(QWidget):
         self._table.setRowCount(0)
         self._btn_scan.setEnabled(False)
         self._btn_stop.setEnabled(True)
+        self._btn_csv.setVisible(False)
+        self._btn_txt.setVisible(False)
         self._status.setText(tr("nmap_scanning"))
         self._status.setStyleSheet("")
 
@@ -238,19 +247,78 @@ class NmapPage(QWidget):
             item = QTableWidgetItem(data.get(key, '—'))
             if col == _COL_STATE:
                 state = data.get('state', '')
-                item.setForeground(QColor(_GREEN if state in ('open', 'up') else _RED))
+                item.setForeground(QColor(color_ok() if state in ('open', 'up') else color_err()))
             self._table.setItem(r, col, item)
 
     def _on_finished(self, summary: str) -> None:
         self._btn_scan.setEnabled(True)
         self._btn_stop.setEnabled(False)
         self._status.setText(summary)
+        has_rows = self._table.rowCount() > 0
+        self._btn_csv.setVisible(has_rows)
+        self._btn_txt.setVisible(has_rows)
 
     def _on_error(self, msg: str) -> None:
         self._btn_scan.setEnabled(True)
         self._btn_stop.setEnabled(False)
         self._status.setText(tr("common_error_prefix", msg=msg))
-        self._status.setStyleSheet("color: #f38ba8;")
+        self._status.setStyleSheet(f"color: {color_err()};")
+
+    def _table_rows(self) -> list[tuple[str, ...]]:
+        keys = ['host', 'port', 'proto', 'state', 'service', 'version']
+        rows = []
+        for r in range(self._table.rowCount()):
+            rows.append(tuple(
+                (self._table.item(r, c).text() if self._table.item(r, c) else '')
+                for c in range(len(keys))
+            ))
+        return rows
+
+    def _export_csv(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(
+            self, tr("common_export_csv"), "nmap_result.csv",
+            "CSV (*.csv);;All (*)",
+        )
+        if not path:
+            return
+        try:
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write("Host,Port,Protocol,State,Service,Version\n")
+                for row in self._table_rows():
+                    safe = [v.replace('"', '""') for v in row]
+                    f.write(','.join(f'"{v}"' if ',' in v else v for v in safe) + '\n')
+        except OSError as exc:
+            QMessageBox.critical(self, "Error", str(exc))
+
+    def _export_txt(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(
+            self, tr("common_export_txt"), "nmap_result.txt",
+            "Text (*.txt);;All (*)",
+        )
+        if not path:
+            return
+        try:
+            rows = self._table_rows()
+            headers = [
+                tr("nmap_col_host"), tr("common_port"), tr("common_proto"),
+                tr("nmap_col_state"), tr("common_service"), tr("common_version"),
+            ]
+            widths = [
+                max(len(h), max((len(r[i]) for r in rows), default=0))
+                for i, h in enumerate(headers)
+            ]
+            sep  = "+" + "+".join("-" * (w + 2) for w in widths) + "+"
+            hrow = "| " + " | ".join(f"{h:<{w}}" for h, w in zip(headers, widths)) + " |"
+            target = self._target.text().strip()
+            with open(path, 'w', encoding='utf-8') as f:
+                if target:
+                    f.write(f"Target: {target}\n{self._status.text()}\n\n")
+                f.write(sep + "\n" + hrow + "\n" + sep + "\n")
+                for row in rows:
+                    f.write("| " + " | ".join(f"{v:<{w}}" for v, w in zip(row, widths)) + " |\n")
+                f.write(sep + "\n")
+        except OSError as exc:
+            QMessageBox.critical(self, "Error", str(exc))
 
     def showEvent(self, event) -> None:  # noqa: N802
         self._update_cli()

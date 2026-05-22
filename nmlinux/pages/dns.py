@@ -12,6 +12,7 @@ from PySide6.QtCore import Qt, QThread, Signal
 
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
+from nmlinux.core.theme import color_err
 
 
 _RTYPES = ["A", "AAAA", "MX", "TXT", "NS", "CNAME", "PTR", "SOA", "ANY"]
@@ -208,7 +209,7 @@ class DnsPage(QWidget):
     def _on_error(self, msg: str) -> None:
         self._btn.setEnabled(True)
         self._table.setVisible(False)
-        self._status.setStyleSheet("color: #f38ba8;")
+        self._status.setStyleSheet(f"color: {color_err()};")
         self._status.setText(tr("common_error_prefix", msg=msg))
 
     def _on_done(self, rows: list) -> None:

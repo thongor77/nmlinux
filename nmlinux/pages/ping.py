@@ -16,6 +16,7 @@ from PySide6.QtCore import Qt, QThread, Signal
 
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
+from nmlinux.core.theme import color_ok, color_err
 
 
 class PingWorker(QThread):
@@ -79,8 +80,6 @@ class _Stats:
 
 _C_DOT, _C_HOST, _C_SENT, _C_LOSS, _C_LAST, _C_MIN, _C_AVG, _C_MAX, _C_DEL = range(9)
 
-_GREEN = QColor("#a6e3a1")
-_RED   = QColor("#f38ba8")
 _GREY  = QColor("#a6adc8")
 
 
@@ -229,7 +228,7 @@ class PingPage(QWidget):
         row = self._rows[host]
         t   = self._table
 
-        t.item(row, _C_DOT).setForeground(_GREEN if success else _RED)
+        t.item(row, _C_DOT).setForeground(QColor(color_ok() if success else color_err()))
         t.item(row, _C_SENT).setText(str(st.sent))
         t.item(row, _C_LOSS).setText(f"{st.loss_pct:.1f} %")
         t.item(row, _C_LAST).setText(st.rtt_last if success else tr("ping_timeout"))

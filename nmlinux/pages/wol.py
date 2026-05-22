@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
+from nmlinux.core.theme import color_ok, color_err
 
 _STORE_PATH = Path.home() / '.local' / 'share' / 'nmlinux' / 'wol_hosts.json'
 
@@ -318,7 +319,7 @@ class WolPage(QWidget):
         self._lbl_status.setText("")
 
     def _set_status(self, msg: str, *, error: bool) -> None:
-        color = "#f38ba8" if error else "#a6e3a1"
+        color = color_err() if error else color_ok()
         self._lbl_status.setStyleSheet(f"color: {color};")
         self._lbl_status.setText(msg)
 

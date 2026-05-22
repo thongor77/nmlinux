@@ -7,25 +7,20 @@ import time
 from collections import deque
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QEvent, QTimer
 from PySide6.QtGui import (
-    QBrush, QColor, QFont, QPainter, QPainterPath, QPen,
+    QBrush, QColor, QFont, QPainter, QPainterPath, QPalette, QPen,
 )
 from PySide6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
-    QSplitter, QVBoxLayout, QWidget,
+    QApplication, QFrame, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
+    QPushButton, QSplitter, QVBoxLayout, QWidget,
 )
 
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
+from nmlinux.core.theme import is_dark
 
-# ── Palette ──────────────────────────────────────────────────────────────────
-
-_BG      = QColor('#1e1e2e')
-_SURFACE = QColor('#181825')
-_GRID    = QColor('#313244')
-_MID     = QColor('#6c7086')
-_TEXT    = QColor('#cdd6f4')
+# ── Fixed semantic colours (work on both themes) ──────────────────────────────
 _RX_LINE = QColor('#89b4fa')          # blue  — download
 _TX_LINE = QColor('#fab387')          # orange — upload
 _RX_FILL = QColor(137, 180, 250, 40)
@@ -93,19 +88,30 @@ class _Graph(QWidget):
         self._tx = deque([0.0] * _WINDOW, maxlen=_WINDOW)
         self.update()
 
+    def changeEvent(self, event: QEvent) -> None:  # noqa: N802
+        if event.type() == QEvent.Type.ApplicationPaletteChange:
+            self.update()
+        super().changeEvent(event)
+
     def paintEvent(self, _event) -> None:                  # noqa: N802
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        pal  = self.palette()
+        c_bg      = pal.color(QPalette.ColorRole.Window)
+        c_surface = pal.color(QPalette.ColorRole.Base)
+        c_grid    = pal.color(QPalette.ColorRole.Mid)
+        c_mid     = pal.color(QPalette.ColorRole.PlaceholderText)
 
         W, H = self.width(), self.height()
         PL, PR, PT, PB = 72, 12, 12, 28   # left/right/top/bottom padding
         cw = W - PL - PR                   # chart area
         ch = H - PT - PB
 
-        p.fillRect(self.rect(), _BG)
+        p.fillRect(self.rect(), c_bg)
 
         # Chart background
-        p.fillRect(PL, PT, cw, ch, _SURFACE)
+        p.fillRect(PL, PT, cw, ch, c_surface)
 
         peak  = max(max(self._rx, default=0), max(self._tx, default=0), 1.0)
         scale = _nice_scale(peak)
@@ -115,14 +121,14 @@ class _Graph(QWidget):
         p.setFont(label_font)
         for i in range(5):
             gy = PT + ch - int(i / 4 * ch)
-            p.setPen(QPen(_GRID, 1, Qt.PenStyle.DotLine))
+            p.setPen(QPen(c_grid, 1, Qt.PenStyle.DotLine))
             p.drawLine(PL, gy, PL + cw, gy)
-            p.setPen(_MID)
+            p.setPen(c_mid)
             lbl = _fmt_speed(scale * i / 4)
             p.drawText(0, gy + 4, PL - 4, 12, Qt.AlignmentFlag.AlignRight, lbl)
 
         # Time axis labels
-        p.setPen(_MID)
+        p.setPen(c_mid)
         p.drawText(PL, H - 4, '−60s')
         p.drawText(PL + cw // 2 - 12, H - 4, '−30s')
         p.drawText(PL + cw - 16, H - 4, 'now')
@@ -153,7 +159,7 @@ class _Graph(QWidget):
         _polyline(self._tx, _TX_LINE, _TX_FILL)
 
         # Border
-        p.setPen(QPen(_GRID, 1))
+        p.setPen(QPen(c_grid, 1))
         p.drawRect(PL, PT, cw, ch)
 
         # Legend
@@ -175,13 +181,14 @@ class BandwidthPage(QWidget):
         self._peak_rx:   dict[str, float] = {}
         self._peak_tx:   dict[str, float] = {}
         self._selected:  str = ''
+        self._running:   bool = False
         self._build_ui()
 
         self._timer = QTimer(self)
         self._timer.setInterval(1000)
         self._timer.timeout.connect(self._tick)
-        self._timer.start()
-        self._tick()   # first read — populate list
+        # Populate interface list once without starting monitoring
+        self._tick_ifaces_only()
 
     # ── UI ───────────────────────────────────────────────────────────────────
 
@@ -211,7 +218,7 @@ class BandwidthPage(QWidget):
         rv.setContentsMargins(12, 12, 12, 12)
         rv.setSpacing(10)
 
-        # Interface name + live speeds
+        # Interface name + live speeds + start/stop button
         header = QHBoxLayout()
         self._lbl_iface = QLabel("—")
         self._lbl_iface.setStyleSheet("font-size: 16px; font-weight: bold;")
@@ -224,6 +231,11 @@ class BandwidthPage(QWidget):
         header.addWidget(self._lbl_rx)
         header.addSpacing(16)
         header.addWidget(self._lbl_tx)
+        header.addSpacing(16)
+        self._btn_startstop = QPushButton(tr("bw_start_btn"))
+        self._btn_startstop.setFixedWidth(110)
+        self._btn_startstop.clicked.connect(self._on_startstop)
+        header.addWidget(self._btn_startstop)
         rv.addLayout(header)
 
         # Graph
@@ -246,17 +258,47 @@ class BandwidthPage(QWidget):
         splitter.setSizes([160, 700])
         root.addWidget(splitter)
 
+    @staticmethod
+    def _muted_color() -> str:
+        return '#7f849c' if is_dark() else '#7c7f93'
+
     def _stat_label(self, title: str, value: str) -> QLabel:
-        lbl = QLabel(f'<span style="color:#6c7086; font-size:9px">{title}</span>'
+        c = self._muted_color()
+        lbl = QLabel(f'<span style="color:{c}; font-size:9px">{title}</span>'
                      f'<br><b>{value}</b>')
         lbl.setTextFormat(Qt.TextFormat.RichText)
         return lbl
 
     def _set_stat(self, lbl: QLabel, title: str, value: str) -> None:
-        lbl.setText(f'<span style="color:#6c7086; font-size:9px">{title}</span>'
+        c = self._muted_color()
+        lbl.setText(f'<span style="color:{c}; font-size:9px">{title}</span>'
                     f'<br><b>{value}</b>')
 
+    # ── Start / Stop ─────────────────────────────────────────────────────────
+
+    def _on_startstop(self) -> None:
+        if self._running:
+            self._timer.stop()
+            self._running = False
+            self._btn_startstop.setText(tr("bw_start_btn"))
+        else:
+            self._running = True
+            self._btn_startstop.setText(tr("bw_stop_btn"))
+            self._tick()
+            self._timer.start()
+
     # ── Sampling ─────────────────────────────────────────────────────────────
+
+    def _tick_ifaces_only(self) -> None:
+        """Populate the interface list without starting the graph."""
+        current = _read_net_dev()
+        existing = {self._iface_list.item(i).text()
+                    for i in range(self._iface_list.count())}
+        for iface in sorted(k for k in current if k != 'lo'):
+            if iface not in existing:
+                self._iface_list.addItem(QListWidgetItem(iface))
+        if not self._selected and self._iface_list.count():
+            self._iface_list.setCurrentRow(0)
 
     def _tick(self) -> None:
         current = _read_net_dev()
@@ -323,12 +365,9 @@ class BandwidthPage(QWidget):
         super().hideEvent(event)
 
     def showEvent(self, event) -> None:                    # noqa: N802
-        self._timer.start()
-        super().showEvent(event)
-
-    def showEvent(self, event) -> None:  # noqa: N802
+        if self._running:
+            self._timer.start()
         bar = get_cli_bar()
         if bar:
-            iface = getattr(self, '_selected', None)
-            bar.set_cmd(f'cat /proc/net/dev  # interface : {iface}' if iface else '')
+            bar.set_cmd(f'cat /proc/net/dev  # interface : {self._selected}' if self._selected else '')
         super().showEvent(event)

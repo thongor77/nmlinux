@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
+from ipaddress import IPv4Network
 
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
@@ -13,10 +15,8 @@ from PySide6.QtCore import Qt, QThread, Signal
 
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
+from nmlinux.core.theme import color_ok, color_err
 
-
-_GREEN = '#a6e3a1'
-_RED   = '#f38ba8'
 _GREY  = 'palette(mid)'
 
 
@@ -128,7 +128,7 @@ class _DetailPanel(QGroupBox):
             if ok is None:
                 lbl = QLabel(value)
             else:
-                color  = _GREEN if ok else _RED
+                color  = color_ok() if ok else color_err()
                 symbol = '✓' if ok else '✗'
                 lbl = QLabel(f'<span style="color:{color}">{symbol}</span>  {value}')
                 lbl.setTextFormat(Qt.TextFormat.RichText)
@@ -141,6 +141,12 @@ class _DetailPanel(QGroupBox):
         row("iface_lbl_state", state_display, ok=connected)
         row("iface_lbl_mac",   iface['mac'])
         row("iface_lbl_ipv4",  iface['ipv4'], ok=iface['ipv4'] != '—')
+        mask = '—'
+        if iface['ipv4'] != '—':
+            m = re.search(r'/(\d+)', iface['ipv4'].split('\n')[0])
+            if m:
+                mask = str(IPv4Network(f'0.0.0.0/{m.group(1)}', strict=False).netmask)
+        row("iface_lbl_mask",  mask)
         row("iface_lbl_ipv6",  iface['ipv6'], ok=iface['ipv6'] != '—')
         self.setVisible(True)
 
@@ -222,7 +228,7 @@ class InterfacesPage(QWidget):
             ]):
                 item = QTableWidgetItem(val)
                 if col == _COL_STATE:
-                    item.setForeground(QColor(_GREEN if connected else _RED))
+                    item.setForeground(QColor(color_ok() if connected else color_err()))
                 t.setItem(row_idx, col, item)
 
         t.resizeRowsToContents()

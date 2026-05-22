@@ -6,6 +6,7 @@ import socket
 import subprocess
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, wait as _wait
+from ipaddress import IPv4Network
 
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
@@ -16,6 +17,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QThread, Signal
 
 from nmlinux.core.i18n import tr
+from nmlinux.core.theme import color_ok, color_err
 
 
 # ── Data collectors (run in threads) ─────────────────────────────────────────
@@ -46,10 +48,12 @@ def _collect_local() -> dict:
     try:
         cmd = ['ip', '-4', 'addr', 'show'] + ([iface] if iface else [])
         raw = subprocess.run(cmd, capture_output=True, text=True, timeout=3).stdout
-        m = re.search(r'inet (\d+\.\d+\.\d+\.\d+)', raw)
-        out['local_ipv4'] = m.group(1) if m else '—'
+        m = re.search(r'inet (\d+\.\d+\.\d+\.\d+)/(\d+)', raw)
+        out['local_ipv4']   = m.group(1) if m else '—'
+        out['subnet_mask']  = str(IPv4Network(f'0.0.0.0/{m.group(2)}', strict=False).netmask) if m else '—'
     except Exception:
-        out['local_ipv4'] = '—'
+        out['local_ipv4']  = '—'
+        out['subnet_mask'] = '—'
 
     try:
         cmd = ['ip', '-6', 'addr', 'show', 'scope', 'global'] + \
@@ -142,8 +146,6 @@ class DashboardWorker(QThread):
 
 # ── UI helpers ────────────────────────────────────────────────────────────────
 
-_GREEN = '#a6e3a1'
-_RED   = '#f38ba8'
 _GREY  = 'palette(mid)'
 
 
@@ -160,7 +162,7 @@ def _val(text: str, ok: bool | None = None) -> QLabel:
     if ok is None:
         lbl = QLabel(text or '—')
     else:
-        color  = _GREEN if ok else _RED
+        color  = color_ok() if ok else color_err()
         symbol = '✓' if ok else '✗'
         lbl = QLabel(f'<span style="color:{color}">{symbol}</span>  {text or "—"}')
         lbl.setTextFormat(Qt.TextFormat.RichText)
@@ -263,10 +265,12 @@ class DashboardPage(QWidget):
         f = self._form_pc
         self._clear_form(f)
         ipv4 = d.get('local_ipv4', '—')
+        mask = d.get('subnet_mask', '—')
         ipv6 = d.get('local_ipv6', '—')
         dns  = d.get('dns_servers', [])
         f.addRow(tr("dash_lbl_host") + " :", _val(d.get('hostname', '—')))
         f.addRow("IPv4 :", _val(ipv4, ok=ipv4 != '—'))
+        f.addRow(tr("dash_lbl_mask") + " :", _val(mask, ok=mask != '—'))
         f.addRow("IPv6 :", _val(ipv6, ok=ipv6 != '—'))
         f.addRow("DNS  :", _val(', '.join(dns) if dns else '—', ok=bool(dns)))
 

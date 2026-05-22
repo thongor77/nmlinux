@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+from ipaddress import IPv4Network
 from typing import NamedTuple
 
 from PySide6.QtCore import Qt, QThread, QTimer, Signal
@@ -17,6 +18,7 @@ from PySide6.QtWidgets import (
 
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
+from nmlinux.core.theme import color_ok
 
 _CMD_NMCLI = shutil.which('nmcli')
 _CMD_NMED  = shutil.which('nm-connection-editor')
@@ -36,7 +38,6 @@ _TYPE_MAP: dict[str, str] = {
     'pppoe':           'PPPoE',
 }
 
-_GREEN  = QColor('#a6e3a1')
 _YELLOW = QColor('#f9e2af')
 _ORANGE = QColor('#fab387')
 _MID    = QColor('#6c7086')
@@ -93,7 +94,7 @@ def _friendly_type(t: str) -> str:
 
 
 def _state_color(state: str) -> QColor:
-    if state == 'activated':   return _GREEN
+    if state == 'activated':   return QColor(color_ok())
     if 'activat' in state:     return _YELLOW
     if 'deactivat' in state:   return _ORANGE
     return _MID
@@ -431,6 +432,11 @@ class ConnectionManagerPage(QWidget):
             val = d.get(nmcli_key, '').strip()
             if not val or val == '--':
                 val = ''
+            if nmcli_key == 'IP4.ADDRESS[1]' and val:
+                m = re.search(r'/(\d+)$', val)
+                if m:
+                    mask = str(IPv4Network(f'0.0.0.0/{m.group(1)}', strict=False).netmask)
+                    val = f'{val}  ({mask})'
             self._det_rows[row_key].setText(val or '—')
 
     # ── Actions ──────────────────────────────────────────────────────────────
@@ -501,7 +507,8 @@ class ConnectionManagerPage(QWidget):
             b.setEnabled(enabled)
 
     def _set_status(self, msg: str, *, error: bool) -> None:
-        color = '#f38ba8' if error else '#a6e3a1'
+        from nmlinux.core.theme import color_err
+        color = color_err() if error else color_ok()
         self._status.setStyleSheet(f'color: {color};')
         self._status.setText(msg)
 

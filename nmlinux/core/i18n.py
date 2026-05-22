@@ -55,6 +55,7 @@ _T: dict[str, dict[str, str]] = {
         "dash_geo_unavail": "Données de géolocalisation indisponibles.",
         "dash_no_dns":      "Aucun résolveur DNS trouvé.",
         "dash_lbl_host":    "Hôte",
+        "dash_lbl_mask":    "Masque réseau",
         "geo_country":      "Pays",
         "geo_code":         "Code",
         "geo_region":       "Région",
@@ -84,6 +85,7 @@ _T: dict[str, dict[str, str]] = {
         "iface_lbl_state":   "État",
         "iface_lbl_mac":     "MAC",
         "iface_lbl_ipv4":    "IPv4",
+        "iface_lbl_mask":    "Masque réseau",
         "iface_lbl_ipv6":    "IPv6",
 
         # ── Wi-Fi ───────────────────────────────────────────────────────────
@@ -407,6 +409,8 @@ _T: dict[str, dict[str, str]] = {
         "bw_total_ul":       "Total ↑",
         "bw_peak_dl":        "Pic ↓",
         "bw_peak_ul":        "Pic ↑",
+        "bw_start_btn":      "▶  Démarrer",
+        "bw_stop_btn":       "⏹  Arrêter",
 
         # ── Connection Manager ───────────────────────────────────────────────
         "conn_col_name":             "Connexion",
@@ -501,6 +505,7 @@ _T: dict[str, dict[str, str]] = {
         "dash_geo_unavail": "Geolocation data unavailable.",
         "dash_no_dns":      "No DNS resolver found.",
         "dash_lbl_host":    "Host",
+        "dash_lbl_mask":    "Subnet mask",
         "geo_country":      "Country",
         "geo_code":         "Code",
         "geo_region":       "Region",
@@ -839,6 +844,8 @@ _T: dict[str, dict[str, str]] = {
         "bw_total_ul":       "Total ↑",
         "bw_peak_dl":        "Peak ↓",
         "bw_peak_ul":        "Peak ↑",
+        "bw_start_btn":      "▶  Start",
+        "bw_stop_btn":       "⏹  Stop",
 
         # ── Connection Manager ───────────────────────────────────────────────
         "conn_col_name":             "Connection",
@@ -915,6 +922,7 @@ _T: dict[str, dict[str, str]] = {
         "dash_geo_unavail": "Datos de geolocalización no disponibles.",
         "dash_no_dns":      "No se encontró resolvedor DNS.",
         "dash_lbl_host":    "Equipo",
+        "dash_lbl_mask":    "Máscara de red",
         "geo_country":      "País",
         "geo_code":         "Código",
         "geo_region":       "Región",
@@ -943,6 +951,7 @@ _T: dict[str, dict[str, str]] = {
         "iface_lbl_state":    "Estado",
         "iface_lbl_mac":      "MAC",
         "iface_lbl_ipv4":     "IPv4",
+        "iface_lbl_mask":     "Máscara de red",
         "iface_lbl_ipv6":     "IPv6",
 
         "wifi_title":        "Wi-Fi",
@@ -1272,6 +1281,8 @@ _T: dict[str, dict[str, str]] = {
         "bw_total_ul":       "Total ↑",
         "bw_peak_dl":        "Pico ↓",
         "bw_peak_ul":        "Pico ↑",
+        "bw_start_btn":      "▶  Iniciar",
+        "bw_stop_btn":       "⏹  Detener",
 
         # ── Connection Manager ───────────────────────────────────────────────
         "conn_col_name":             "Conexión",
@@ -1348,6 +1359,7 @@ _T: dict[str, dict[str, str]] = {
         "dash_geo_unavail": "Geolokationsdaten nicht verfügbar.",
         "dash_no_dns":      "Kein DNS-Resolver gefunden.",
         "dash_lbl_host":    "Host",
+        "dash_lbl_mask":    "Netzmaske",
         "geo_country":      "Land",
         "geo_code":         "Code",
         "geo_region":       "Region",
@@ -1376,6 +1388,7 @@ _T: dict[str, dict[str, str]] = {
         "iface_lbl_state":    "Status",
         "iface_lbl_mac":      "MAC",
         "iface_lbl_ipv4":     "IPv4",
+        "iface_lbl_mask":     "Netzmaske",
         "iface_lbl_ipv6":     "IPv6",
 
         "wifi_title":        "Wi-Fi",
@@ -1705,6 +1718,8 @@ _T: dict[str, dict[str, str]] = {
         "bw_total_ul":       "Gesamt ↑",
         "bw_peak_dl":        "Spitze ↓",
         "bw_peak_ul":        "Spitze ↑",
+        "bw_start_btn":      "▶  Starten",
+        "bw_stop_btn":       "⏹  Stoppen",
 
         # ── Connection Manager ───────────────────────────────────────────────
         "conn_col_name":             "Verbindung",

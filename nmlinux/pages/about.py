@@ -85,7 +85,7 @@ class AboutPage(QWidget):
         btn_link = QPushButton("BornToBeRoot / NETworkManager")
         btn_link.setFlat(True)
         btn_link.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_link.setStyleSheet("color: #4a9eff; text-decoration: underline; font-size: 11px;")
+        btn_link.setStyleSheet("color: palette(link); text-decoration: underline; font-size: 11px;")
         btn_link.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(_ORIGINAL_URL)))
         link_row.addWidget(btn_link)
         link_row.addStretch(1)

@@ -13,6 +13,7 @@ from PySide6.QtCore import Qt, QThread, Signal
 
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
+from nmlinux.core.theme import color_ok, color_err
 
 
 _NTP_DELTA = 2208988800
@@ -24,10 +25,6 @@ _SERVERS = [
     "fr.pool.ntp.org",
     "europe.pool.ntp.org",
 ]
-
-_GREEN = '#a6e3a1'
-_RED   = '#f38ba8'
-
 
 def _query_ntp(host: str, port: int = 123, timeout: float = 5.0) -> dict:
     packet = bytearray(48)
@@ -227,7 +224,7 @@ class SntpPage(QWidget):
             if ok is None:
                 lbl = QLabel(value)
             else:
-                color  = _GREEN if ok else _RED
+                color  = color_ok() if ok else color_err()
                 symbol = '✓' if ok else '✗'
                 lbl = QLabel(f'<span style="color:{color}">{symbol}</span>  {value}')
                 lbl.setTextFormat(Qt.TextFormat.RichText)
@@ -254,4 +251,4 @@ class SntpPage(QWidget):
     def _on_error(self, msg: str) -> None:
         self._btn.setEnabled(True)
         self._status.setText(tr("common_error_prefix", msg=msg))
-        self._status.setStyleSheet("color: #f38ba8;")
+        self._status.setStyleSheet(f"color: {color_err()};")

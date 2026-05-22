@@ -11,6 +11,7 @@ from PySide6.QtGui import QFont
 
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
+from nmlinux.core.theme import color_err
 
 
 class WhoisWorker(QThread):
@@ -99,4 +100,4 @@ class WhoisPage(QWidget):
     def _on_error(self, msg: str) -> None:
         self._btn.setEnabled(True)
         self._status.setText(tr("common_error_prefix", msg=msg))
-        self._status.setStyleSheet("color: #f38ba8;")
+        self._status.setStyleSheet(f"color: {color_err()};")

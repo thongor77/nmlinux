@@ -1,4 +1,4 @@
-# NMLinux · v1.1.1
+# NMLinux · v1.2.0
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.com/donate/?business=JFQGY7NU3ANCN&no_recurring=0&item_name=Every+donation%2C+no+matter+how+small%2C+helps+me+keep+this+project+alive.+Thank+you%21%0A&currency_code=EUR)
 
@@ -23,6 +23,14 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 ---
 
 ## Changelog
+
+### v1.2.0 — 2026-05-22
+
+- **Theme adaptation** — full runtime light/dark switching support across all pages; new `core/theme.py` with `is_dark()`, `color_ok()`, `color_err()`; custom painter widgets (`_Graph`, `_MapWidget`) read palette at paint time; all hardcoded Catppuccin Mocha colours replaced with semantic Qt palette roles
+- **Subnet mask** — Dashboard, Interfaces, and Connexions pages now display dotted-decimal subnet mask (e.g. `255.255.255.0`) derived from CIDR prefix
+- **Bandwidth Monitor** — explicit Start/Stop button replaces unreliable auto-start on page load
+- **Export CSV/TXT** — Nmap and Traceroute pages now offer Export CSV and Export TXT buttons (appear after scan/trace completes)
+- **i18n** — new translation keys for all above features (fr/en/es/de)
 
 ### v1.1.1 — 2026-05-16
 
@@ -51,12 +59,12 @@ Initial public release — 13 modules: Dashboard, Interfaces, Wi-Fi, Subnet Calc
 | **Ping Monitor** | Continuous ping to multiple hosts, RTT stats, packet loss % |
 | **IP Scanner** | CIDR/range ping scan, 50 threads, hostname (DNS/mDNS/NetBIOS), MAC address, vendor (OUI), interface, CSV + TXT export |
 | **Port Scanner** | TCP connect scan, 200 threads, service presets, CSV + TXT export |
-| **Nmap** | 7 scan modes, XML output parsing, Host/Port/Protocol/State/Service table |
+| **Nmap** | 7 scan modes, XML output parsing, Host/Port/Protocol/State/Service table, CSV + TXT export |
 | **Whois** | Raw whois output in monospace |
 | **SNMP** | `snmpwalk`/`snmpget`, v1/v2c, 10 OID presets, results table |
 | **SNTP / NTP** | Pure Python RFC 4330 UDP client, offset/delay/stratum/reference |
 | **SSH** | Embedded PTY terminal (pyte/VT100), saved connections (JSON), key auth, scrollback |
-| **Visual Traceroute** | Hop-by-hop route on a world map, live geolocation (ip-api.com), zoom & pan |
+| **Visual Traceroute** | Hop-by-hop route on a world map, live geolocation (ip-api.com), zoom & pan, CSV + TXT export |
 | **Bandwidth** | Real-time per-interface throughput: 60s sliding graph, live speeds, session totals, peak |
 | **Wake on LAN** | Pure Python magic packet (UDP broadcast), persistent host book, no external tool required |
 | **Settings** | Language selection (French, English, Spanish, German), persisted |
@@ -104,7 +112,7 @@ All dependencies (PySide6, ptyprocess, pyte, nmcli, …) are handled automatical
 Download the `.whl` from the [latest release](https://github.com/thongor77/nmlinux/releases/latest) and install it:
 
 ```bash
-pip install nmlinux-1.1.1-py3-none-any.whl
+pip install nmlinux-1.2.0-py3-none-any.whl
 nmlinux
 ```
 

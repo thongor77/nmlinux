@@ -1,14 +1,28 @@
 from __future__ import annotations
 
+from PySide6.QtCore import QEvent, Signal
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout,
     QLabel, QGroupBox, QRadioButton,
     QButtonGroup, QFrame,
 )
-from PySide6.QtCore import Signal
 
 from nmlinux.core.settings import _SUPPORTED_LANGUAGES, get as get_settings, save as save_settings
 from nmlinux.core.i18n import tr
+from nmlinux.core.theme import color_ok, is_dark
+
+
+def _banner_style() -> tuple[str, str]:
+    """Return (frame_stylesheet, label_stylesheet) for current theme."""
+    if is_dark():
+        return (
+            "QFrame { background: #1e3a5f; border: 1px solid #4a9eff; border-radius: 6px; padding: 4px; }",
+            "color: #a8d4ff; font-size: 12px; border: none;",
+        )
+    return (
+        "QFrame { background: #dbeafe; border: 1px solid #3b82f6; border-radius: 6px; padding: 4px; }",
+        "color: #1e40af; font-size: 12px; border: none;",
+    )
 
 
 class SettingsPage(QWidget):
@@ -44,7 +58,7 @@ class SettingsPage(QWidget):
             lang_layout.addWidget(rb)
 
         self._lang_saved = QLabel("")
-        self._lang_saved.setStyleSheet("color: #a6e3a1;")
+        self._lang_saved.setStyleSheet(f"color: {color_ok()};")
         lang_layout.addSpacing(4)
         lang_layout.addWidget(self._lang_saved)
 
@@ -53,21 +67,30 @@ class SettingsPage(QWidget):
         # Restart info banner — hidden until language is changed
         self._restart_banner = QFrame()
         self._restart_banner.setFrameShape(QFrame.Shape.StyledPanel)
-        self._restart_banner.setStyleSheet(
-            "QFrame { background: #1e3a5f; border: 1px solid #4a9eff; border-radius: 6px; padding: 4px; }"
-        )
         banner_layout = QVBoxLayout(self._restart_banner)
         banner_layout.setContentsMargins(12, 8, 12, 8)
         self._restart_label = QLabel(tr("settings_lang_note"))
         self._restart_label.setWordWrap(True)
-        self._restart_label.setStyleSheet("color: #a8d4ff; font-size: 12px; border: none;")
         banner_layout.addWidget(self._restart_label)
         self._restart_banner.setVisible(False)
         layout.addWidget(self._restart_banner)
 
+        self._apply_banner_colors()
+
         self._lang_group.buttonClicked.connect(self._on_lang_changed)
 
         layout.addStretch(1)
+
+    def _apply_banner_colors(self) -> None:
+        frame_ss, lbl_ss = _banner_style()
+        self._restart_banner.setStyleSheet(frame_ss)
+        self._restart_label.setStyleSheet(lbl_ss)
+        self._lang_saved.setStyleSheet(f"color: {color_ok()};")
+
+    def changeEvent(self, event: QEvent) -> None:  # noqa: N802
+        if event.type() == QEvent.Type.ApplicationPaletteChange:
+            self._apply_banner_colors()
+        super().changeEvent(event)
 
     def _on_lang_changed(self, btn: QRadioButton) -> None:
         code = btn.property("lang_code")

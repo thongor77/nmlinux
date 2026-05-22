@@ -12,10 +12,9 @@ from PySide6.QtCore import Qt, QThread, Signal
 
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
+from nmlinux.core.theme import color_ok, color_err
 
 
-_GREEN  = '#a6e3a1'
-_RED    = '#f38ba8'
 _YELLOW = '#f9e2af'
 
 
@@ -209,7 +208,7 @@ class WifiPage(QWidget):
 
         if iface == '—':
             self._lbl_status.setText(tr("wifi_no_iface"))
-            self._lbl_status.setStyleSheet(f"color: {_RED};")
+            self._lbl_status.setStyleSheet(f"color: {color_err()};")
             return
 
         count = len(ssids)
@@ -227,7 +226,7 @@ class WifiPage(QWidget):
             dot_item = QTableWidgetItem('●' if ap['connected'] else '')
             dot_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             if ap['connected']:
-                dot_item.setForeground(QColor(_GREEN))
+                dot_item.setForeground(QColor(color_ok()))
             t.setItem(row_idx, _COL_DOT, dot_item)
 
             ssid_display = hidden_label if ap['ssid'] == '(hidden_sentinel)' else ap['ssid']
@@ -245,11 +244,11 @@ class WifiPage(QWidget):
             signal_item = QTableWidgetItem(ap['bar'])
             pct = ap['signal_pct']
             if pct >= 66:
-                signal_item.setForeground(QColor(_GREEN))
+                signal_item.setForeground(QColor(color_ok()))
             elif pct >= 33:
                 signal_item.setForeground(QColor(_YELLOW))
             else:
-                signal_item.setForeground(QColor(_RED))
+                signal_item.setForeground(QColor(color_err()))
             t.setItem(row_idx, _COL_SIGNAL, signal_item)
 
             sec_display = open_label if not ap['security'] else ap['security']
