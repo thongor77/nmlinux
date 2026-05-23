@@ -1,4 +1,4 @@
-# NMLinux · v1.2.0
+# NMLinux · v1.2.5
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.com/donate/?business=JFQGY7NU3ANCN&no_recurring=0&item_name=Every+donation%2C+no+matter+how+small%2C+helps+me+keep+this+project+alive.+Thank+you%21%0A&currency_code=EUR)
 
@@ -23,6 +23,14 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 ---
 
 ## Changelog
+
+### v1.2.5 — 2026-05-23
+
+- **MTR** — embedded My Traceroute: runs `mtr --report`, parses text output, displays a live table with Loss %, RTT Last/Avg/Best/Worst/Jitter per hop, colour-coded by loss severity; continuous mode; CSV + TXT export
+- **Speed Test** — dependency-free speed test via `curl` + Cloudflare (`speed.cloudflare.com`): download (25 MB), upload (10 MB), ping to `1.1.1.1`; up to 5 runs persisted in JSON; historical line graph (Download/Upload)
+- **Firewall Viewer** — read-only ruleset viewer: parses `/etc/nftables.conf` and `/etc/iptables/*.rules` without root; live ruleset via `pkexec nft list ruleset`; columns: Table / Chain / Rule / Port / Action / Comment; colour-coded actions; live filter
+- **Sidebar hints** — each nav entry now shows a subtle `?` badge; hovering displays a tooltip describing what the module does; vertical separator added between sidebar and content area
+- **i18n** — all new modules translated in French, English, and Spanish
 
 ### v1.2.0 — 2026-05-22
 
@@ -65,6 +73,9 @@ Initial public release — 13 modules: Dashboard, Interfaces, Wi-Fi, Subnet Calc
 | **SNTP / NTP** | Pure Python RFC 4330 UDP client, offset/delay/stratum/reference |
 | **SSH** | Embedded PTY terminal (pyte/VT100), saved connections (JSON), key auth, scrollback |
 | **Visual Traceroute** | Hop-by-hop route on a world map, live geolocation (ip-api.com), zoom & pan, CSV + TXT export |
+| **MTR** | Embedded My Traceroute: loss %, RTT Last/Avg/Best/Worst/Jitter per hop, colour-coded, CSV + TXT export |
+| **Firewall Viewer** | Read-only nftables + iptables/ip6tables ruleset (no root); live via pkexec; filter by table/chain/action |
+| **Speed Test** | Download/upload/ping via Cloudflare; no external tool beyond `curl`; history graph (last 5 runs) |
 | **Bandwidth** | Real-time per-interface throughput: 60s sliding graph, live speeds, session totals, peak |
 | **Wake on LAN** | Pure Python magic packet (UDP broadcast), persistent host book, no external tool required |
 | **Settings** | Language selection (French, English, Spanish, German), persisted |
@@ -79,13 +90,13 @@ Most are already present on a standard Linux install:
 
 ```bash
 # Debian / Ubuntu
-sudo apt install iproute2 network-manager dnsutils nmap whois snmp
+sudo apt install iproute2 network-manager dnsutils nmap whois snmp mtr-tiny curl
 
 # Arch / EndeavourOS
-sudo pacman -S iproute2 networkmanager bind-tools nmap whois net-snmp iputils
+sudo pacman -S iproute2 networkmanager bind-tools nmap whois net-snmp iputils mtr curl
 
 # Fedora
-sudo dnf install iproute NetworkManager bind-utils nmap whois net-snmp-utils
+sudo dnf install iproute NetworkManager bind-utils nmap whois net-snmp-utils mtr curl
 ```
 
 ### Python
@@ -112,7 +123,7 @@ All dependencies (PySide6, ptyprocess, pyte, nmcli, …) are handled automatical
 Download the `.whl` from the [latest release](https://github.com/thongor77/nmlinux/releases/latest) and install it:
 
 ```bash
-pip install nmlinux-1.2.0-py3-none-any.whl
+pip install nmlinux-1.2.5-py3-none-any.whl
 nmlinux
 ```
 
@@ -176,6 +187,9 @@ nmlinux/
     subnet.py       — Subnet Calculator
     terminal_view.py — TerminalView: pyte VT100 emulator + QPainter renderer
     traceroute.py   — Visual Traceroute: world map, geolocation, zoom/pan
+    mtr.py          — MTR: mtr --report parser, live hop stats table, export
+    firewall.py     — Firewall Viewer: nftables + iptables parser, live via pkexec
+    speedtest.py    — Speed Test: curl + Cloudflare, history graph
     bandwidth.py    — Bandwidth Monitor: per-interface 60s graph, live stats
     wol.py          — Wake on LAN: magic packet, persistent host book
     whois.py        — Whois
