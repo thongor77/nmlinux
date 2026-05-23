@@ -99,7 +99,11 @@ class _EdgeItem(QGraphicsLineItem):
         self.setZValue(-1)
         self.sync()
 
+    def boundingRect(self) -> QRectF:
+        return super().boundingRect().adjusted(-4, -4, 4, 4)
+
     def sync(self) -> None:
+        self.prepareGeometryChange()
         self.setLine(QLineF(self._src.pos(), self._dst.pos()))
 
 
@@ -226,8 +230,10 @@ class _TopoView(QGraphicsView):
         super().__init__(scene)
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
-        self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
         self.setDragMode(QGraphicsView.DragMode.NoDrag)
+        self.setViewportUpdateMode(
+            QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
         self._panning   = False
         self._pan_start = QPointF()
         scene.selectionChanged.connect(self._on_sel)
@@ -591,7 +597,10 @@ class TopologyPage(QWidget):
         row('topo_lbl_vendor',   data.get('vendor', '—'))
 
         if data['ip'] in self._nodes:
-            self._view.centerOn(self._nodes[data['ip']])
+            node_item = self._nodes[data['ip']]
+            vp_rect = self._view.mapToScene(self._view.viewport().rect()).boundingRect()
+            if not vp_rect.contains(node_item.pos()):
+                self._view.centerOn(node_item)
 
     # ── Visibility ────────────────────────────────────────────────────────────
 
