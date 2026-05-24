@@ -33,10 +33,16 @@ def _ensure_icon_theme() -> None:
     if additions:
         QIcon.setThemeSearchPaths(additions + current_paths)
 
-    # Explicit Nix wrapper override (NMLINUX_ICON_PATH points to icons dir)
+    # Explicit Nix wrapper override (NMLINUX_ICON_PATH = <store>/share, has icons/breeze/)
     icon_path = os.environ.get("NMLINUX_ICON_PATH", "").strip()
-    if icon_path and icon_path not in QIcon.themeSearchPaths():
-        QIcon.setThemeSearchPaths([icon_path] + QIcon.themeSearchPaths())
+    if icon_path:
+        if icon_path not in QIcon.themeSearchPaths():
+            QIcon.setThemeSearchPaths([icon_path] + QIcon.themeSearchPaths())
+        # Nix bundle ships Breeze — force the theme name so Qt uses it
+        if os.path.isdir(os.path.join(icon_path, "icons", "breeze")):
+            QIcon.setThemeName("breeze")
+            if _icon_ok("network-wired"):
+                return
 
     # If the current theme already resolves real icons, nothing to do
     if QIcon.themeName() and _icon_ok("network-wired"):
