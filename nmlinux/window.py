@@ -48,12 +48,12 @@ _TOOLS = [
         "Gère les profils réseau NetworkManager :\ncréer, modifier, activer ou désactiver des connexions.",
     ),
     (
-        ("network-connect", "network-transmit-receive", "network-wired"),
+        ("network-connect", "network-transmit-receive", "network-wired", "computer"),
         "Interfaces", InterfacesPage,
         "Affiche les interfaces réseau actives (Ethernet, Wi-Fi, loopback…)\navec état, adresse MAC et adresses IP.",
     ),
     (
-        ("network-wireless", "network-wireless-signal-excellent"),
+        ("network-wireless", "network-wireless-signal-excellent", "network-wireless-signal-good"),
         "Wi-Fi", WifiPage,
         "Scanne les réseaux sans fil disponibles, affiche\nle niveau de signal et la sécurité, et permet de s'y connecter.",
     ),
@@ -78,7 +78,7 @@ _TOOLS = [
         "Découvre les équipements actifs sur le réseau local\npar balayage ARP/ping.",
     ),
     (
-        ("security-medium", "security-high", "dialog-password", "changes-prevent"),
+        ("security-medium", "security-high", "dialog-password", "changes-prevent", "system-lock-screen"),
         "Port Scanner", PortScannerPage,
         "Scanne les ports TCP/UDP d'un hôte\npour identifier les services réseau ouverts.",
     ),
@@ -108,22 +108,22 @@ _TOOLS = [
         "Terminal SSH embarqué pour se connecter à distance\nà un serveur ou un équipement réseau.",
     ),
     (
-        ("network-wired", "network-transmit-receive"),
+        ("network-wired", "network-transmit-receive", "go-next"),
         "Traceroute", TraceroutePage,
         "Affiche le chemin réseau vers une destination\net la latence de chaque routeur traversé.",
     ),
     (
-        ("network-wired", "network-transmit-receive", "chronometer"),
+        ("network-wired", "network-transmit-receive", "chronometer", "appointment-soon"),
         "MTR", MtrPage,
         "Combine traceroute et ping : statistiques de perte\net de latence en continu sur chaque saut réseau.",
     ),
     (
-        ("security-medium", "security-high", "firewall"),
+        ("security-medium", "security-high", "firewall", "system-lock-screen", "changes-prevent", "dialog-warning"),
         "Firewall", FirewallPage,
         "Lit et affiche les règles pare-feu nftables et iptables\nsans nécessiter les droits root.",
     ),
     (
-        ("network-transmit-receive", "modem", "network-wired"),
+        ("network-transmit-receive", "modem", "network-wired", "go-down"),
         "Speed Test", SpeedTestPage,
         "Mesure le débit descendant, montant et le ping\nvia les serveurs Cloudflare.",
     ),
