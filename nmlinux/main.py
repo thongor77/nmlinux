@@ -6,6 +6,17 @@ from nmlinux.window import MainWindow
 from nmlinux.core.icons import themed_icon
 
 
+def _icon_ok(name: str) -> bool:
+    """True if the theme provides a real pixmap for *name* at any standard size."""
+    icon = QIcon.fromTheme(name)
+    if icon.isNull():
+        return False
+    for size in (22, 24, 16, 32, 48):
+        if not icon.pixmap(size, size).isNull():
+            return True
+    return False
+
+
 def _ensure_icon_theme() -> None:
     """When Qt has no icon theme set, detect it from the desktop environment."""
     import os
@@ -28,20 +39,23 @@ def _ensure_icon_theme() -> None:
         QIcon.setThemeSearchPaths([icon_path] + QIcon.themeSearchPaths())
 
     # If the current theme already resolves real icons, nothing to do
-    if QIcon.themeName() and not QIcon.fromTheme("network-wired").isNull():
+    if QIcon.themeName() and _icon_ok("network-wired"):
         return
 
-    # KDE / KConfig (~/.config/kdeglobals)
+    # KDE / KConfig (~/.config/kdeglobals, /etc/xdg/kdeglobals for NixOS)
     try:
         import configparser
-        kdeglobals = os.path.expanduser("~/.config/kdeglobals")
-        cfg = configparser.ConfigParser()
-        cfg.read(kdeglobals)
-        theme = cfg.get("Icons", "Theme", fallback="").strip()
-        if theme:
-            QIcon.setThemeName(theme)
-            if not QIcon.fromTheme("network-wired").isNull():
-                return
+        for kdeglobals in (
+            os.path.expanduser("~/.config/kdeglobals"),
+            "/etc/xdg/kdeglobals",
+        ):
+            cfg = configparser.ConfigParser()
+            cfg.read(kdeglobals)
+            theme = cfg.get("Icons", "Theme", fallback="").strip()
+            if theme:
+                QIcon.setThemeName(theme)
+                if _icon_ok("network-wired"):
+                    return
     except Exception:
         pass
 
@@ -53,7 +67,7 @@ def _ensure_icon_theme() -> None:
         ).strip().strip("'\"")
         if theme:
             QIcon.setThemeName(theme)
-            if not QIcon.fromTheme("network-wired").isNull():
+            if _icon_ok("network-wired"):
                 return
     except Exception:
         pass
@@ -61,7 +75,7 @@ def _ensure_icon_theme() -> None:
     # Fallback: try breeze then Adwaita
     for name in ("breeze", "Adwaita", "hicolor"):
         QIcon.setThemeName(name)
-        if not QIcon.fromTheme("network-wired").isNull():
+        if _icon_ok("network-wired"):
             return
 
 
