@@ -53,7 +53,7 @@ _TOOLS = [
         "Affiche les interfaces réseau actives (Ethernet, Wi-Fi, loopback…)\navec état, adresse MAC et adresses IP.",
     ),
     (
-        ("network-wireless", "network-wireless-signal-excellent", "network-wireless-signal-good"),
+        ("network-wireless", "network-wireless-signal-excellent", "network-wireless-signal-good", "network-workgroup"),
         "Wi-Fi", WifiPage,
         "Scanne les réseaux sans fil disponibles, affiche\nle niveau de signal et la sécurité, et permet de s'y connecter.",
     ),
@@ -108,7 +108,7 @@ _TOOLS = [
         "Terminal SSH embarqué pour se connecter à distance\nà un serveur ou un équipement réseau.",
     ),
     (
-        ("network-wired", "network-transmit-receive", "go-next"),
+        ("network-wired", "network-transmit-receive", "go-next", "go-jump", "mail-send", "network-workgroup"),
         "Traceroute", TraceroutePage,
         "Affiche le chemin réseau vers une destination\net la latence de chaque routeur traversé.",
     ),
@@ -123,7 +123,7 @@ _TOOLS = [
         "Lit et affiche les règles pare-feu nftables et iptables\nsans nécessiter les droits root.",
     ),
     (
-        ("network-transmit-receive", "modem", "network-wired", "go-down"),
+        ("network-transmit-receive", "modem", "network-wired", "go-down", "utilities-system-monitor", "appointment-soon"),
         "Speed Test", SpeedTestPage,
         "Mesure le débit descendant, montant et le ping\nvia les serveurs Cloudflare.",
     ),
