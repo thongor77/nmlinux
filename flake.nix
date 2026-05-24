@@ -1,5 +1,5 @@
 {
-  description = "NMLinux — Network Manager for Linux";
+  description = "NMLinux — Network Manager GUI for Linux";
 
   inputs = {
     nixpkgs.url     = "github:NixOS/nixpkgs/nixos-unstable";
@@ -10,22 +10,45 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs   = nixpkgs.legacyPackages.${system};
-        python = pkgs.python313;
+        python = pkgs.python3;
+
+        systemTools = with pkgs; [
+          networkmanager   # nmcli
+          iproute2         # ip
+          iputils          # ping
+          nmap
+          whois
+          net-snmp         # snmpwalk / snmpget
+          bind             # dig
+          traceroute
+          mtr
+          curl
+        ];
 
         nmlinux = python.pkgs.buildPythonApplication {
           pname   = "nmlinux";
-          version = "0.1.0";
+          version = "1.2.6";
           src     = ./.;
           format  = "pyproject";
 
-          nativeBuildInputs = [ python.pkgs.hatchling ];
+          nativeBuildInputs = with python.pkgs; [ hatchling ];
 
           propagatedBuildInputs = with python.pkgs; [
             pyside6
-            dnspython
-            paramiko
-            netaddr
+            ptyprocess
+            pyte
           ];
+
+          makeWrapperArgs = [
+            "--prefix PATH : ${pkgs.lib.makeBinPath systemTools}"
+          ];
+
+          meta = {
+            description = "A free Linux adaptation of NETworkManager";
+            homepage    = "https://github.com/thongor77/nmlinux";
+            license     = pkgs.lib.licenses.gpl2Only;
+            platforms   = pkgs.lib.platforms.linux;
+          };
         };
       in {
         packages.default = nmlinux;
@@ -36,11 +59,13 @@
         };
 
         devShells.default = pkgs.mkShell {
-          packages = [
+          buildInputs = [
             (python.withPackages (ps: with ps; [
-              pyside6 dnspython paramiko netaddr
+              pyside6
+              ptyprocess
+              pyte
             ]))
-          ];
+          ] ++ systemTools;
         };
       }
     );
