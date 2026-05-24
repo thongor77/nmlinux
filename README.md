@@ -4,7 +4,10 @@
 
 **A free Linux adaptation of [NETworkManager](https://github.com/BornToBeRoot/NETworkManager) by BornToBeRoot.**
 
-NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented from scratch in Python and PySide6 (Qt 6). It is not a port of the original C# code, but an independent rewrite inspired by the same idea: a single, unified GUI for the most common network tools a sysadmin or power user needs.
+NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented from scratch in Python and PySide6 (Qt 6). It is not a port of the original C# code, but an independent project inspired by the same idea: a single, unified GUI for the most common network tools a sysadmin or power user needs.
+
+> [!NOTE]
+> **NMLinux is not related to the Linux system daemon `/usr/bin/NetworkManager` (NetworkManager by Red Hat/GNOME).** The name comes from [NETworkManager](https://github.com/BornToBeRoot/NETworkManager) by BornToBeRoot, a similar tool for Windows that served as the original inspiration.
 
 > Built with [Claude Code](https://claude.ai/code) (Anthropic) and the contribution of its author.
 
