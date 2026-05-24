@@ -45,6 +45,8 @@
             "--prefix PATH : ${pkgs.lib.makeBinPath systemTools}"
             "--prefix XDG_DATA_DIRS : ${pkgs.kdePackages.breeze-icons}/share"
             "--prefix XDG_DATA_DIRS : ${pkgs.hicolor-icon-theme}/share"
+            "--set-default QT_QPA_PLATFORMTHEME kde"
+            "--set-default NMLINUX_ICON_THEME breeze"
           ];
 
           meta = {

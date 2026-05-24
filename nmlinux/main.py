@@ -8,7 +8,16 @@ from nmlinux.core.icons import themed_icon
 
 def _ensure_icon_theme() -> None:
     """When Qt has no icon theme set, detect it from the desktop environment."""
-    if QIcon.themeName():
+    import os
+
+    # If the current theme already resolves real icons, nothing to do
+    if QIcon.themeName() and not QIcon.fromTheme("network-wired").isNull():
+        return
+
+    # Explicit override from the Nix wrapper (or user env)
+    forced = os.environ.get("NMLINUX_ICON_THEME", "").strip()
+    if forced:
+        QIcon.setThemeName(forced)
         return
 
     # KDE / KConfig (~/.config/kdeglobals)
