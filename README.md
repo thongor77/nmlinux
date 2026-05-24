@@ -1,4 +1,4 @@
-# NMLinux · v1.2.5
+# NMLinux · v1.2.6
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.com/donate/?business=JFQGY7NU3ANCN&no_recurring=0&item_name=Every+donation%2C+no+matter+how+small%2C+helps+me+keep+this+project+alive.+Thank+you%21%0A&currency_code=EUR)
 
@@ -23,6 +23,10 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 ---
 
 ## Changelog
+
+### v1.2.6 — 2026-05-24
+
+- **GNOME / Adwaita compatibility** — fixed icons on non-KDE desktops: `main.py` now auto-detects the GTK icon theme via `gsettings` and applies it to Qt; extended fallback chains for Wi-Fi, Traceroute, Speed Test, Interfaces, Port Scanner, Firewall, MTR; `themed_icon()` now validates that a real pixmap exists before accepting a theme icon
 
 ### v1.2.5 — 2026-05-23
 
@@ -123,7 +127,7 @@ All dependencies (PySide6, ptyprocess, pyte, nmcli, …) are handled automatical
 Download the `.whl` from the [latest release](https://github.com/thongor77/nmlinux/releases/latest) and install it:
 
 ```bash
-pip install nmlinux-1.2.5-py3-none-any.whl
+pip install nmlinux-1.2.6-py3-none-any.whl
 nmlinux
 ```
 
