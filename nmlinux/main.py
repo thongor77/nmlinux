@@ -11,10 +11,11 @@ def _ensure_icon_theme() -> None:
     import os
 
     # Add non-standard icon search paths (NixOS, Nix profiles, custom installs)
+    # Qt expects the *parent* of the icons/ directory, i.e. /foo/share not /foo/share/icons
     extra_search = [
-        "/run/current-system/sw/share/icons",
-        os.path.expanduser("~/.nix-profile/share/icons"),
-        "/usr/local/share/icons",
+        "/run/current-system/sw/share",
+        os.path.expanduser("~/.nix-profile/share"),
+        "/usr/local/share",
     ]
     current_paths = QIcon.themeSearchPaths()
     additions = [p for p in extra_search if os.path.isdir(p) and p not in current_paths]

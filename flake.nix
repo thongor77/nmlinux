@@ -46,7 +46,7 @@
             "--prefix XDG_DATA_DIRS : ${pkgs.kdePackages.breeze-icons}/share"
             "--prefix XDG_DATA_DIRS : ${pkgs.hicolor-icon-theme}/share"
             "--set-default QT_QPA_PLATFORMTHEME kde"
-            "--set NMLINUX_ICON_PATH ${pkgs.kdePackages.breeze-icons}/share/icons"
+            "--set NMLINUX_ICON_PATH ${pkgs.kdePackages.breeze-icons}/share"
           ];
 
           meta = {
