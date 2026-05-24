@@ -7,10 +7,24 @@ from nmlinux.core.icons import themed_icon
 
 
 def _ensure_icon_theme() -> None:
-    """On GNOME/non-KDE desktops Qt often has no icon theme — detect and set one."""
+    """When Qt has no icon theme set, detect it from the desktop environment."""
     if QIcon.themeName():
         return
-    # Try to read the GTK/GNOME icon theme from gsettings
+
+    # KDE / KConfig (~/.config/kdeglobals)
+    try:
+        import configparser, os
+        kdeglobals = os.path.expanduser("~/.config/kdeglobals")
+        cfg = configparser.ConfigParser()
+        cfg.read(kdeglobals)
+        theme = cfg.get("Icons", "Theme", fallback="").strip()
+        if theme:
+            QIcon.setThemeName(theme)
+            return
+    except Exception:
+        pass
+
+    # GNOME / gsettings
     try:
         theme = subprocess.check_output(
             ["gsettings", "get", "org.gnome.desktop.interface", "icon-theme"],
@@ -21,7 +35,9 @@ def _ensure_icon_theme() -> None:
             return
     except Exception:
         pass
-    QIcon.setThemeName("Adwaita")
+
+    # Fallback
+    QIcon.setThemeName("breeze")
 
 
 def main() -> None:

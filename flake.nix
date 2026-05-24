@@ -23,6 +23,8 @@
           traceroute
           mtr
           curl
+          kdePackages.breeze-icons
+          hicolor-icon-theme
         ];
 
         nmlinux = python.pkgs.buildPythonApplication {
@@ -41,6 +43,8 @@
 
           makeWrapperArgs = [
             "--prefix PATH : ${pkgs.lib.makeBinPath systemTools}"
+            "--prefix XDG_DATA_DIRS : ${pkgs.kdePackages.breeze-icons}/share"
+            "--prefix XDG_DATA_DIRS : ${pkgs.hicolor-icon-theme}/share"
           ];
 
           meta = {
