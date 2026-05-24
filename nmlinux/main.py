@@ -14,10 +14,13 @@ def _ensure_icon_theme() -> None:
     if QIcon.themeName() and not QIcon.fromTheme("network-wired").isNull():
         return
 
-    # Explicit override from the Nix wrapper (or user env)
-    forced = os.environ.get("NMLINUX_ICON_THEME", "").strip()
-    if forced:
-        QIcon.setThemeName(forced)
+    # Nix wrapper: explicit icon search path + theme name
+    icon_path = os.environ.get("NMLINUX_ICON_PATH", "").strip()
+    if icon_path:
+        paths = QIcon.themeSearchPaths()
+        if icon_path not in paths:
+            QIcon.setThemeSearchPaths([icon_path] + paths)
+        QIcon.setThemeName("breeze")
         return
 
     # KDE / KConfig (~/.config/kdeglobals)
