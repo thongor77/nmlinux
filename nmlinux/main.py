@@ -87,16 +87,27 @@ def _ensure_icon_theme() -> None:
 
 def _debug_icons() -> None:
     import os
-    app = QApplication(sys.argv)
+    from PySide6.QtWidgets import QApplication as _QApp
+    from PySide6.QtCore import QCoreApplication
+    app = _QApp(sys.argv)
     _ensure_icon_theme()
     print("=== nmlinux icon debug ===")
     print(f"QT_QPA_PLATFORMTHEME : {os.environ.get('QT_QPA_PLATFORMTHEME', 'NOT SET')}")
+    print(f"QT_PLUGIN_PATH       : {os.environ.get('QT_PLUGIN_PATH', 'NOT SET')}")
     print(f"NMLINUX_ICON_PATH    : {os.environ.get('NMLINUX_ICON_PATH', 'NOT SET')}")
-    xdg = os.environ.get("XDG_DATA_DIRS", "NOT SET")
-    print(f"XDG_DATA_DIRS        : {xdg[:120]}{'...' if len(xdg) > 120 else ''}")
     print(f"themeName            : {QIcon.themeName()!r}")
-    print(f"themeSearchPaths     : {QIcon.themeSearchPaths()}")
-    for iname in ("network-wired", "network-wireless", "utilities-terminal"):
+    print(f"libraryPaths         : {QCoreApplication.libraryPaths()}")
+    # Check if icon files actually exist on disk
+    icon_path = os.environ.get("NMLINUX_ICON_PATH", "")
+    for rel in (
+        "icons/breeze/index.theme",
+        "icons/breeze/scalable/devices/network-wired.svg",
+        "icons/breeze/scalable/devices/network-wired.svgz",
+        "icons/breeze/22/devices/network-wired.png",
+    ):
+        full = os.path.join(icon_path, rel)
+        print(f"  exists {full}: {os.path.exists(full)}")
+    for iname in ("network-wired", "network-wireless"):
         icon = QIcon.fromTheme(iname)
         sizes = {s: not icon.pixmap(s, s).isNull() for s in (16, 22, 24, 32, 48)}
         print(f"  {iname}: isNull={icon.isNull()}  pixmaps={sizes}")
