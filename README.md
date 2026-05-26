@@ -1,4 +1,4 @@
-# NMLinux · v1.2.6
+# NMLinux · v1.2.7
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.com/donate/?business=JFQGY7NU3ANCN&no_recurring=0&item_name=Every+donation%2C+no+matter+how+small%2C+helps+me+keep+this+project+alive.+Thank+you%21%0A&currency_code=EUR)
 
@@ -26,6 +26,10 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 ---
 
 ## Changelog
+
+### v1.2.7 — 2026-05-26
+
+- **Bundled Lucide icons** — 21 SVG icons from [Lucide](https://lucide.dev) (MIT) are now bundled in `assets/icons/`; rendered at runtime via `QSvgRenderer`; coloured `#60a5fa`; app no longer requires any system icon theme (Breeze, Adwaita, Papirus…)
 
 ### v1.2.6 — 2026-05-24
 
@@ -131,7 +135,7 @@ All dependencies (PySide6, ptyprocess, pyte, nmcli, …) are handled automatical
 Download the `.whl` from the [latest release](https://github.com/thongor77/nmlinux/releases/latest) and install it:
 
 ```bash
-pip install nmlinux-1.2.6-py3-none-any.whl
+pip install nmlinux-1.2.7-py3-none-any.whl
 nmlinux
 ```
 
