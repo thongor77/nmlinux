@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import os
 import subprocess
-import tempfile
 import uuid
 
 from PySide6.QtWidgets import (
@@ -506,36 +504,13 @@ class VncPage(QWidget):
         if binary is None:
             QMessageBox.warning(self, tr("vnc_missing_title"), tr("vnc_missing_msg"))
             return
-        password, ok = QInputDialog.getText(
-            self,
-            conn.display_name,
-            tr("vnc_password_prompt"),
-            QLineEdit.EchoMode.Password,
-        )
-        if not ok:
-            return
         try:
-            # vncpasswd -f: reads plain password from stdin, writes 8-byte
-            # VNC-obfuscated password to stdout (TigerVNC -autopass removed in v1.14+)
-            enc = subprocess.run(
-                ["vncpasswd", "-f"],
-                input=password.encode() + b"\n",
-                capture_output=True,
-                timeout=5,
+            # vncviewer handles its own password dialog — macOS ARD uses DH(30) auth
+            # which ignores pre-passed password files; let vncviewer prompt natively
+            subprocess.Popen(
+                build_vnc_args(conn, binary),
+                start_new_session=True,
+                close_fds=True,
             )
-            if enc.returncode != 0:
-                QMessageBox.critical(self, "VNC", "vncpasswd failed: " + enc.stderr.decode())
-                return
-            with tempfile.NamedTemporaryFile(suffix=".vnc", delete=False) as f:
-                f.write(enc.stdout)
-                tmppath = f.name
-            try:
-                subprocess.Popen(
-                    build_vnc_args(conn, binary, tmppath),
-                    start_new_session=True,
-                    close_fds=True,
-                )
-            finally:
-                os.unlink(tmppath)
         except Exception as exc:
             QMessageBox.critical(self, "VNC", str(exc))

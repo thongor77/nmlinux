@@ -91,10 +91,8 @@ class VncStore:
 # ── Args builder ───────────────────────────────────────────────────────────
 
 
-def build_vnc_args(conn: VncConnection, binary: str, password_file: str = "") -> list[str]:
+def build_vnc_args(conn: VncConnection, binary: str) -> list[str]:
     args = [binary]
-    if password_file:
-        args += ["-passwd", password_file]
     if conn.username:
         args += ["-username", conn.username]
     args.append(f"{conn.host}::{conn.port}")
