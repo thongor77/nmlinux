@@ -12,8 +12,19 @@ def test_args_basic():
     conn = VncConnection(host="192.168.1.20", port=5900)
     args = build_vnc_args(conn, "vncviewer")
     assert args[0] == "vncviewer"
-    assert "-autopass" in args
+    assert "-autopass" not in args
     assert "192.168.1.20::5900" in args
+
+def test_args_with_password_file():
+    conn = VncConnection(host="192.168.1.20", port=5900)
+    args = build_vnc_args(conn, "vncviewer", "/tmp/vnc.vnc")
+    assert "-passwd" in args
+    assert "/tmp/vnc.vnc" in args
+
+def test_args_no_password_file():
+    conn = VncConnection(host="192.168.1.20", port=5900)
+    args = build_vnc_args(conn, "vncviewer")
+    assert "-passwd" not in args
 
 def test_args_with_username():
     conn = VncConnection(host="192.168.1.20", port=5900, username="luust")
