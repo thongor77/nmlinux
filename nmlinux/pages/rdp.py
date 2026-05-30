@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import shutil
 import uuid
 
 from PySide6.QtWidgets import (
@@ -14,7 +13,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import Qt, QProcess
 
-from nmlinux.core.rdp import RdpConnection, RdpGroup, RdpStore, build_rdp_args
+from nmlinux.core.rdp import RdpConnection, RdpGroup, RdpStore, build_rdp_args, find_xfreerdp
 from nmlinux.core.i18n import tr
 
 _EMPTY  = 0
@@ -552,7 +551,8 @@ class RdpPage(QWidget):
     # ── RDP launch ─────────────────────────────────────────────────────────
 
     def _launch_rdp(self, conn: RdpConnection) -> None:
-        if not shutil.which("xfreerdp"):
+        binary = find_xfreerdp()
+        if binary is None:
             QMessageBox.warning(self, tr("rdp_missing_title"), tr("rdp_missing_msg"))
             return
         password, ok = QInputDialog.getText(
@@ -563,6 +563,6 @@ class RdpPage(QWidget):
         )
         if not ok:
             return
-        args = build_rdp_args(conn, password)
+        args = build_rdp_args(conn, password, binary=binary)
         proc = QProcess(self)
         proc.startDetached(args[0], args[1:])

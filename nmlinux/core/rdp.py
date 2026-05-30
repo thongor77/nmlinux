@@ -3,9 +3,20 @@
 from __future__ import annotations
 
 import json
+import shutil
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+
+# freerdp 3.x (Arch) ships xfreerdp3; freerdp 2.x (Debian/Ubuntu) ships xfreerdp
+_XFREERDP_CANDIDATES = ["xfreerdp3", "xfreerdp"]
+
+
+def find_xfreerdp() -> str | None:
+    for name in _XFREERDP_CANDIDATES:
+        if shutil.which(name):
+            return name
+    return None
 
 
 # ── Model ──────────────────────────────────────────────────────────────────
@@ -83,9 +94,9 @@ class RdpStore:
 # ── Args builder ───────────────────────────────────────────────────────────
 
 
-def build_rdp_args(conn: RdpConnection, password: str) -> list[str]:
+def build_rdp_args(conn: RdpConnection, password: str, binary: str = "xfreerdp") -> list[str]:
     args = [
-        "xfreerdp",
+        binary,
         f"/v:{conn.host}:{conn.port}",
     ]
     if conn.username:
