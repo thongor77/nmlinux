@@ -1,4 +1,4 @@
-# NMLinux · v1.2.8
+# NMLinux · v1.2.9
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.com/donate/?business=JFQGY7NU3ANCN&no_recurring=0&item_name=Every+donation%2C+no+matter+how+small%2C+helps+me+keep+this+project+alive.+Thank+you%21%0A&currency_code=EUR)
 
@@ -26,6 +26,10 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 ---
 
 ## Changelog
+
+### v1.2.9 — 2026-05-30
+
+- **VNC** — new module for managing VNC connection profiles; groups/subgroups like SSH and RDP; launches `vncviewer` (TigerVNC) via `-autopass` stdin; username field for macOS ARD compatibility; password prompted at connect time, never stored; detects missing `vncviewer` with distro-specific install instructions
 
 ### v1.2.8 — 2026-05-30
 
