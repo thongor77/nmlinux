@@ -16,17 +16,6 @@ def test_args_basic():
     assert "-passwd" not in args
     assert "192.168.1.20::5900" in args
 
-def test_args_with_username():
-    conn = VncConnection(host="192.168.1.20", port=5900, username="luust")
-    args = build_vnc_args(conn, "vncviewer")
-    assert "-username" in args
-    assert "luust" in args
-
-def test_args_no_username():
-    conn = VncConnection(host="192.168.1.20", port=5900, username="")
-    args = build_vnc_args(conn, "vncviewer")
-    assert "-username" not in args
-
 def test_args_custom_binary():
     conn = VncConnection(host="srv", port=5901)
     args = build_vnc_args(conn, "tigervnc")

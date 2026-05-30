@@ -92,8 +92,4 @@ class VncStore:
 
 
 def build_vnc_args(conn: VncConnection, binary: str) -> list[str]:
-    args = [binary]
-    if conn.username:
-        args += ["-username", conn.username]
-    args.append(f"{conn.host}::{conn.port}")
-    return args
+    return [binary, f"{conn.host}::{conn.port}"]

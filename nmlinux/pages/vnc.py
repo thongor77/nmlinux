@@ -505,8 +505,6 @@ class VncPage(QWidget):
             QMessageBox.warning(self, tr("vnc_missing_title"), tr("vnc_missing_msg"))
             return
         try:
-            # vncviewer handles its own password dialog — macOS ARD uses DH(30) auth
-            # which ignores pre-passed password files; let vncviewer prompt natively
             subprocess.Popen(
                 build_vnc_args(conn, binary),
                 start_new_session=True,
