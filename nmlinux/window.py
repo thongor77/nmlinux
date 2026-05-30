@@ -151,7 +151,7 @@ _TOOLS = [
     ),
     (
         ("network-workgroup", "computer", "network-wired"),
-        "Topologie", TopologyPage,
+        "Topology", TopologyPage,
         "Génère une carte visuelle des équipements\ndécouverts sur le réseau local.",
     ),
 ]
