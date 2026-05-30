@@ -23,6 +23,7 @@ from nmlinux.pages.whois import WhoisPage
 from nmlinux.pages.snmp import SnmpPage
 from nmlinux.pages.sntp import SntpPage
 from nmlinux.pages.ssh import SshPage
+from nmlinux.pages.rdp import RdpPage
 from nmlinux.pages.traceroute import TraceroutePage
 from nmlinux.pages.mtr import MtrPage
 from nmlinux.pages.firewall import FirewallPage
@@ -106,6 +107,11 @@ _TOOLS = [
         ("utilities-terminal", "terminal", "gnome-terminal"),
         "SSH", SshPage,
         "Terminal SSH embarqué pour se connecter à distance\nà un serveur ou un équipement réseau.",
+    ),
+    (
+        ("computer", "network-workgroup", "preferences-desktop-remote-desktop"),
+        "Remote Desktop", RdpPage,
+        "Gère les profils de connexion Bureau à distance (RDP)\net lance xfreerdp vers des machines Windows.",
     ),
     (
         ("network-wired", "network-transmit-receive", "go-next", "go-jump", "mail-send", "network-workgroup"),
