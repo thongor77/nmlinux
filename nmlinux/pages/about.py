@@ -99,5 +99,9 @@ class AboutPage(QWidget):
         self._tech_frame = _section(tr("about_tech_title"), tr("about_tech_text"))
         center.addWidget(self._tech_frame)
 
+        # ── Tools & services ──────────────────────────────────────────────
+        self._tools_frame = _section(tr("about_tools_title"), tr("about_tools_text"))
+        center.addWidget(self._tools_frame)
+
         outer.addLayout(center)
         outer.addStretch(1)

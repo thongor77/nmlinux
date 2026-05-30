@@ -40,7 +40,14 @@ _T: dict[str, dict[str, str]] = {
             "Merci à BornToBeRoot pour l'inspiration et le travail original."
         ),
         "about_tech_title":      "Technologies",
-        "about_tech_text":       "Python 3 · PySide6 (Qt 6) · ptyprocess",
+        "about_tech_text":       "Python 3 · PySide6 (Qt 6) · ptyprocess · pyte · Lucide Icons",
+        "about_tools_title":     "Outils & services",
+        "about_tools_text":      (
+            "NetworkManager (nmcli) · iproute2 · OpenSSH · nmap · "
+            "freerdp · TigerVNC · mtr · net-snmp · curl · tracepath\n"
+            "ip-api.com (géolocalisation) · speed.cloudflare.com (test débit) · "
+            "Natural Earth (carte traceroute)"
+        ),
 
         # ── Dashboard ───────────────────────────────────────────────────────
         "dash_title":       "Tableau de bord",
@@ -684,7 +691,14 @@ _T: dict[str, dict[str, str]] = {
             "Thanks to BornToBeRoot for the inspiration and the original work."
         ),
         "about_tech_title":      "Technologies",
-        "about_tech_text":       "Python 3 · PySide6 (Qt 6) · ptyprocess",
+        "about_tech_text":       "Python 3 · PySide6 (Qt 6) · ptyprocess · pyte · Lucide Icons",
+        "about_tools_title":     "Tools & services",
+        "about_tools_text":      (
+            "NetworkManager (nmcli) · iproute2 · OpenSSH · nmap · "
+            "freerdp · TigerVNC · mtr · net-snmp · curl · tracepath\n"
+            "ip-api.com (geolocation) · speed.cloudflare.com (speed test) · "
+            "Natural Earth (traceroute map)"
+        ),
 
         "dash_title":       "Dashboard",
         "dash_card_pc":     "Computer",
@@ -1709,7 +1723,14 @@ _T: dict[str, dict[str, str]] = {
             "Gracias a BornToBeRoot por la inspiración y el trabajo original."
         ),
         "about_tech_title":      "Tecnologías",
-        "about_tech_text":       "Python 3 · PySide6 (Qt 6) · ptyprocess",
+        "about_tech_text":       "Python 3 · PySide6 (Qt 6) · ptyprocess · pyte · Lucide Icons",
+        "about_tools_title":     "Herramientas y servicios",
+        "about_tools_text":      (
+            "NetworkManager (nmcli) · iproute2 · OpenSSH · nmap · "
+            "freerdp · TigerVNC · mtr · net-snmp · curl · tracepath\n"
+            "ip-api.com (geolocalización) · speed.cloudflare.com (velocidad) · "
+            "Natural Earth (mapa traceroute)"
+        ),
 
         "settings_title":        "Configuración",
         "settings_lang_section": "Idioma",
@@ -2339,7 +2360,14 @@ _T: dict[str, dict[str, str]] = {
             "Dank an BornToBeRoot für die Inspiration und die ursprüngliche Arbeit."
         ),
         "about_tech_title":      "Technologien",
-        "about_tech_text":       "Python 3 · PySide6 (Qt 6) · ptyprocess",
+        "about_tech_text":       "Python 3 · PySide6 (Qt 6) · ptyprocess · pyte · Lucide Icons",
+        "about_tools_title":     "Werkzeuge & Dienste",
+        "about_tools_text":      (
+            "NetworkManager (nmcli) · iproute2 · OpenSSH · nmap · "
+            "freerdp · TigerVNC · mtr · net-snmp · curl · tracepath\n"
+            "ip-api.com (Geolokalisierung) · speed.cloudflare.com (Geschwindigkeitstest) · "
+            "Natural Earth (Traceroute-Karte)"
+        ),
 
         "settings_title":        "Einstellungen",
         "settings_lang_section": "Sprache",
