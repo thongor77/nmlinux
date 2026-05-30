@@ -46,7 +46,7 @@ _TOOLS = [
     ),
     (
         ("network-wired", "network-manager", "preferences-system-network"),
-        "Connexions", ConnectionManagerPage,
+        "Connections", ConnectionManagerPage,
         "Gère les profils réseau NetworkManager :\ncréer, modifier, activer ou désactiver des connexions.",
     ),
     (
@@ -61,7 +61,7 @@ _TOOLS = [
     ),
     (
         ("network-wired", "network-server"),
-        "Sous-réseau", SubnetPage,
+        "Subnet", SubnetPage,
         "Calcule la plage d'adresses, le masque, le broadcast\net le nombre d'hôtes d'un réseau CIDR.",
     ),
     (
