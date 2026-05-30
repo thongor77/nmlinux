@@ -24,6 +24,7 @@ from nmlinux.pages.snmp import SnmpPage
 from nmlinux.pages.sntp import SntpPage
 from nmlinux.pages.ssh import SshPage
 from nmlinux.pages.rdp import RdpPage
+from nmlinux.pages.vnc import VncPage
 from nmlinux.pages.traceroute import TraceroutePage
 from nmlinux.pages.mtr import MtrPage
 from nmlinux.pages.firewall import FirewallPage
@@ -112,6 +113,11 @@ _TOOLS = [
         ("computer", "network-workgroup", "preferences-desktop-remote-desktop"),
         "Remote Desktop", RdpPage,
         "Gère les profils de connexion Bureau à distance (RDP)\net lance xfreerdp vers des machines Windows.",
+    ),
+    (
+        ("computer", "video-display", "network-workgroup"),
+        "VNC", VncPage,
+        "Gère les profils de connexion VNC\net lance vncviewer vers des machines macOS, Linux ou Windows.",
     ),
     (
         ("network-wired", "network-transmit-receive", "go-next", "go-jump", "mail-send", "network-workgroup"),
