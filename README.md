@@ -15,13 +15,13 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 
 ## Screenshots
 
-| Dashboard | SSH Terminal |
-|-----------|-------------|
-| ![Dashboard](screenshots/Main.png) | ![SSH](screenshots/SSH.png) |
+| Dashboard | Topology |
+|-----------|----------|
+| ![Dashboard](screenshots/main_v1.2.7.png) | ![Topology](screenshots/topology_v1.2.7.png) |
 
-| DNS Lookup | Port Scanner |
-|------------|-------------|
-| ![DNS](screenshots/DNS.png) | ![Port Scanner](screenshots/port%20scanner.png) |
+| Traceroute | Wi-Fi |
+|------------|-------|
+| ![Traceroute](screenshots/traceroute_v1.2.7.png) | ![Wi-Fi](screenshots/Wi-Fi_v1.2.7.png) |
 
 ---
 
