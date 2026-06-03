@@ -153,16 +153,38 @@ yay -S nmlinux
 
 All dependencies (PySide6, ptyprocess, pyte, nmcli, …) are handled automatically.
 
-### Option 2 — Wheel (all distros)
+### Option 2 — Debian / Ubuntu / Linux Mint (install script)
+
+> **Note for Linux Mint / Ubuntu users:** `pip install` is blocked system-wide on Python 3.12+ (PEP 668 — `externally-managed-environment`). Use the provided install script — it creates a virtual environment automatically and installs a `.desktop` entry.
+
+```bash
+git clone https://github.com/thongor77/nmlinux.git
+cd nmlinux
+bash install.sh
+```
+
+The script will:
+- Install system dependencies via `apt` (libgl1, python3-venv, freerdp, tigervnc…)
+- Create a virtual environment in `~/.local/share/nmlinux/venv`
+- Install NMLinux and its Python dependencies inside the venv
+- Create a launcher at `~/.local/bin/nmlinux`
+- Add a `.desktop` entry so NMLinux appears in your application menu
+
+After install, run `nmlinux` from a terminal or launch it from the application menu.
+
+### Option 3 — Wheel (all distros)
 
 Download the `.whl` from the [latest release](https://github.com/thongor77/nmlinux/releases/latest) and install it:
 
 ```bash
+# Arch / Fedora / distros without pip restrictions
 pip install nmlinux-1.2.9-py3-none-any.whl
-nmlinux
+
+# Debian / Ubuntu / Mint — use pipx or a venv instead
+pipx install nmlinux-1.2.9-py3-none-any.whl
 ```
 
-### Option 3 — From source
+### Option 4 — From source (Arch / Fedora)
 
 ```bash
 git clone https://github.com/thongor77/nmlinux.git
@@ -171,7 +193,7 @@ pip install PySide6 ptyprocess pyte
 python3 -m nmlinux.main
 ```
 
-### Option 4 — Desktop entry (KDE / GNOME / etc.)
+### Option 5 — Desktop entry (KDE / GNOME / etc.)
 
 Copy the `.desktop` file to make NMLinux appear in your application launcher:
 
