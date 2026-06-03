@@ -21,6 +21,8 @@ from nmlinux.pages.port_scanner import PortScannerPage
 from nmlinux.pages.nmap_scan import NmapPage
 from nmlinux.pages.whois import WhoisPage
 from nmlinux.pages.tls import TlsPage
+from nmlinux.pages.smb_nfs import SmbNfsPage
+from nmlinux.pages.hosts import HostsPage
 from nmlinux.pages.snmp import SnmpPage
 from nmlinux.pages.sntp import SntpPage
 from nmlinux.pages.ssh import SshPage
@@ -99,6 +101,16 @@ _TOOLS = [
         ("security-high", "changes-prevent", "system-lock-screen", "dialog-password"),
         "TLS Inspector", TlsPage,
         tr("nav_hint_tls"),
+    ),
+    (
+        ("network-workgroup", "folder-remote", "network-server", "network-wired"),
+        "SMB / NFS", SmbNfsPage,
+        tr("nav_hint_smb_nfs"),
+    ),
+    (
+        ("text-x-generic", "document-edit", "preferences-system"),
+        "Hosts File", HostsPage,
+        tr("nav_hint_hosts"),
     ),
     (
         ("preferences-system", "system-settings", "configure"),

@@ -1,4 +1,4 @@
-# NMLinux · v1.2.9
+# NMLinux · v1.3.0
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.com/donate/?business=JFQGY7NU3ANCN&no_recurring=0&item_name=Every+donation%2C+no+matter+how+small%2C+helps+me+keep+this+project+alive.+Thank+you%21%0A&currency_code=EUR)
 
@@ -26,6 +26,13 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 ---
 
 ## Changelog
+
+### v1.3.0 — 2026-06-03
+
+- **TLS / SSL Inspector** — inspect any server's certificate: subject CN, SANs, issuer, validity dates (color-coded: green / orange < 30 days / red expired), serial number, TLS protocol, cipher suite and certificate chain (via `openssl s_client`); works for valid, expired and self-signed certs; friendly error messages for unreachable hosts
+- **SMB / NFS Browser** — list shares and exports from any server; SMB tab: `smbclient -L` with optional credentials, shows share name / type / comment; NFS tab: `showmount -e`, shows export path and access list; detects missing tools with distro-specific install instructions
+- **Hosts File Editor** — view and edit `/etc/hosts`; table with enable/disable toggle, add/edit/delete entries via dialog; filter by IP or hostname; saves via `pkexec cp` (polkit authentication dialog)
+- **install.sh** — new script for Debian / Ubuntu / Linux Mint: creates a venv in `~/.local/share/nmlinux/venv`, installs system deps via apt, creates launcher and `.desktop` entry (fixes PEP 668 `externally-managed-environment` error)
 
 ### v1.2.9 — 2026-05-30
 
@@ -97,6 +104,9 @@ Initial public release — 13 modules: Dashboard, Interfaces, Wi-Fi, Subnet Calc
 | **SSH** | Embedded PTY terminal (pyte/VT100), saved connections (JSON), key auth, scrollback |
 | **Remote Desktop** | RDP connection profiles (groups/subgroups); launches `xfreerdp`; password never stored |
 | **VNC** | VNC connection profiles (groups/subgroups); launches `vncviewer` (TigerVNC); macOS ARD compatible; password never stored |
+| **TLS Inspector** | Certificate details: CN, SANs, issuer, validity + expiry countdown, serial, protocol, cipher, chain |
+| **SMB / NFS** | List SMB shares (`smbclient`) and NFS exports (`showmount`) from any server or NAS; optional credentials for SMB |
+| **Hosts File** | View/edit `/etc/hosts`: add, delete, toggle entries; filter; save via pkexec |
 | **Visual Traceroute** | Hop-by-hop route on a world map, live geolocation (ip-api.com), zoom & pan, CSV + TXT export |
 | **MTR** | Embedded My Traceroute: loss %, RTT Last/Avg/Best/Worst/Jitter per hop, colour-coded, CSV + TXT export |
 | **Firewall Viewer** | Read-only nftables + iptables/ip6tables ruleset (no root); live via pkexec; filter by table/chain/action |
