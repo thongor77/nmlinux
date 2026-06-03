@@ -61,7 +61,7 @@ class AboutPage(QWidget):
 
         self._version_lbl = QLabel(f"Version {__version__}")
         self._version_lbl.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        self._version_lbl.setStyleSheet("font-size: 12px; color: palette(mid);")
+        self._version_lbl.setStyleSheet("font-size: 12px; color: gray;")
         center.addWidget(self._version_lbl)
 
         self._desc_lbl = QLabel(tr("about_description"))
