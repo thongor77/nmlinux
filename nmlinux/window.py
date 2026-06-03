@@ -20,6 +20,7 @@ from nmlinux.pages.ip_scanner import IpScannerPage
 from nmlinux.pages.port_scanner import PortScannerPage
 from nmlinux.pages.nmap_scan import NmapPage
 from nmlinux.pages.whois import WhoisPage
+from nmlinux.pages.tls import TlsPage
 from nmlinux.pages.snmp import SnmpPage
 from nmlinux.pages.sntp import SntpPage
 from nmlinux.pages.ssh import SshPage
@@ -93,6 +94,11 @@ _TOOLS = [
         ("dialog-information", "help-about"),
         "Whois", WhoisPage,
         tr("nav_hint_whois"),
+    ),
+    (
+        ("security-high", "changes-prevent", "system-lock-screen", "dialog-password"),
+        "TLS Inspector", TlsPage,
+        tr("nav_hint_tls"),
     ),
     (
         ("preferences-system", "system-settings", "configure"),
