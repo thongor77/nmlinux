@@ -26,6 +26,7 @@ from nmlinux.pages.hosts import HostsPage
 from nmlinux.pages.snmp import SnmpPage
 from nmlinux.pages.sntp import SntpPage
 from nmlinux.pages.ssh import SshPage
+from nmlinux.pages.ssh_keys import SshKeysPage
 from nmlinux.pages.rdp import RdpPage
 from nmlinux.pages.vnc import VncPage
 from nmlinux.pages.traceroute import TraceroutePage
@@ -126,6 +127,11 @@ _TOOLS = [
         ("utilities-terminal", "terminal", "gnome-terminal"),
         "SSH", SshPage,
         tr("nav_hint_ssh"),
+    ),
+    (
+        ("dialog-password", "security-high", "changes-prevent"),
+        "SSH Keys", SshKeysPage,
+        tr("nav_hint_ssh_keys"),
     ),
     (
         ("computer", "network-workgroup", "preferences-desktop-remote-desktop"),
