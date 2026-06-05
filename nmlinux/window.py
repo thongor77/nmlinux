@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QListWidget, QListWidgetItem, QStackedWidget, QFrame, QSizePolicy,
     QStyledItemDelegate, QStyle,
 )
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QPainter, QColor, QFont
 
 from nmlinux.core.i18n import tr
@@ -39,6 +39,7 @@ from nmlinux.pages.connection_manager import ConnectionManagerPage
 from nmlinux.pages.topology import TopologyPage
 from nmlinux.pages.settings import SettingsPage
 from nmlinux.pages.about import AboutPage
+from nmlinux.pages.help_page import HelpPage
 
 
 # (icon_names, label, PageClass, description)
@@ -181,6 +182,23 @@ _TOOLS = [
 ]
 
 
+class _NavList(QListWidget):
+    """QListWidget that detects clicks on the ? badge and emits help_requested."""
+
+    help_requested = Signal(int)   # row index
+    _BADGE_W = 25                  # px from right edge that counts as badge zone
+
+    def mousePressEvent(self, event) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            item = self.itemAt(event.pos())
+            if item is not None:
+                rect = self.visualRect(self.indexFromItem(item))
+                if event.pos().x() >= rect.right() - self._BADGE_W:
+                    self.help_requested.emit(self.row(item))
+                    return
+        super().mousePressEvent(event)
+
+
 class _NavHintDelegate(QStyledItemDelegate):
     """Draws a subtle ⓘ badge at the right edge of each nav item."""
 
@@ -267,12 +285,13 @@ class MainWindow(QMainWindow):
         layout.setSpacing(0)
 
         # ── Tools navigation (scrollable, fills available space) ──────────
-        self._nav = QListWidget()
+        self._nav = _NavList()
         self._nav.setIconSize(QSize(20, 20))
         self._nav.setSpacing(2)
         self._nav.setFrameShape(QFrame.Shape.NoFrame)
         self._nav.setItemDelegate(_NavHintDelegate(self._nav))
         self._nav.currentRowChanged.connect(self._on_nav_changed)
+        self._nav.help_requested.connect(self._on_help_requested)
 
         for icon_names, label, _, tip in _TOOLS:
             item = QListWidgetItem(themed_icon(*icon_names), label)
@@ -328,6 +347,11 @@ class MainWindow(QMainWindow):
         self._about_page = AboutPage()
         self._stack.addWidget(self._about_page)
 
+        # Help page — index = len(_TOOLS) + 2
+        self._help_page = HelpPage()
+        self._help_page.back_requested.connect(self._on_help_back)
+        self._stack.addWidget(self._help_page)
+
         self._nav.setCurrentRow(0)
         return self._stack
 
@@ -353,6 +377,20 @@ class MainWindow(QMainWindow):
             self._stack.setCurrentIndex(len(self._pages))
         elif row == 1:
             self._stack.setCurrentIndex(len(self._pages) + 1)
+
+    def _on_help_requested(self, row: int) -> None:
+        if 0 <= row < len(_TOOLS):
+            label = _TOOLS[row][1]
+            self._help_page.load(label)
+            self._stack.setCurrentIndex(len(self._pages) + 2)
+
+    def _on_help_back(self) -> None:
+        # Return to whichever page was active before help
+        row = self._nav.currentRow()
+        if row >= 0:
+            self._stack.setCurrentIndex(row)
+        else:
+            self._stack.setCurrentIndex(0)
 
     def _on_language_changed(self) -> None:
         self._settings_item.setText(tr("nav_settings"))
