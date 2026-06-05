@@ -1,4 +1,4 @@
-# NMLinux · v1.3.0
+# NMLinux · v1.3.1
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.com/donate/?business=JFQGY7NU3ANCN&no_recurring=0&item_name=Every+donation%2C+no+matter+how+small%2C+helps+me+keep+this+project+alive.+Thank+you%21%0A&currency_code=EUR)
 
@@ -26,6 +26,10 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 ---
 
 ## Changelog
+
+### v1.3.1 — 2026-06-05
+
+- **SSH Key Manager** — list all key pairs in `~/.ssh/` (file, type, bits, comment, SHA256 fingerprint); generate Ed25519 or RSA 4096 keys with optional passphrase (mismatch detection, auto-filename by type); copy public key to clipboard; deploy to a remote server via `ssh-copy-id` in an inline terminal with stdin support for password prompts; delete key pairs with confirmation; auto-creates `~/.ssh/` if missing; i18n: fr / en / es / de
 
 ### v1.3.0 — 2026-06-03
 
