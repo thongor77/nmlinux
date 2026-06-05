@@ -188,15 +188,23 @@ class _NavList(QListWidget):
     help_requested = Signal(int)   # row index
     _BADGE_W = 25                  # px from right edge that counts as badge zone
 
-    def mousePressEvent(self, event) -> None:
-        if event.button() == Qt.MouseButton.LeftButton:
-            item = self.itemAt(event.pos())
-            if item is not None:
-                rect = self.visualRect(self.indexFromItem(item))
-                if event.pos().x() >= rect.right() - self._BADGE_W:
-                    self.help_requested.emit(self.row(item))
-                    return
-        super().mousePressEvent(event)
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        # QListWidget is a QAbstractScrollArea — mouse events hit the viewport,
+        # not the widget itself, so we must filter at the viewport level.
+        self.viewport().installEventFilter(self)
+
+    def eventFilter(self, obj, event) -> bool:
+        from PySide6.QtCore import QEvent
+        if obj is self.viewport() and event.type() == QEvent.Type.MouseButtonPress:
+            if event.button() == Qt.MouseButton.LeftButton:
+                item = self.itemAt(event.pos())
+                if item is not None:
+                    rect = self.visualRect(self.indexFromItem(item))
+                    if event.pos().x() >= rect.right() - self._BADGE_W:
+                        self.help_requested.emit(self.row(item))
+                        return True   # consume — don't also select the item
+        return super().eventFilter(obj, event)
 
 
 class _NavHintDelegate(QStyledItemDelegate):
