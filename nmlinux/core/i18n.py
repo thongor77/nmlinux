@@ -74,6 +74,13 @@ _T: dict[str, dict[str, str]] = {
         "ssh_keys_err_passphrase_mismatch": "Les passphrases ne correspondent pas.",
         "ssh_keys_err_keygen":       "Erreur : {msg}",
         "ssh_keys_no_keys":          "Aucune clé SSH trouvée dans ~/.ssh/",
+
+        # ── Help panel ───────────────────────────────────────────────────
+        "help_back":             "← Retour",
+        "help_about":            "📖  À propos",
+        "help_examples":         "💡  Exemples d'utilisation",
+        "help_cli":              "💻  Commandes équivalentes",
+        "help_no_content":       "Pas de documentation disponible pour ce module.",
         "nav_hint_rdp":          "Gère les profils de connexion Bureau à distance (RDP)\net lance xfreerdp vers des machines Windows.",
         "nav_hint_vnc":          "Gère les profils de connexion VNC\net lance vncviewer vers des machines macOS, Linux ou Windows.",
         "nav_hint_traceroute":   "Affiche le chemin réseau vers une destination\net la latence de chaque routeur traversé.",
@@ -868,6 +875,13 @@ _T: dict[str, dict[str, str]] = {
         "ssh_keys_err_passphrase_mismatch": "Passphrases do not match.",
         "ssh_keys_err_keygen":       "Error: {msg}",
         "ssh_keys_no_keys":          "No SSH keys found in ~/.ssh/",
+
+        # ── Help panel ───────────────────────────────────────────────────
+        "help_back":             "← Back",
+        "help_about":            "📖  About",
+        "help_examples":         "💡  Usage examples",
+        "help_cli":              "💻  Equivalent commands",
+        "help_no_content":       "No documentation available for this module.",
         "nav_hint_rdp":          "Manages Remote Desktop (RDP) connection profiles\nand launches xfreerdp to Windows machines.",
         "nav_hint_vnc":          "Manages VNC connection profiles\nand launches vncviewer to macOS, Linux or Windows machines.",
         "nav_hint_traceroute":   "Shows the network path to a destination\nand the latency of each router hop.",
@@ -1642,6 +1656,13 @@ _T: dict[str, dict[str, str]] = {
         "ssh_keys_err_passphrase_mismatch": "Las frases de contraseña no coinciden.",
         "ssh_keys_err_keygen":       "Error: {msg}",
         "ssh_keys_no_keys":          "No se encontraron claves SSH en ~/.ssh/",
+
+        # ── Help panel ───────────────────────────────────────────────────
+        "help_back":             "← Volver",
+        "help_about":            "📖  Acerca de",
+        "help_examples":         "💡  Ejemplos de uso",
+        "help_cli":              "💻  Comandos equivalentes",
+        "help_no_content":       "Sin documentación disponible para este módulo.",
         "nav_hint_rdp":          "Gestiona perfiles de conexión de Escritorio Remoto (RDP)\ny lanza xfreerdp hacia máquinas Windows.",
         "nav_hint_vnc":          "Gestiona perfiles de conexión VNC\ny lanza vncviewer hacia máquinas macOS, Linux o Windows.",
         "nav_hint_traceroute":   "Muestra la ruta de red hacia un destino\ny la latencia de cada salto de router.",
@@ -2419,6 +2440,13 @@ _T: dict[str, dict[str, str]] = {
         "ssh_keys_err_passphrase_mismatch": "Passphrasen stimmen nicht überein.",
         "ssh_keys_err_keygen":       "Fehler: {msg}",
         "ssh_keys_no_keys":          "Keine SSH-Schlüssel in ~/.ssh/ gefunden",
+
+        # ── Help panel ───────────────────────────────────────────────────
+        "help_back":             "← Zurück",
+        "help_about":            "📖  Über",
+        "help_examples":         "💡  Verwendungsbeispiele",
+        "help_cli":              "💻  Äquivalente Befehle",
+        "help_no_content":       "Keine Dokumentation für dieses Modul verfügbar.",
         "nav_hint_rdp":          "Verwaltet Remote-Desktop-Verbindungsprofile (RDP)\nund startet xfreerdp zu Windows-Computern.",
         "nav_hint_vnc":          "Verwaltet VNC-Verbindungsprofile\nund startet vncviewer zu macOS-, Linux- oder Windows-Computern.",
         "nav_hint_traceroute":   "Zeigt den Netzwerkpfad zu einem Ziel\nund die Latenz jedes Router-Hops.",
