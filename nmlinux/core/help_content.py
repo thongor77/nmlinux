@@ -551,5 +551,5 @@ def get_help(label: str) -> dict | None:
     entry = _CONTENT.get(label)
     if not entry:
         return None
-    lang = _get_settings().get("language", "fr")
+    lang = _get_settings().language
     return entry.get(lang) or entry.get("fr")
