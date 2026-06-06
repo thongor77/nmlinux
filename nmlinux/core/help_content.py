@@ -1759,6 +1759,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "snmpwalk -v2c -c public 192.168.1.1 1.3.6.1.2.1.25.3.3.1.2",
             ],
         },
+        "zh": {
+            "desc": "通过snmpwalk/snmpget查询支持SNMP的网络设备（路由器、交换机、NAS…）。支持v1/v2c，内置10个常用OID预设（系统名称、运行时间、接口、CPU、内存…）。",
+            "examples": [
+                "读取交换机或路由器的运行时间。",
+                "获取设备的接口列表。",
+                "查询支持SNMP的服务器的CPU负载。",
+                "在集成到监控工具前测试SNMP社区字符串。",
+            ],
+            "cli": [
+                "snmpwalk -v2c -c public 192.168.1.1 system",
+                "snmpget -v2c -c public 192.168.1.1 sysDescr.0",
+                "snmpwalk -v2c -c public 192.168.1.1 ifTable",
+                "snmpwalk -v2c -c public 192.168.1.1 1.3.6.1.2.1.25.3.3.1.2",
+            ],
+        },
     },
     "SNTP / NTP": {
         "fr": {
@@ -1858,6 +1873,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "サーバーのクロックドリフトを測定する。",
                 "ntp.orgプールの複数のサーバーをテストする。",
                 "不正なシステムクロックが原因のTLSエラーを診断する。",
+            ],
+            "cli": [
+                "ntpdate -q pool.ntp.org",
+                "chronyc tracking",
+                "timedatectl status",
+                "sntp -q pool.ntp.org",
+            ],
+        },
+        "zh": {
+            "desc": "通过纯Python UDP客户端（RFC 4330）测试NTP同步。显示偏移量、往返延迟、层级和参考源。最多对5次请求取平均值。",
+            "examples": [
+                "验证本地NTP服务器是否可达并正常响应。",
+                "测量服务器的时钟漂移。",
+                "测试ntp.org池中的多个服务器。",
+                "诊断由系统时钟不正确引起的TLS错误。",
             ],
             "cli": [
                 "ntpdate -q pool.ntp.org",
@@ -1973,6 +2003,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "ssh -L 8080:localhost:80 user@192.168.1.10",
             ],
         },
+        "zh": {
+            "desc": "内置SSH终端，带有层级地址簿（组/子组）。支持密钥和密码认证、2000行滚动缓冲区、动态PTY、所有VT100/xterm序列。",
+            "examples": [
+                "连接服务器并交互式执行命令。",
+                "按组（生产、开发…）管理多个服务器。",
+                "在内置终端中使用Vim、htop等TUI工具。",
+                "保存连接历史以快速找到服务器。",
+            ],
+            "cli": [
+                "ssh user@192.168.1.10",
+                "ssh -p 2222 user@192.168.1.10",
+                "ssh -i ~/.ssh/id_ed25519 user@server.example.com",
+                "ssh -L 8080:localhost:80 user@192.168.1.10",
+            ],
+        },
     },
     "SSH Keys": {
         "fr": {
@@ -2072,6 +2117,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "authorized_keysに貼り付けるために公開鍵をすばやくコピーする。",
                 "ワンクリックでssh-copy-idを使って新しいサーバーにキーを配備する。",
                 "古い未使用キーペアをインベントリして削除する。",
+            ],
+            "cli": [
+                "ssh-keygen -t ed25519 -C \"user@host\"",
+                "ssh-keygen -t rsa -b 4096 -C \"user@host\"",
+                "ssh-copy-id -i ~/.ssh/id_ed25519.pub user@192.168.1.10",
+                "ssh-keygen -l -f ~/.ssh/id_ed25519.pub",
+            ],
+        },
+        "zh": {
+            "desc": "SSH密钥管理器：列出~/.ssh/中的密钥对（类型、位数、注释、SHA256指纹）。支持Ed25519/RSA生成（可选密码短语）、复制公钥、在内联终端通过ssh-copy-id部署。",
+            "examples": [
+                "生成Ed25519密钥以访问服务器或GitHub。",
+                "快速复制公钥以粘贴到authorized_keys。",
+                "一键通过ssh-copy-id将密钥部署到新服务器。",
+                "清点并删除旧的未使用密钥对。",
             ],
             "cli": [
                 "ssh-keygen -t ed25519 -C \"user@host\"",
@@ -2180,6 +2240,20 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "xfreerdp3 /v:192.168.1.100 /u:user /p:password /cert:ignore",
             ],
         },
+        "zh": {
+            "desc": "连接Windows机器的远程桌面（RDP）配置文件。支持组/子组，启动xfreerdp。密码在连接时提示输入，从不保存。",
+            "examples": [
+                "双击从Linux连接到Windows机器。",
+                "按站点或客户管理多台Windows服务器。",
+                "设置1920×1080全屏连接。",
+                "访问Active Directory域上的服务器。",
+            ],
+            "cli": [
+                "xfreerdp /v:192.168.1.100 /u:Administrator /dynamic-resolution",
+                "xfreerdp /v:192.168.1.100 /u:user /d:DOMAIN /f",
+                "xfreerdp3 /v:192.168.1.100 /u:user /p:password /cert:ignore",
+            ],
+        },
     },
     "VNC": {
         "fr": {
@@ -2266,6 +2340,19 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "リモートLinuxサーバーのグラフィカルデスクトップにアクセスする。",
                 "Apple Remote Desktop（ARD）経由でMacに接続する。",
                 "複数のVNCマシンをグループで管理する。",
+            ],
+            "cli": [
+                "vncviewer 192.168.1.100::5900",
+                "vncviewer -FullScreen 192.168.1.100::5901",
+                "vncviewer 192.168.1.100:1",
+            ],
+        },
+        "zh": {
+            "desc": "VNC连接配置文件。启动vncviewer（TigerVNC）连接到Linux、macOS（ARD）或Windows。原生支持macOS DH(30)认证。密码从不保存。",
+            "examples": [
+                "访问远程Linux服务器的图形桌面。",
+                "通过Apple Remote Desktop（ARD）连接Mac。",
+                "在组中管理多台VNC机器。",
             ],
             "cli": [
                 "vncviewer 192.168.1.100::5900",
@@ -2372,6 +2459,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "どのホップでパケットが失われたり遅延したりするかを特定する。",
                 "2つの異なるCDNへの経路を比較する。",
                 "トラフィックが予期しない国を経由していないか検出する。",
+            ],
+            "cli": [
+                "traceroute -n google.com",
+                "tracepath -b google.com",
+                "mtr -n --report google.com",
+                "traceroute -I -n 8.8.8.8",
+            ],
+        },
+        "zh": {
+            "desc": "在交互式世界地图（Natural Earth）上实时显示到目标的网络路径和地理位置。支持traceroute和tracepath。地图可缩放/平移。",
+            "examples": [
+                "直观查看到外国服务器的地理路径。",
+                "识别数据包在哪个跳点丢失或变慢。",
+                "比较到两个不同CDN的路由。",
+                "检测流量是否经过意外的国家。",
             ],
             "cli": [
                 "traceroute -n google.com",
@@ -2487,6 +2589,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "mtr --json google.com",
             ],
         },
+        "zh": {
+            "desc": "结合traceroute和ping：通过mtr --report持续统计每个跳点的丢包和延迟。跳点/主机/丢包%/已发/最新/平均/最小/最大/抖动表格。支持CSV/TXT导出。",
+            "examples": [
+                "识别哪个路由器导致高延迟。",
+                "测量到游戏服务器每个跳点的丢包率。",
+                "比较到同一主机的两条互联网链路质量。",
+                "生成报告与托管商技术支持共享。",
+            ],
+            "cli": [
+                "mtr --report -c 10 google.com",
+                "mtr -n --report google.com",
+                "mtr --report-wide -c 100 8.8.8.8",
+                "mtr --json google.com",
+            ],
+        },
     },
     "Firewall": {
         "fr": {
@@ -2594,6 +2711,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "nft list table inet filter",
             ],
         },
+        "zh": {
+            "desc": "无需root即可读取并显示nftables和iptables/ip6tables规则（配置文件），通过pkexec获取实时规则集。表/链/规则/端口/动作/注释列，实时筛选，按动作着色。",
+            "examples": [
+                "无需记忆nft/iptables语法即可查看活动规则。",
+                "按端口或链（INPUT、OUTPUT）筛选规则。",
+                "对比配置文件与实时规则集。",
+                "识别阻止服务的DROP规则。",
+            ],
+            "cli": [
+                "nft list ruleset",
+                "iptables -L -n -v --line-numbers",
+                "ip6tables -L -n -v",
+                "nft list table inet filter",
+            ],
+        },
     },
     "Speed Test": {
         "fr": {
@@ -2687,6 +2819,20 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "Wi-FiとEthernetの速度を比較する。",
                 "履歴チャートで時間経過による速度を監視する。",
                 "クライアントサイトでの接続劣化を検出する。",
+            ],
+            "cli": [
+                "curl -o /dev/null -s -w '%{speed_download}\\n' https://speed.cloudflare.com/__down?bytes=25000000",
+                "curl -o /dev/null -s -w '%{speed_upload}\\n' -T /dev/zero https://speed.cloudflare.com/__up",
+                "ping -c 10 1.1.1.1 | tail -1",
+            ],
+        },
+        "zh": {
+            "desc": "通过curl使用Cloudflare（speed.cloudflare.com）测量下载（25 MB）、上传（10 MB）速度和ping值。实时显示结果，保留5次历史记录，显示趋势图。",
+            "examples": [
+                "无需浏览器即可测量实际吞吐量。",
+                "比较Wi-Fi和Ethernet的速度。",
+                "通过历史图表监控速度变化趋势。",
+                "检测客户端连接质量下降。",
             ],
             "cli": [
                 "curl -o /dev/null -s -w '%{speed_download}\\n' https://speed.cloudflare.com/__down?bytes=25000000",
@@ -2801,6 +2947,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "iftop -i eth0",
             ],
         },
+        "zh": {
+            "desc": "实时监控所选接口的网络吞吐量。60秒滑动图表，下载/上传曲线，当前速度、会话总量和峰值。",
+            "examples": [
+                "在备份期间可视化带宽使用情况。",
+                "识别哪个接口消耗最多（Ethernet、Wi-Fi、VPN）。",
+                "检测意外的后台网络流量。",
+                "测量到NAS的实际传输速度。",
+            ],
+            "cli": [
+                "cat /proc/net/dev",
+                "watch -n 1 'cat /proc/net/dev | grep eth0'",
+                "nethogs eth0",
+                "iftop -i eth0",
+            ],
+        },
     },
     "Wake on LAN": {
         "fr": {
@@ -2901,6 +3062,20 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "etherwake -i eth0 AA:BB:CC:DD:EE:FF",
             ],
         },
+        "zh": {
+            "desc": "发送原生Python UDP魔术包以远程启动设备。持久化主机簿（JSON），包含名称、MAC地址和广播地址。",
+            "examples": [
+                "通过SSH或RDP访问前先启动台式机。",
+                "在访问文件前唤醒处于休眠的NAS。",
+                "测试BIOS中是否启用了WoL。",
+                "在集中主机簿中管理多个WoL设备（PC、服务器、NAS）。",
+            ],
+            "cli": [
+                "wakeonlan AA:BB:CC:DD:EE:FF",
+                "wakeonlan -i 192.168.1.255 AA:BB:CC:DD:EE:FF",
+                "etherwake -i eth0 AA:BB:CC:DD:EE:FF",
+            ],
+        },
     },
     "Topology": {
         "fr": {
@@ -2994,6 +3169,20 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "ゲートウェイとその周辺デバイスを視覚的に特定する。",
                 "アイコンまたはメーカーで未知のデバイスを検出する。",
                 "ビジュアルマップでネットワークインフラをドキュメント化する。",
+            ],
+            "cli": [
+                "nmap -sn 192.168.1.0/24",
+                "nmap -sn -oX - 192.168.1.0/24 | grep -E 'addr|hostname'",
+                "arp-scan --localnet",
+            ],
+        },
+        "zh": {
+            "desc": "通过nmap -sn发现的LAN设备的交互式可视化地图。可拖拽节点，图标区分路由器/显示器/台式机。点击或悬停可查看IP、MAC、主机名和厂商信息。",
+            "examples": [
+                "快速直观地查看LAN上所有活动设备。",
+                "直观识别网关及其周围的设备。",
+                "通过图标或厂商检测未知设备。",
+                "用可视化地图记录网络基础设施。",
             ],
             "cli": [
                 "nmap -sn 192.168.1.0/24",
