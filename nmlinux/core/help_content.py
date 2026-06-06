@@ -93,6 +93,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "curl -s ifconfig.me",
                 "resolvectl status | grep 'DNS Servers'",
             ],
+        },
 
         "ja": {
             "desc": "ローカルマシンのネットワーク概要：ホスト名、IPv4/IPv6、ゲートウェイ、有効なDNSサーバー、パブリックIPおよびip-api.com経由のおおよその位置情報。",
@@ -108,7 +109,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "curl -s ifconfig.me",
                 "resolvectl status | grep 'DNS Servers'",
             ],
-        },        },
+        },
     },
     "Connections": {
         "fr": {
@@ -194,6 +195,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "nmcli connection down 'MyVPN'",
                 "nmcli connection delete 'OldProfile'",
             ],
+        },
 
         "ja": {
             "desc": "すべてのNetworkManager接続（Ethernet、Wi-Fi、VPN、WireGuard）を管理。タイプフィルターと教育的CLIバーで接続・切断・編集・削除が可能。",
@@ -208,7 +210,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "nmcli connection down 'MyVPN'",
                 "nmcli connection delete 'OldProfile'",
             ],
-        },        },
+        },
     },
     "Interfaces": {
         "fr": {
@@ -294,6 +296,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "ip -j addr | python3 -m json.tool",
                 "nmcli device status",
             ],
+        },
 
         "ja": {
             "desc": "すべてのアクティブなネットワークインターフェース（Ethernet、Wi-Fi、ループバック、ブリッジ…）を状態・MACアドレス・IPv4・IPv6と共に一覧表示。インターフェースをクリックすると詳細表示。",
@@ -308,7 +311,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "ip -j addr | python3 -m json.tool",
                 "nmcli device status",
             ],
-        },        },
+        },
     },
     "Wi-Fi": {
         "fr": {
@@ -388,6 +391,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "nmcli dev wifi connect 'MySSID' password 'mypassword'",
                 "iwlist wlan0 scan | grep -E 'SSID|Signal'",
             ],
+        },
 
         "ja": {
             "desc": "利用可能なWi-Fiネットワークをスキャンし、SSID、BSSID、チャンネル、周波数、信号強度（▂▄▆█）およびセキュリティタイプを表示。接続中のネットワークが先頭に表示される。",
@@ -401,7 +405,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "nmcli dev wifi connect 'MySSID' password 'mypassword'",
                 "iwlist wlan0 scan | grep -E 'SSID|Signal'",
             ],
-        },        },
+        },
     },
     "Subnet": {
         "fr": {
@@ -481,6 +485,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "python3 -c \\\"import ipaddress; n=ipaddress.IPv4Network('192.168.1.0/24'); print(n.network_address, n.broadcast_address, n.num_addresses)\\\"",
                 "ip route show | grep 192.168.1",
             ],
+        },
 
         "ja": {
             "desc": "CIDRカリキュレーター：IPとマスク（例：192.168.1.0/24）からネットワーク、マスク、ワイルドカード、ブロードキャスト、ホスト範囲と合計数を計算。IPv4とIPv6に対応。",
@@ -494,7 +499,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "python3 -c \"import ipaddress; n=ipaddress.IPv4Network('192.168.1.0/24'); print(n.network_address, n.broadcast_address, n.num_addresses)\"",
                 "ip route show | grep 192.168.1",
             ],
-        },        },
+        },
     },
     "DNS": {
         "fr": {
@@ -586,6 +591,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "dig -x 8.8.8.8",
                 "dig TXT example.com +short",
             ],
+        },
 
         "ja": {
             "desc": "digを使用して任意のDNSサーバーをクエリ。A、AAAA、MX、TXT、NS、CNAME、PTR、SOA、ANYをサポート。代替DNSサーバーの設定可能、IPからの自動リバースルックアップ。",
@@ -601,7 +607,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "dig -x 8.8.8.8",
                 "dig TXT example.com +short",
             ],
-        },        },
+        },
     },
     "Ping": {
         "fr": {
@@ -693,6 +699,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "ping -s 1400 -c 10 192.168.1.1",
                 "ping6 ::1",
             ],
+        },
 
         "ja": {
             "desc": "継続的なマルチホストpingモニター：設定可能な間隔（1〜30秒）で複数の宛先へ同時にICMPパケットを送信。RTT最小/平均/最大とパケットロス統計をリアルタイム表示。",
@@ -708,7 +715,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "ping -s 1400 -c 10 192.168.1.1",
                 "ping6 ::1",
             ],
-        },        },
+        },
     },
     "IP Scanner": {
         "fr": {
@@ -800,6 +807,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "arp-scan --localnet",
                 "ip neigh show",
             ],
+        },
 
         "ja": {
             "desc": "ARP/pingスキャンによりCIDR範囲内のアクティブなデバイスを検出。IP、ホスト名（DNS/mDNS/NetBIOS）、MACアドレス、メーカー（39,000件OUIデータベース）を表示。CSV/TXTエクスポート。",
@@ -815,7 +823,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "arp-scan --localnet",
                 "ip neigh show",
             ],
-        },        },
+        },
     },
     "Port Scanner": {
         "fr": {
@@ -907,6 +915,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "nc -zv 192.168.1.10 22",
                 "ss -tlnp",
             ],
+        },
 
         "ja": {
             "desc": "ルート不要の直接接続でホストのTCPポートをスキャン。ポート範囲、一般的なプリセット（Web、Mail、SSH…）、開いているポートのサービスを識別。最大200スレッド。",
@@ -922,7 +931,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "nc -zv 192.168.1.10 22",
                 "ss -tlnp",
             ],
-        },        },
+        },
     },
     "Nmap": {
         "fr": {
@@ -1014,6 +1023,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "sudo nmap -sS 192.168.1.0/24",
                 "nmap --script ssl-cert 192.168.1.10",
             ],
+        },
 
         "ja": {
             "desc": "nmapによる高度なネットワークスキャン：7つのモード（検出、TCP、SYN、サービス/バージョン、OS、フル、NSEスクリプト）。XML結果を構造化テーブルに解析。CSV/TXTエクスポート。",
@@ -1029,7 +1039,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "sudo nmap -sS 192.168.1.0/24",
                 "nmap --script ssl-cert 192.168.1.10",
             ],
-        },        },
+        },
     },
     "Whois": {
         "fr": {
@@ -1115,6 +1125,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "whois 8.8.8.8",
                 "whois -h whois.iana.org example.com",
             ],
+        },
 
         "ja": {
             "desc": "ドメイン名またはIPアドレスへのWHOISクエリ。登録情報、管理者連絡先、オペレーターのIP範囲を生のモノスペースフォーマットで表示。",
@@ -1129,7 +1140,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "whois 8.8.8.8",
                 "whois -h whois.iana.org example.com",
             ],
-        },        },
+        },
     },
     "TLS Inspector": {
         "fr": {
@@ -1215,6 +1226,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "openssl s_client -connect example.com:443 -servername example.com </dev/null 2>/dev/null",
                 "curl -vI https://example.com 2>&1 | grep -E 'expire|issuer|subject'",
             ],
+        },
 
         "ja": {
             "desc": "サーバーのTLS/SSL証明書を検査：CN、SAN、発行者、有効性（緑/橙/赤）、シリアル番号、プロトコル、暗号スイート、openssl経由の完全なチェーン。有効・期限切れ・自己署名証明書に対応。",
@@ -1229,7 +1241,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "openssl s_client -connect example.com:443 -servername example.com </dev/null 2>/dev/null",
                 "curl -vI https://example.com 2>&1 | grep -E 'expire|issuer|subject'",
             ],
-        },        },
+        },
     },
     "SMB / NFS": {
         "fr": {
@@ -1321,6 +1333,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "showmount -e 192.168.1.100",
                 "mount -t nfs 192.168.1.100:/export /mnt/nfs",
             ],
+        },
 
         "ja": {
             "desc": "サーバーまたはNASのSMB/Samba共有とNFSエクスポートを一覧表示。SMBはsmbclient -L（オプションの認証情報）、NFSはshowmount -e経由。",
@@ -1336,7 +1349,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "showmount -e 192.168.1.100",
                 "mount -t nfs 192.168.1.100:/export /mnt/nfs",
             ],
-        },        },
+        },
     },
     "Hosts File": {
         "fr": {
@@ -1422,6 +1435,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "sudo bash -c 'echo \\\"192.168.1.10 myserver.local\\\" >> /etc/hosts'",
                 "getent hosts myserver.local",
             ],
+        },
 
         "ja": {
             "desc": "/etc/hostsをテーブルUIで表示・編集。エントリの追加・編集・削除・有効化/無効化。pkexec（polkit認証）経由で保存。",
@@ -1436,7 +1450,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "sudo bash -c 'echo \"192.168.1.10 myserver.local\" >> /etc/hosts'",
                 "getent hosts myserver.local",
             ],
-        },        },
+        },
     },
     "SNMP": {
         "fr": {
@@ -1521,6 +1535,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "Recuperar a lista de interfaces de um dispositivo.",
                 "Consultar a carga de CPU de um servidor compatível SNMP.",
                 "Testar a community SNMP antes de integrar numa ferramenta de monitorização.",
+            ],
+            "cli": [
+                "snmpwalk -v2c -c public 192.168.1.1 system",
+                "snmpget -v2c -c public 192.168.1.1 sysDescr.0",
+                "snmpwalk -v2c -c public 192.168.1.1 ifTable",
+                "snmpwalk -v2c -c public 192.168.1.1 1.3.6.1.2.1.25.3.3.1.2",
+            ],
+        },
+        "ja": {
+            "desc": "SNMPに対応したネットワーク機器（ルーター、スイッチ、NAS…）をsnmpwalk/snmpget経由でクエリ。v1/v2cをサポートし、10個の一般的なOIDプリセット（システム名、アップタイム、インターフェース、CPU、メモリ…）を装備。",
+            "examples": [
+                "スイッチまたはルーターのアップタイムを読み取る。",
+                "デバイスのインターフェース一覧を取得する。",
+                "SNMP対応サーバーのCPU負荷をクエリする。",
+                "監視ツールに統合する前にSNMPコミュニティをテストする。",
             ],
             "cli": [
                 "snmpwalk -v2c -c public 192.168.1.1 system",
@@ -1621,6 +1650,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "sntp -q pool.ntp.org",
             ],
         },
+        "ja": {
+            "desc": "純粋なPython UDPクライアント（RFC 4330）でNTP同期をテスト。オフセット、ラウンドトリップ遅延、ストラタム、参照ソースを表示。最大5回の平均リクエスト。",
+            "examples": [
+                "ローカルNTPサーバーが到達可能で応答していることを確認する。",
+                "サーバーのクロックドリフトを測定する。",
+                "ntp.orgプールの複数のサーバーをテストする。",
+                "不正なシステムクロックが原因のTLSエラーを診断する。",
+            ],
+            "cli": [
+                "ntpdate -q pool.ntp.org",
+                "chronyc tracking",
+                "timedatectl status",
+                "sntp -q pool.ntp.org",
+            ],
+        },
     },
     "SSH": {
         "fr": {
@@ -1705,6 +1749,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "Gerir múltiplos servidores organizados em grupos (Produção, Dev…).",
                 "Usar Vim, htop ou qualquer ferramenta TUI no terminal integrado.",
                 "Manter um histórico de ligações para encontrar rapidamente um servidor.",
+            ],
+            "cli": [
+                "ssh user@192.168.1.10",
+                "ssh -p 2222 user@192.168.1.10",
+                "ssh -i ~/.ssh/id_ed25519 user@server.example.com",
+                "ssh -L 8080:localhost:80 user@192.168.1.10",
+            ],
+        },
+        "ja": {
+            "desc": "階層型アドレス帳（グループ/サブグループ）を持つ組み込みSSHターミナル。キーとパスワード認証、2000行スクロールバック、ダイナミックPTY、全VT100/xtermシーケンス対応。",
+            "examples": [
+                "サーバーに接続してコマンドをインタラクティブに実行する。",
+                "グループ（本番、開発…）で複数のサーバーを管理する。",
+                "組み込みターミナルでVim、htopなどのTUIツールを使用する。",
+                "接続履歴を保持してサーバーをすばやく見つける。",
             ],
             "cli": [
                 "ssh user@192.168.1.10",
@@ -1805,6 +1864,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "ssh-keygen -l -f ~/.ssh/id_ed25519.pub",
             ],
         },
+        "ja": {
+            "desc": "SSHキーマネージャー：~/.ssh/のキーペアを一覧表示（タイプ、ビット数、コメント、SHA256フィンガープリント）。Ed25519/RSA生成（オプションのパスフレーズ）、公開鍵のコピー、インラインターミナルでssh-copy-idによる配備。",
+            "examples": [
+                "サーバーまたはGitHubにアクセスするEd25519キーを生成する。",
+                "authorized_keysに貼り付けるために公開鍵をすばやくコピーする。",
+                "ワンクリックでssh-copy-idを使って新しいサーバーにキーを配備する。",
+                "古い未使用キーペアをインベントリして削除する。",
+            ],
+            "cli": [
+                "ssh-keygen -t ed25519 -C \"user@host\"",
+                "ssh-keygen -t rsa -b 4096 -C \"user@host\"",
+                "ssh-copy-id -i ~/.ssh/id_ed25519.pub user@192.168.1.10",
+                "ssh-keygen -l -f ~/.ssh/id_ed25519.pub",
+            ],
+        },
     },
     "Remote Desktop": {
         "fr": {
@@ -1891,6 +1965,20 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "xfreerdp3 /v:192.168.1.100 /u:user /p:password /cert:ignore",
             ],
         },
+        "ja": {
+            "desc": "Windowsマシンへのリモートデスクトップ（RDP）接続プロファイル。グループ/サブグループ、xfreerdpを起動。パスワードは接続時に入力を求められ、保存されない。",
+            "examples": [
+                "ダブルクリックでLinuxからWindowsマシンに接続する。",
+                "サイトまたはクライアント別に複数のWindowsサーバーを管理する。",
+                "1920×1080フルスクリーン接続を設定する。",
+                "Active Directoryドメイン上のサーバーにアクセスする。",
+            ],
+            "cli": [
+                "xfreerdp /v:192.168.1.100 /u:Administrator /dynamic-resolution",
+                "xfreerdp /v:192.168.1.100 /u:user /d:DOMAIN /f",
+                "xfreerdp3 /v:192.168.1.100 /u:user /p:password /cert:ignore",
+            ],
+        },
     },
     "VNC": {
         "fr": {
@@ -1964,6 +2052,19 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "Aceder ao ambiente de trabalho gráfico de um servidor Linux remoto.",
                 "Ligar a um Mac via Apple Remote Desktop (ARD).",
                 "Gerir múltiplas máquinas VNC em grupos.",
+            ],
+            "cli": [
+                "vncviewer 192.168.1.100::5900",
+                "vncviewer -FullScreen 192.168.1.100::5901",
+                "vncviewer 192.168.1.100:1",
+            ],
+        },
+        "ja": {
+            "desc": "VNC接続プロファイル。Linux、macOS（ARD）、Windowsへvncviewer（TigerVNC）を起動。macOSのDH(30)認証をネイティブサポート。パスワードは保存されない。",
+            "examples": [
+                "リモートLinuxサーバーのグラフィカルデスクトップにアクセスする。",
+                "Apple Remote Desktop（ARD）経由でMacに接続する。",
+                "複数のVNCマシンをグループで管理する。",
             ],
             "cli": [
                 "vncviewer 192.168.1.100::5900",
@@ -2055,6 +2156,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "Identificar em que hop um pacote é perdido ou atrasado.",
                 "Comparar os caminhos para dois CDN diferentes.",
                 "Detetar se o tráfego passa por um país inesperado.",
+            ],
+            "cli": [
+                "traceroute -n google.com",
+                "tracepath -b google.com",
+                "mtr -n --report google.com",
+                "traceroute -I -n 8.8.8.8",
+            ],
+        },
+        "ja": {
+            "desc": "インタラクティブな世界地図（Natural Earth）上でリアルタイムのジオロケーションを表示しながら宛先へのネットワーク経路を可視化。tracerouteとtracepathをサポート。ズーム/パン可能な地図。",
+            "examples": [
+                "外国のサーバーへの地理的な経路を視覚的に確認する。",
+                "どのホップでパケットが失われたり遅延したりするかを特定する。",
+                "2つの異なるCDNへの経路を比較する。",
+                "トラフィックが予期しない国を経由していないか検出する。",
             ],
             "cli": [
                 "traceroute -n google.com",
@@ -2155,6 +2271,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "mtr --json google.com",
             ],
         },
+        "ja": {
+            "desc": "tracerouteとpingを組み合わせ：mtr --report経由で各ホップの継続的な損失と遅延統計。ホップ/ホスト/損失%/送信数/最終/平均/最小/最大/ジッターのテーブル。CSV/TXTエクスポート。",
+            "examples": [
+                "どのルーターが高遅延の原因かを特定する。",
+                "ゲームサーバーへの各ホップのパケット損失を測定する。",
+                "同じホストへの2つのインターネット回線の品質を比較する。",
+                "ホスティングプロバイダーのサポートと共有するレポートを生成する。",
+            ],
+            "cli": [
+                "mtr --report -c 10 google.com",
+                "mtr -n --report google.com",
+                "mtr --report-wide -c 100 8.8.8.8",
+                "mtr --json google.com",
+            ],
+        },
     },
     "Firewall": {
         "fr": {
@@ -2247,6 +2378,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "nft list table inet filter",
             ],
         },
+        "ja": {
+            "desc": "nftablesとiptables/ip6tablesのルールをルートなしで読み取り・表示（設定ファイル）、pkexec経由でライブルールセットも取得。テーブル/チェーン/ルール/ポート/アクション/コメント列、ライブフィルター、アクション別色分け。",
+            "examples": [
+                "nft/iptablesの構文を暗記せずにアクティブなルールを確認する。",
+                "ポートまたはチェーン（INPUT、OUTPUT）でルールをフィルタリングする。",
+                "設定ファイルとライブルールセットを比較する。",
+                "サービスをブロックしているDROPルールを特定する。",
+            ],
+            "cli": [
+                "nft list ruleset",
+                "iptables -L -n -v --line-numbers",
+                "ip6tables -L -n -v",
+                "nft list table inet filter",
+            ],
+        },
     },
     "Speed Test": {
         "fr": {
@@ -2330,6 +2476,20 @@ _CONTENT: dict[str, dict[str, dict]] = {
             "cli": [
                 "curl -o /dev/null -s -w '%{speed_download}\\\\n' https://speed.cloudflare.com/__down?bytes=25000000",
                 "curl -o /dev/null -s -w '%{speed_upload}\\\\n' -T /dev/zero https://speed.cloudflare.com/__up",
+                "ping -c 10 1.1.1.1 | tail -1",
+            ],
+        },
+        "ja": {
+            "desc": "curl経由でCloudflare（speed.cloudflare.com）によるダウンロード（25 MB）、アップロード（10 MB）、pingを測定。リアルタイム結果、5テスト履歴、トレンドチャート。",
+            "examples": [
+                "ブラウザを使わずに実際のスループットを測定する。",
+                "Wi-FiとEthernetの速度を比較する。",
+                "履歴チャートで時間経過による速度を監視する。",
+                "クライアントサイトでの接続劣化を検出する。",
+            ],
+            "cli": [
+                "curl -o /dev/null -s -w '%{speed_download}\\n' https://speed.cloudflare.com/__down?bytes=25000000",
+                "curl -o /dev/null -s -w '%{speed_upload}\\n' -T /dev/zero https://speed.cloudflare.com/__up",
                 "ping -c 10 1.1.1.1 | tail -1",
             ],
         },
@@ -2425,6 +2585,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "iftop -i eth0",
             ],
         },
+        "ja": {
+            "desc": "選択したインターフェース上のネットワークスループットをリアルタイムで監視。60秒スライドチャート、ダウンロード/アップロード曲線、現在の速度、セッション合計とピーク値。",
+            "examples": [
+                "バックアップ中の帯域幅使用量を可視化する。",
+                "どのインターフェースが最も消費しているか特定する（Ethernet、Wi-Fi、VPN）。",
+                "バックグラウンドの予期しないネットワークトラフィックを検出する。",
+                "NASへの実際の転送速度を測定する。",
+            ],
+            "cli": [
+                "cat /proc/net/dev",
+                "watch -n 1 'cat /proc/net/dev | grep eth0'",
+                "nethogs eth0",
+                "iftop -i eth0",
+            ],
+        },
     },
     "Wake on LAN": {
         "fr": {
@@ -2511,6 +2686,20 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "etherwake -i eth0 AA:BB:CC:DD:EE:FF",
             ],
         },
+        "ja": {
+            "desc": "デバイスをリモートで起動するためのネイティブPython UDP Magic Packetを送信。名前、MACアドレス、ブロードキャストアドレスを持つ永続的なホストブック（JSON）。",
+            "examples": [
+                "SSHまたはRDPでアクセスする前にデスクトップPCを起動する。",
+                "ファイルにアクセスする前にスリープ中のNASを起こす。",
+                "BIOSでWoLが有効になっているかテストする。",
+                "複数のWoLデバイス（PC、サーバー、NAS）を一元管理する。",
+            ],
+            "cli": [
+                "wakeonlan AA:BB:CC:DD:EE:FF",
+                "wakeonlan -i 192.168.1.255 AA:BB:CC:DD:EE:FF",
+                "etherwake -i eth0 AA:BB:CC:DD:EE:FF",
+            ],
+        },
     },
     "Topology": {
         "fr": {
@@ -2590,6 +2779,20 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "Identificar visualmente o gateway e os dispositivos à sua volta.",
                 "Detetar um dispositivo desconhecido pelo ícone ou fabricante.",
                 "Documentar a infraestrutura de rede com um mapa visual.",
+            ],
+            "cli": [
+                "nmap -sn 192.168.1.0/24",
+                "nmap -sn -oX - 192.168.1.0/24 | grep -E 'addr|hostname'",
+                "arp-scan --localnet",
+            ],
+        },
+        "ja": {
+            "desc": "nmap -sn経由で発見されたLANデバイスのインタラクティブなビジュアルマップ。ドラッグ可能なノード、ルーター/モニター/タワーPCを区別するアイコン。クリックまたはホバーでIP、MAC、ホスト名、メーカーを表示。",
+            "examples": [
+                "LAN上のすべてのアクティブデバイスを素早くビジュアル概観する。",
+                "ゲートウェイとその周辺デバイスを視覚的に特定する。",
+                "アイコンまたはメーカーで未知のデバイスを検出する。",
+                "ビジュアルマップでネットワークインフラをドキュメント化する。",
             ],
             "cli": [
                 "nmap -sn 192.168.1.0/24",
