@@ -1583,6 +1583,9 @@ _T: dict[str, dict[str, str]] = {
         "nav_hint_tls":         "Inspects a server's TLS/SSL certificate:\nvalidity, SANs, issuer, protocol and certificate chain.",
 
         # ── Global CLI bar ───────────────────────────────────────────────────
+        "nav_hint_smb_nfs":   "Lists SMB/Samba shares and NFS exports\nfrom a server or NAS.",
+        "nav_hint_hosts":   "Displays and edits /etc/hosts:\nadd, delete or disable entries.",
+
         "cli_bar_idle":  "select a tool and fill in the parameters…",
         "cli_bar_copy":  "Copy",
         "cli_bar_about": "CLI equivalent · for learning purposes",
@@ -2367,6 +2370,9 @@ _T: dict[str, dict[str, str]] = {
         "nav_hint_tls":         "Inspecciona el certificado TLS/SSL de un servidor:\nvalidez, SANs, emisor, protocolo y cadena de certificados.",
 
         # ── Barra CLI global ─────────────────────────────────────────────────
+        "nav_hint_smb_nfs":   "Lista los recursos SMB/Samba y las exportaciones NFS\nde un servidor o NAS.",
+        "nav_hint_hosts":   "Muestra y edita /etc/hosts:\nagregar, eliminar o desactivar entradas.",
+
         "cli_bar_idle":  "selecciona una herramienta y completa los parámetros…",
         "cli_bar_copy":  "Copiar",
         "cli_bar_about": "equivalente CLI · con fines pedagógicos",
@@ -3089,6 +3095,9 @@ _T: dict[str, dict[str, str]] = {
         "nav_hint_tls":         "Prüft das TLS/SSL-Zertifikat eines Servers:\nGültigkeit, SANs, Aussteller, Protokoll und Zertifikatskette.",
 
         # ── Globale CLI-Leiste ───────────────────────────────────────────────
+        "nav_hint_smb_nfs":   "Listet SMB/Samba-Freigaben und NFS-Exporte\nvon einem Server oder NAS.",
+        "nav_hint_hosts":   "Zeigt /etc/hosts an und bearbeitet es:\nEinträge hinzufügen, löschen oder deaktivieren.",
+
         "cli_bar_idle":  "Werkzeug wählen und Parameter eingeben…",
         "cli_bar_copy":  "Kopieren",
         "cli_bar_about": "CLI-Äquivalent · zu Lernzwecken",
@@ -3888,6 +3897,9 @@ _T: dict[str, dict[str, str]] = {
         "hosts_save_err":           "Errore di salvataggio: {msg}",
 
         # ── CLI bar ──────────────────────────────────────────────────────────
+        "nav_hint_smb_nfs":   "Elenca le condivisioni SMB/Samba e le esportazioni NFS\nda un server o NAS.",
+        "nav_hint_hosts":   "Visualizza e modifica /etc/hosts:\naggiungere, eliminare o disabilitare voci.",
+
         "cli_bar_idle":  "seleziona uno strumento e compila i parametri…",
         "cli_bar_copy":  "Copia",
         "cli_bar_about": "equivalente CLI · a scopo didattico",
@@ -4687,6 +4699,9 @@ _T: dict[str, dict[str, str]] = {
         "hosts_save_err":           "Erro ao guardar: {msg}",
 
         # ── CLI bar ──────────────────────────────────────────────────────────
+        "nav_hint_smb_nfs":   "Lista as partilhas SMB/Samba e as exportações NFS\nde um servidor ou NAS.",
+        "nav_hint_hosts":   "Apresenta e edita /etc/hosts:\nadicionar, eliminar ou desativar entradas.",
+
         "cli_bar_idle":  "selecione uma ferramenta e preencha os parâmetros…",
         "cli_bar_copy":  "Copiar",
         "cli_bar_about": "equivalente CLI · para fins pedagógicos",
@@ -5453,6 +5468,9 @@ _T: dict[str, dict[str, str]] = {
         "hosts_saved":              "保存しました",
         "hosts_save_err":           "保存エラー: {msg}",
 
+        "nav_hint_smb_nfs":   "サーバーまたはNASのSMB/Samba共有と\nNFSエクスポートを一覧表示。",
+        "nav_hint_hosts":   "/etc/hostsを表示・編集:\nエントリの追加、削除、無効化。",
+
         "cli_bar_idle":  "ツールを選択してパラメーターを入力してください…",
         "cli_bar_copy":  "コピー",
         "cli_bar_about": "CLIコマンド · 学習目的",
@@ -6218,6 +6236,9 @@ _T: dict[str, dict[str, str]] = {
         "hosts_modified":           "有未保存的更改",
         "hosts_saved":              "已保存",
         "hosts_save_err":           "保存错误：{msg}",
+
+        "nav_hint_smb_nfs":   "列出服务器或NAS的SMB/Samba共享\n和NFS导出。",
+        "nav_hint_hosts":   "显示和编辑/etc/hosts：\n添加、删除或禁用条目。",
 
         "cli_bar_idle":  "选择一个工具并填写参数…",
         "cli_bar_copy":  "复制",
