@@ -5,6 +5,24 @@ Ce fichier est le point d'entrée unique pour tout agent Claude travaillant sur 
 
 ---
 
+## Session startup checklist
+
+Pour toute tâche non triviale :
+
+1. Lire `README.md`
+2. Lire `docs/Architecture.md`
+3. Lire `docs/Decisions-Techniques.md`
+
+Pour toute nouvelle fonctionnalité :
+
+4. Lire `docs/Roadmap.md`
+
+Avant de terminer :
+
+5. Vérifier si la documentation doit être mise à jour.
+
+---
+
 ## 1 — Base de connaissances
 
 ```
