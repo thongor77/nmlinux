@@ -1,4 +1,4 @@
-# NMLinux · v1.3.1
+# NMLinux · v1.3.2
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.com/donate/?business=JFQGY7NU3ANCN&no_recurring=0&item_name=Every+donation%2C+no+matter+how+small%2C+helps+me+keep+this+project+alive.+Thank+you%21%0A&currency_code=EUR)
 
@@ -26,6 +26,12 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 ---
 
 ## Changelog
+
+### v1.3.2 — 2026-06-06
+
+- **i18n extended to 8 languages** — added Italiano, Português, 日本語 (Japanese) and 中文 (Chinese Simplified); the full UI (all 27 modules, ~720 translation keys) is now available in FR / EN / ES / DE / IT / PT / JA / ZH; language can be changed at runtime without restarting
+- **Contextual help in 8 languages** — the `?` badge panel (description, usage examples and equivalent CLI commands) now covers all 8 languages for every module; previously JA and ZH fell back to English
+- **Bug fix** — nav tooltips for SMB/NFS and Hosts File were displaying in French regardless of the selected language; missing `nav_hint_smb_nfs` and `nav_hint_hosts` keys added to all 7 non-French language blocks
 
 ### v1.3.1 — 2026-06-05
 
