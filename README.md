@@ -1,4 +1,4 @@
-# NMLinux · v1.3.2
+# NMLinux · v1.3.5
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.com/donate/?business=JFQGY7NU3ANCN&no_recurring=0&item_name=Every+donation%2C+no+matter+how+small%2C+helps+me+keep+this+project+alive.+Thank+you%21%0A&currency_code=EUR)
 
@@ -28,6 +28,12 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 ---
 
 ## Changelog
+
+### v1.3.5 — 2026-06-06
+
+- **macOS compatibility** — all 9 network modules now run on macOS without breaking Linux behaviour; each module detects the platform at startup (`_IS_MACOS`) and branches to native macOS commands: `route -n get default`, `ifconfig`, `scutil --dns`, `networksetup`, `system_profiler SPAirPortDataType`, `pfctl`, `netstat -ib`; privilege escalation uses `osascript` + `with administrator privileges` instead of `pkexec`; monospace font uses `Menlo` instead of `Monospace`
+- **Modules with dual Linux/macOS paths**: Dashboard, Interfaces, Wi-Fi, Topology, Bandwidth, Firewall (pf.conf + pfctl), Connection Manager, Hosts File, MTR
+- **Modules unchanged** (tools identical on both platforms): DNS, Nmap Scan, SNMP, Whois
 
 ### v1.3.2 — 2026-06-06
 

@@ -1,11 +1,14 @@
-"""Firewall Viewer — lecture seule nftables / iptables."""
+"""Firewall Viewer — lecture seule nftables / iptables / pf."""
 
 from __future__ import annotations
 
+import platform
 import re
 import shutil
 import subprocess
 from pathlib import Path
+
+_IS_MACOS = platform.system() == 'Darwin'
 
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QBrush, QColor, QFont
@@ -24,6 +27,7 @@ _CMD_NFT    = shutil.which('nft')
 _NFT_CONF    = Path('/etc/nftables.conf')
 _IP4_RULES   = Path('/etc/iptables/iptables.rules')
 _IP6_RULES   = Path('/etc/iptables/ip6tables.rules')
+_PF_CONF     = Path('/etc/pf.conf')
 
 _ORANGE = QColor('#fab387')
 _BLUE   = QColor('#89b4fa')
@@ -217,6 +221,46 @@ def parse_iptables(text: str, source_label: str) -> list[dict]:
     return rows
 
 
+# ── pf parser (macOS) ────────────────────────────────────────────────────────
+
+_PF_ACTIONS = ('pass', 'block', 'anchor', 'nat', 'rdr', 'scrub', 'dummynet', 'load')
+
+
+def parse_pf(text: str, source_label: str) -> list[dict]:
+    rows: list[dict] = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+
+        action = next((kw for kw in _PF_ACTIONS if line.startswith(kw)), '')
+        if not action:
+            continue
+
+        direction = next(
+            (d for d in ('in', 'out') if re.search(r'\b' + d + r'\b', line)),
+            'all',
+        )
+
+        m_if = re.search(r'\bon\s+(\S+)', line)
+        iface = m_if.group(1) if m_if else 'any'
+
+        port_matches = re.findall(r'\bport\s+(\S+)', line)
+        port = ', '.join(port_matches)
+
+        rows.append({
+            'source':  source_label,
+            'table':   direction,
+            'chain':   iface,
+            'rule':    line,
+            'port':    port,
+            'action':  action,
+            'comment': '',
+            'is_meta': False,
+        })
+    return rows
+
+
 # ── Worker for live ruleset (pkexec) ─────────────────────────────────────────
 
 class LiveRulesetWorker(QThread):
@@ -242,31 +286,57 @@ class LiveRulesetWorker(QThread):
             self.error.emit(str(exc))
 
 
+class LiveRulesetWorkerMacos(QThread):
+    done  = Signal(str)
+    error = Signal(str)
+
+    def run(self) -> None:
+        try:
+            proc = subprocess.run(
+                ['osascript', '-e',
+                 'do shell script "pfctl -sr" with administrator privileges'],
+                capture_output=True, text=True, timeout=60,
+            )
+            if proc.returncode != 0:
+                self.error.emit(proc.stderr.strip() or tr("fw_err_pkexec_fail"))
+            else:
+                self.done.emit(proc.stdout)
+        except subprocess.TimeoutExpired:
+            self.error.emit(tr("fw_err_timeout"))
+        except Exception as exc:
+            self.error.emit(str(exc))
+
+
 # ── Action color ──────────────────────────────────────────────────────────────
 
 def _action_color(action: str) -> QColor | None:
     a = action.lower()
-    if a in ('accept',):
+    if a in ('accept', 'pass'):
         return QColor(color_ok())
-    if a in ('drop',):
+    if a in ('drop', 'block'):
         return QColor(color_err())
-    if a in ('reject',):
+    if a in ('reject', 'nat', 'rdr'):
         return _ORANGE
-    if a in ('log',):
-        return _BLUE
-    if a.startswith('jump') or a.startswith('goto'):
+    if a in ('log', 'anchor', 'scrub', 'dummynet') or a.startswith(('jump', 'goto')):
         return _BLUE
     return None
 
 
 # ── Page ──────────────────────────────────────────────────────────────────────
 
-_SOURCE_NFT4  = 'nftables.conf'
-_SOURCE_IP4   = 'iptables IPv4'
-_SOURCE_IP6   = 'iptables IPv6'
-_SOURCE_LIVE  = 'live (pkexec)'
+_SOURCE_NFT4     = 'nftables.conf'
+_SOURCE_IP4      = 'iptables IPv4'
+_SOURCE_IP6      = 'iptables IPv6'
+_SOURCE_LIVE     = 'live (pkexec)'
+_SOURCE_PF_FILE  = 'pf.conf'
+_SOURCE_PF_LIVE  = 'live (pfctl)'
 
-_ALL_SOURCES = [_SOURCE_NFT4, _SOURCE_IP4, _SOURCE_IP6, _SOURCE_LIVE]
+if _IS_MACOS:
+    _ALL_SOURCES    = [_SOURCE_PF_FILE, _SOURCE_PF_LIVE]
+    _DEFAULT_SOURCE = _SOURCE_PF_FILE
+else:
+    _ALL_SOURCES    = [_SOURCE_NFT4, _SOURCE_IP4, _SOURCE_IP6, _SOURCE_LIVE]
+    _DEFAULT_SOURCE = _SOURCE_NFT4
 
 
 class FirewallPage(QWidget):
@@ -275,7 +345,7 @@ class FirewallPage(QWidget):
         self._rows: list[dict] = []
         self._worker: LiveRulesetWorker | None = None
         self._build_ui()
-        self._load_source(_SOURCE_NFT4)
+        self._load_source(_DEFAULT_SOURCE)
 
     # ── Layout ───────────────────────────────────────────────────────────────
 
@@ -353,7 +423,7 @@ class FirewallPage(QWidget):
         self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._table.verticalHeader().setVisible(False)
         self._table.setAlternatingRowColors(True)
-        self._table.setFont(QFont('Monospace', 9))
+        self._table.setFont(QFont('Menlo' if _IS_MACOS else 'Monospace', 9))
         self._table.setWordWrap(False)
         layout.addWidget(self._table, 1)
 
@@ -370,14 +440,20 @@ class FirewallPage(QWidget):
         self._rows = []
         self._filter_edit.clear()
 
-        if source == _SOURCE_NFT4:
-            self._load_file(_NFT_CONF, source, 'nft')
-        elif source == _SOURCE_IP4:
-            self._load_file(_IP4_RULES, source, 'ipt')
-        elif source == _SOURCE_IP6:
-            self._load_file(_IP6_RULES, source, 'ipt')
-        elif source == _SOURCE_LIVE:
-            self._load_live()
+        if _IS_MACOS:
+            if source == _SOURCE_PF_FILE:
+                self._load_file(_PF_CONF, source, 'pf')
+            elif source == _SOURCE_PF_LIVE:
+                self._load_live()
+        else:
+            if source == _SOURCE_NFT4:
+                self._load_file(_NFT_CONF, source, 'nft')
+            elif source == _SOURCE_IP4:
+                self._load_file(_IP4_RULES, source, 'ipt')
+            elif source == _SOURCE_IP6:
+                self._load_file(_IP6_RULES, source, 'ipt')
+            elif source == _SOURCE_LIVE:
+                self._load_live()
 
     def _load_file(self, path: Path, label: str, fmt: str) -> None:
         if not path.exists():
@@ -393,6 +469,8 @@ class FirewallPage(QWidget):
 
         if fmt == 'nft':
             rows = parse_nft(text, label)
+        elif fmt == 'pf':
+            rows = parse_pf(text, label)
         else:
             rows = parse_iptables(text, label)
 
@@ -402,21 +480,27 @@ class FirewallPage(QWidget):
         self._lbl_status.setText(tr("fw_status_loaded", path=str(path), n=n_rules))
 
     def _load_live(self) -> None:
-        if not _CMD_PKEXEC or not _CMD_NFT:
-            self._lbl_status.setText(tr("fw_err_no_pkexec"))
-            self._populate([])
-            return
         self._lbl_status.setText(tr("fw_status_pkexec"))
         self._btn_refresh.setEnabled(False)
         self._src_box.setEnabled(False)
-        self._worker = LiveRulesetWorker()
+        if _IS_MACOS:
+            self._worker = LiveRulesetWorkerMacos()
+        else:
+            if not _CMD_PKEXEC or not _CMD_NFT:
+                self._lbl_status.setText(tr("fw_err_no_pkexec"))
+                self._populate([])
+                self._btn_refresh.setEnabled(True)
+                self._src_box.setEnabled(True)
+                return
+            self._worker = LiveRulesetWorker()
         self._worker.done.connect(self._on_live_done)
         self._worker.error.connect(self._on_live_error)
         self._worker.finished.connect(self._on_live_finished)
         self._worker.start()
 
     def _on_live_done(self, text: str) -> None:
-        rows = parse_nft(text, _SOURCE_LIVE)
+        source = _SOURCE_PF_LIVE if _IS_MACOS else _SOURCE_LIVE
+        rows = parse_pf(text, source) if _IS_MACOS else parse_nft(text, source)
         self._rows = rows
         self._populate(rows)
         n_rules = sum(1 for r in rows if not r.get('is_meta'))
@@ -475,7 +559,7 @@ class FirewallPage(QWidget):
                 from PySide6.QtWidgets import QApplication
                 dim = QApplication.palette().color(QPalette.ColorRole.PlaceholderText)
                 item.setForeground(QBrush(dim))
-                font = QFont('Monospace', 9)
+                font = QFont('Menlo' if _IS_MACOS else 'Monospace', 9)
                 font.setItalic(True)
                 item.setFont(font)
 
@@ -517,8 +601,9 @@ class FirewallPage(QWidget):
                 self._lbl_status.setText(tr("fw_status_live", n=n_rules))
             else:
                 path = {
-                    _SOURCE_NFT4: _NFT_CONF,
-                    _SOURCE_IP4:  _IP4_RULES,
-                    _SOURCE_IP6:  _IP6_RULES,
+                    _SOURCE_NFT4:    _NFT_CONF,
+                    _SOURCE_IP4:     _IP4_RULES,
+                    _SOURCE_IP6:     _IP6_RULES,
+                    _SOURCE_PF_FILE: _PF_CONF,
                 }.get(src, Path(src))
                 self._lbl_status.setText(tr("fw_status_loaded", path=str(path), n=n_rules))

@@ -56,6 +56,13 @@ Ce fichier reprend les jalons techniques essentiels.
 - Aide contextuelle (`pages/help_page.py` + `core/help_content.py`).
 - 49 étoiles GitHub.
 
+## 2026-06-06 — v1.3.5
+
+- Compatibilité macOS : 9 modules dual Linux/macOS via `_IS_MACOS` + commandes natives.
+- Modules couverts : Dashboard, Interfaces, Wi-Fi, Topology, Bandwidth, Firewall (pf), Connection Manager, Hosts, MTR.
+- Firewall : parser `parse_pf()`, `LiveRulesetWorkerMacos`, sources dynamiques selon OS.
+- Connection Manager : `_ListWorkerMacos`, `_DetailWorkerMacos`, actions via `osascript`.
+
 ## 2026-06-06 — v1.3.2
 
 - i18n 4 → 8 langues (+Italiano +Português +日本語 +中文).

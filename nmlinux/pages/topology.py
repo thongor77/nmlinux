@@ -3,11 +3,15 @@ from __future__ import annotations
 
 import json
 import math
+import platform
 import re
 import shutil
 import subprocess
 import xml.etree.ElementTree as ET
 from ipaddress import IPv4Network
+
+_IS_MACOS = platform.system() == 'Darwin'
+_mono = 'Menlo' if _IS_MACOS else 'Monospace'
 
 from PySide6.QtCore import Qt, QLineF, QPointF, QRectF, QThread, Signal
 from PySide6.QtGui import (
@@ -49,37 +53,65 @@ def _local_network() -> tuple[str, str, str]:
     """Return (cidr, gateway_ip, self_ip) for the default route interface."""
     gateway = self_ip = cidr = ''
     iface = ''
-    try:
-        route = subprocess.run(
-            ['ip', 'route', 'show', 'default'],
-            capture_output=True, text=True, timeout=2,
-        ).stdout
-        m_gw = re.search(r'via (\S+)', route)
-        m_if = re.search(r'dev (\S+)', route)
-        gateway = m_gw.group(1) if m_gw else ''
-        iface   = m_if.group(1) if m_if else ''
-    except Exception:
-        pass
 
-    try:
-        cmd = (['ip', '-j', 'addr', 'show', iface] if iface
-               else ['ip', '-j', 'addr', 'show'])
-        data = json.loads(
-            subprocess.run(cmd, capture_output=True, text=True, timeout=2).stdout
-        )
-        for entry in data:
-            if entry.get('ifname') == 'lo':
-                continue
-            for addr in entry.get('addr_info', []):
-                if addr.get('family') == 'inet':
-                    self_ip = addr['local']
-                    prefix  = addr['prefixlen']
+    if _IS_MACOS:
+        try:
+            raw = subprocess.run(
+                ['route', '-n', 'get', 'default'],
+                capture_output=True, text=True, timeout=2,
+            ).stdout
+            m_gw = re.search(r'gateway:\s+(\S+)', raw)
+            m_if = re.search(r'interface:\s+(\S+)', raw)
+            gateway = m_gw.group(1) if m_gw else ''
+            iface   = m_if.group(1) if m_if else ''
+        except Exception:
+            pass
+
+        if iface:
+            try:
+                raw = subprocess.run(
+                    ['ifconfig', iface],
+                    capture_output=True, text=True, timeout=2,
+                ).stdout
+                m = re.search(r'inet (\d+\.\d+\.\d+\.\d+) netmask (0x[0-9a-f]+)', raw)
+                if m:
+                    self_ip = m.group(1)
+                    prefix  = bin(int(m.group(2), 16)).count('1')
                     cidr    = str(IPv4Network(f'{self_ip}/{prefix}', strict=False))
+            except Exception:
+                pass
+    else:
+        try:
+            route = subprocess.run(
+                ['ip', 'route', 'show', 'default'],
+                capture_output=True, text=True, timeout=2,
+            ).stdout
+            m_gw = re.search(r'via (\S+)', route)
+            m_if = re.search(r'dev (\S+)', route)
+            gateway = m_gw.group(1) if m_gw else ''
+            iface   = m_if.group(1) if m_if else ''
+        except Exception:
+            pass
+
+        try:
+            cmd = (['ip', '-j', 'addr', 'show', iface] if iface
+                   else ['ip', '-j', 'addr', 'show'])
+            data = json.loads(
+                subprocess.run(cmd, capture_output=True, text=True, timeout=2).stdout
+            )
+            for entry in data:
+                if entry.get('ifname') == 'lo':
+                    continue
+                for addr in entry.get('addr_info', []):
+                    if addr.get('family') == 'inet':
+                        self_ip = addr['local']
+                        prefix  = addr['prefixlen']
+                        cidr    = str(IPv4Network(f'{self_ip}/{prefix}', strict=False))
+                        break
+                if cidr:
                     break
-            if cidr:
-                break
-    except Exception:
-        pass
+        except Exception:
+            pass
 
     return cidr, gateway, self_ip
 
@@ -156,7 +188,7 @@ class _NodeItem(QGraphicsItem):
 
         c_text = pal.color(QPalette.ColorRole.Text)
         painter.setPen(c_text)
-        painter.setFont(QFont('Monospace', 7))
+        painter.setFont(QFont(_mono, 7))
         painter.drawText(QRectF(-55, r + 5, 110, 14),
                          Qt.AlignmentFlag.AlignCenter, primary)
 
@@ -164,7 +196,7 @@ class _NodeItem(QGraphicsItem):
         if hostname and hostname != ip:
             c_sub = pal.color(QPalette.ColorRole.PlaceholderText)
             painter.setPen(c_sub)
-            painter.setFont(QFont('Monospace', 6))
+            painter.setFont(QFont(_mono, 6))
             painter.drawText(QRectF(-55, r + 19, 110, 12),
                              Qt.AlignmentFlag.AlignCenter, ip)
 

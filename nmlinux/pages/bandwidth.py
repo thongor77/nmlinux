@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import math
+import platform
+import subprocess
 import time
 from collections import deque
 from pathlib import Path
+
+_IS_MACOS = platform.system() == 'Darwin'
 
 from PySide6.QtCore import Qt, QEvent, QTimer
 from PySide6.QtGui import (
@@ -32,7 +36,13 @@ _WINDOW = 60   # samples (= seconds)
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _read_net_dev() -> dict[str, tuple[int, int]]:
-    """Return {iface: (rx_bytes, tx_bytes)} from /proc/net/dev."""
+    """Return {iface: (rx_bytes, tx_bytes)}."""
+    if _IS_MACOS:
+        return _read_net_dev_macos()
+    return _read_net_dev_linux()
+
+
+def _read_net_dev_linux() -> dict[str, tuple[int, int]]:
     out: dict[str, tuple[int, int]] = {}
     for line in Path('/proc/net/dev').read_text().splitlines()[2:]:
         parts = line.split()
@@ -40,6 +50,26 @@ def _read_net_dev() -> dict[str, tuple[int, int]]:
             continue
         iface = parts[0].rstrip(':')
         out[iface] = (int(parts[1]), int(parts[9]))
+    return out
+
+
+def _read_net_dev_macos() -> dict[str, tuple[int, int]]:
+    out: dict[str, tuple[int, int]] = {}
+    try:
+        result = subprocess.run(
+            ['netstat', '-ib'],
+            capture_output=True, text=True, timeout=5,
+        )
+        for line in result.stdout.splitlines()[1:]:  # skip header
+            parts = line.split()
+            if len(parts) < 10 or '<Link#' not in parts[2]:
+                continue
+            try:
+                out[parts[0]] = (int(parts[-5]), int(parts[-2]))
+            except ValueError:
+                continue
+    except Exception:
+        pass
     return out
 
 
@@ -117,7 +147,7 @@ class _Graph(QWidget):
         scale = _nice_scale(peak)
 
         # Horizontal grid + Y labels
-        label_font = QFont('Monospace', 7)
+        label_font = QFont('Menlo' if _IS_MACOS else 'Monospace', 7)
         p.setFont(label_font)
         for i in range(5):
             gy = PT + ch - int(i / 4 * ch)
@@ -294,7 +324,7 @@ class BandwidthPage(QWidget):
         current = _read_net_dev()
         existing = {self._iface_list.item(i).text()
                     for i in range(self._iface_list.count())}
-        for iface in sorted(k for k in current if k != 'lo'):
+        for iface in sorted(k for k in current if not k.startswith('lo')):
             if iface not in existing:
                 self._iface_list.addItem(QListWidgetItem(iface))
         if not self._selected and self._iface_list.count():
@@ -304,7 +334,7 @@ class BandwidthPage(QWidget):
         current = _read_net_dev()
 
         # Populate / refresh interface list (skip loopback)
-        ifaces = [k for k in current if k != 'lo']
+        ifaces = [k for k in current if not k.startswith('lo')]
         existing = {self._iface_list.item(i).text()
                     for i in range(self._iface_list.count())}
         for iface in sorted(ifaces):
@@ -315,7 +345,7 @@ class BandwidthPage(QWidget):
 
         # Compute speeds for each interface
         for iface, (rx, tx) in current.items():
-            if iface == 'lo':
+            if iface.startswith('lo'):
                 continue
             if iface in self._prev:
                 p_rx, p_tx = self._prev[iface]
@@ -350,7 +380,7 @@ class BandwidthPage(QWidget):
         self._selected = item.text()
         bar = get_cli_bar()
         if bar:
-            bar.set_cmd(f'cat /proc/net/dev  # interface : {self._selected}')
+            bar.set_cmd(f'{"netstat -ib" if _IS_MACOS else "cat /proc/net/dev"}  # interface : {self._selected}')
         self._lbl_iface.setText(self._selected)
         self._graph.clear()
         self._lbl_rx.setText('↓  —')
@@ -369,5 +399,5 @@ class BandwidthPage(QWidget):
             self._timer.start()
         bar = get_cli_bar()
         if bar:
-            bar.set_cmd(f'cat /proc/net/dev  # interface : {self._selected}' if self._selected else '')
+            bar.set_cmd(f'{"netstat -ib" if _IS_MACOS else "cat /proc/net/dev"}  # interface : {self._selected}' if self._selected else '')
         super().showEvent(event)

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import platform
 import re
 import subprocess
 from ipaddress import IPv4Network
+
+_IS_MACOS = platform.system() == 'Darwin'
 
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
@@ -45,6 +48,10 @@ class InterfacesWorker(QThread):
 
 
 def _collect_interfaces() -> list[dict]:
+    return _collect_interfaces_macos() if _IS_MACOS else _collect_interfaces_linux()
+
+
+def _collect_interfaces_linux() -> list[dict]:
     ifaces: list[dict] = []
 
     type_map: dict[str, str] = {}
@@ -75,7 +82,6 @@ def _collect_interfaces() -> list[dict]:
             continue
 
         operstate = entry.get('operstate', '').lower()
-        # Store raw state key for color logic; translated in UI
         if operstate == 'up':
             state_key = 'up'
         elif operstate == 'down':
@@ -94,6 +100,91 @@ def _collect_interfaces() -> list[dict]:
                 ipv4_list.append(f"{local}/{prefix}")
             elif addr.get('family') == 'inet6' and addr.get('scope') == 'global':
                 ipv6_list.append(f"{local}/{prefix}")
+
+        ifaces.append({
+            'name':      name,
+            'type':      type_map.get(name, '—'),
+            'state_key': state_key,
+            'mac':       mac,
+            'ipv4':      '\n'.join(ipv4_list) if ipv4_list else '—',
+            'ipv6':      '\n'.join(ipv6_list) if ipv6_list else '—',
+        })
+
+    return ifaces
+
+
+def _collect_interfaces_macos() -> list[dict]:
+    type_map: dict[str, str] = {}
+    try:
+        raw = subprocess.run(
+            ['networksetup', '-listallhardwareports'],
+            capture_output=True, text=True, timeout=4,
+        ).stdout
+        current_type = ''
+        for line in raw.splitlines():
+            line = line.strip()
+            if line.startswith('Hardware Port:'):
+                current_type = line.split(':', 1)[1].strip()
+            elif line.startswith('Device:'):
+                device = line.split(':', 1)[1].strip()
+                if device:
+                    type_map[device] = current_type
+    except Exception:
+        pass
+
+    ifaces: list[dict] = []
+    try:
+        raw = subprocess.run(
+            ['ifconfig', '-a'],
+            capture_output=True, text=True, timeout=4,
+        ).stdout
+    except Exception:
+        return ifaces
+
+    blocks: list[tuple[str, str]] = []
+    current_name = ''
+    current_lines: list[str] = []
+    for line in raw.splitlines():
+        m = re.match(r'^(\S+):\s', line)
+        if m:
+            if current_name:
+                blocks.append((current_name, '\n'.join(current_lines)))
+            current_name = m.group(1)
+            current_lines = [line]
+        else:
+            current_lines.append(line)
+    if current_name:
+        blocks.append((current_name, '\n'.join(current_lines)))
+
+    for name, block in blocks:
+        if name.startswith('lo'):
+            continue
+
+        status_m = re.search(r'status:\s+(\S+)', block)
+        flags_m  = re.search(r'flags=\w+<([^>]*)>', block)
+        flags    = flags_m.group(1).split(',') if flags_m else []
+        if status_m:
+            state_key = 'up' if status_m.group(1) == 'active' else 'down'
+        elif 'UP' in flags and 'RUNNING' in flags:
+            state_key = 'up'
+        elif 'UP' not in flags:
+            state_key = 'down'
+        else:
+            state_key = 'unknown'
+
+        mac_m = re.search(r'ether\s+([0-9a-f:]+)', block)
+        mac   = mac_m.group(1) if mac_m else '—'
+
+        ipv4_list: list[str] = []
+        for m in re.finditer(r'inet (\d+\.\d+\.\d+\.\d+) netmask (0x[0-9a-f]+)', block):
+            prefix = bin(int(m.group(2), 16)).count('1')
+            ipv4_list.append(f"{m.group(1)}/{prefix}")
+
+        ipv6_list: list[str] = []
+        for m in re.finditer(r'inet6 (\S+) prefixlen (\d+)', block):
+            addr = m.group(1).split('%')[0]
+            if not addr.lower().startswith('fe80') and addr != '::1':
+                ipv6_list.append(f"{addr}/{m.group(2)}")
 
         ifaces.append({
             'name':      name,
@@ -242,5 +333,5 @@ class InterfacesPage(QWidget):
     def showEvent(self, event) -> None:  # noqa: N802
         bar = get_cli_bar()
         if bar:
-            bar.set_cmd("ip -j addr show  |  nmcli device show")
+            bar.set_cmd("ifconfig -a" if _IS_MACOS else "ip -j addr show  |  nmcli device show")
         super().showEvent(event)

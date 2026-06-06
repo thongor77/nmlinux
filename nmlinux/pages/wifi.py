@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import json
+import platform
+import re
 import subprocess
+
+_IS_MACOS = platform.system() == 'Darwin'
 
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
@@ -43,6 +48,10 @@ class WifiWorker(QThread):
 
 
 def _collect_wifi() -> dict:
+    return _collect_wifi_macos() if _IS_MACOS else _collect_wifi_linux()
+
+
+def _collect_wifi_linux() -> dict:
     result: dict = {'iface': '—', 'connected_ssid': '', 'ssids': []}
 
     wifi_iface = '—'
@@ -90,7 +99,7 @@ def _collect_wifi() -> dict:
                 parts[4], parts[5], parts[6], parts[7],
             )
             if not ssid:
-                ssid = '(hidden_sentinel)'  # translated at display time
+                ssid = '(hidden_sentinel)'
             if bssid in seen:
                 continue
             seen.add(bssid)
@@ -118,12 +127,124 @@ def _collect_wifi() -> dict:
                 'signal':     signal,
                 'signal_pct': pct,
                 'bar':        bar_str,
-                'security':   security,   # empty string = open
+                'security':   security,
                 'mode':       mode,
             })
 
         ssids.sort(key=lambda x: (not x['connected'], -x['signal_pct']))
         result['ssids'] = ssids
+    except Exception:
+        pass
+
+    return result
+
+
+def _parse_sp_security(raw: str) -> str:
+    """'spairport_security_mode_wpa2_personal' → 'WPA2', empty/none → ''."""
+    if not raw or 'none' in raw:
+        return ''
+    s = raw.replace('spairport_security_mode_', '')
+    if s.startswith('wpa3'):
+        return 'WPA3'
+    if s.startswith('wpa2'):
+        return 'WPA2'
+    if s.startswith('wpa'):
+        return 'WPA'
+    return s
+
+
+def _sp_network_to_entry(net: dict, connected: bool) -> dict:
+    ssid  = net.get('_name', '') or '(hidden_sentinel)'
+    bssid = net.get('spairport_network_bssid', '—')
+
+    rssi = 0
+    m = re.search(r'(-\d+)\s*dBm', net.get('spairport_signal_noise', ''))
+    if m:
+        rssi = int(m.group(1))
+    pct = max(0, min(100, 2 * (rssi + 100)))
+
+    chan_raw = net.get('spairport_network_channel', '')
+    chan_m   = re.search(r'(\d+)', chan_raw)
+    chan_num = int(chan_m.group(1)) if chan_m else 0
+    freq     = '2.4 GHz' if 0 < chan_num <= 14 else '5 GHz'
+
+    security = _parse_sp_security(net.get('spairport_security_mode', ''))
+
+    bars    = '▂▄▆█'
+    bar_str = ''.join(
+        bars[i] if pct >= (i + 1) * 25 else '░'
+        for i in range(4)
+    ) + f'  {pct}%'
+
+    return {
+        'connected':  connected,
+        'ssid':       ssid,
+        'bssid':      bssid,
+        'chan':        str(chan_num) if chan_num else '—',
+        'freq':        freq,
+        'signal':      str(pct),
+        'signal_pct':  pct,
+        'bar':         bar_str,
+        'security':    security,
+        'mode':        '—',
+    }
+
+
+def _collect_wifi_macos() -> dict:
+    result: dict = {'iface': '—', 'connected_ssid': '', 'ssids': []}
+
+    wifi_iface = '—'
+    try:
+        raw = subprocess.run(
+            ['networksetup', '-listallhardwareports'],
+            capture_output=True, text=True, timeout=4,
+        ).stdout
+        in_wifi = False
+        for line in raw.splitlines():
+            s = line.strip()
+            if s.startswith('Hardware Port:') and 'Wi-Fi' in s:
+                in_wifi = True
+            elif in_wifi and s.startswith('Device:'):
+                wifi_iface = s.split(':', 1)[1].strip()
+                break
+            elif in_wifi and s == '':
+                in_wifi = False
+    except Exception:
+        pass
+
+    result['iface'] = wifi_iface
+    if wifi_iface == '—':
+        return result
+
+    try:
+        raw = subprocess.run(
+            ['system_profiler', 'SPAirPortDataType', '-json'],
+            capture_output=True, text=True, timeout=15,
+        ).stdout
+        data = json.loads(raw)
+
+        interfaces = (data.get('SPAirPortDataType', [{}])[0]
+                         .get('spairport_airport_interfaces', []))
+
+        for iface_data in interfaces:
+            if iface_data.get('_name') != wifi_iface:
+                continue
+
+            current = iface_data.get('spairport_current_network_information', {})
+            connected_ssid = current.get('_name', '')
+            result['connected_ssid'] = connected_ssid
+
+            ssids: list[dict] = []
+            if current:
+                ssids.append(_sp_network_to_entry(current, connected=True))
+
+            for net in iface_data.get('spairport_airport_other_local_wireless_networks', []):
+                ssids.append(_sp_network_to_entry(net, connected=False))
+
+            ssids.sort(key=lambda x: (not x['connected'], -x['signal_pct']))
+            result['ssids'] = ssids
+            break
+
     except Exception:
         pass
 
@@ -262,5 +383,5 @@ class WifiPage(QWidget):
     def showEvent(self, event) -> None:  # noqa: N802
         bar = get_cli_bar()
         if bar:
-            bar.set_cmd("nmcli dev wifi list")
+            bar.set_cmd("system_profiler SPAirPortDataType -json" if _IS_MACOS else "nmcli dev wifi list")
         super().showEvent(event)

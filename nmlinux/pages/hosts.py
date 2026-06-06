@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import platform
 import re
 import subprocess
 import tempfile
 import os
+
+_IS_MACOS = platform.system() == 'Darwin'
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -301,10 +304,18 @@ class HostsPage(QWidget):
             with os.fdopen(fd, "w") as f:
                 f.write(content)
 
-            proc = subprocess.run(
-                ["pkexec", "cp", tmppath, _HOSTS_FILE],
-                capture_output=True, timeout=30,
-            )
+            if _IS_MACOS:
+                proc = subprocess.run(
+                    ['osascript', '-e',
+                     f'do shell script "cp {tmppath} /etc/hosts"'
+                     f' with administrator privileges'],
+                    capture_output=True, timeout=60,
+                )
+            else:
+                proc = subprocess.run(
+                    ["pkexec", "cp", tmppath, _HOSTS_FILE],
+                    capture_output=True, timeout=30,
+                )
             os.unlink(tmppath)
 
             if proc.returncode != 0:

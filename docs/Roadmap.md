@@ -1,8 +1,8 @@
 # Roadmap NMLinux
 
-## Version courante : v1.3.2 (2026-06-06)
+## Version courante : v1.3.5 (2026-06-06)
 
-27 modules, 8 langues UI, aide contextuelle 8 langues × 27 modules.
+27 modules, 8 langues UI, aide contextuelle 8 langues × 27 modules, compatibilité macOS.
 
 ---
 
@@ -53,3 +53,4 @@ Ces idées ont été discutées et validées — elles ne sont pas encore implé
 | v1.3.0 | 2026-06-03 | TLS Inspector, SMB/NFS, Hosts File, install.sh |
 | v1.3.1 | 2026-06-05 | SSH Key Manager, aide contextuelle (help_page.py) |
 | v1.3.2 | 2026-06-06 | i18n 8 langues, aide contextuelle 8 langues × 27 modules |
+| v1.3.5 | 2026-06-06 | Compatibilité macOS — 9 modules dual Linux/macOS |

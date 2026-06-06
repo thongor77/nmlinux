@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import platform
 import re
 import socket
 import subprocess
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, wait as _wait
-from ipaddress import IPv4Network
+from ipaddress import IPv4Address, IPv4Network
+
+_IS_MACOS = platform.system() == 'Darwin'
 
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
@@ -30,13 +33,22 @@ def _collect_local() -> dict:
     except Exception:
         out['hostname'] = '—'
 
+    # ── Default gateway + interface ───────────────────────────────────────────
     try:
-        route = subprocess.run(
-            ['ip', 'route', 'show', 'default'],
-            capture_output=True, text=True, timeout=3,
-        ).stdout
-        m_gw = re.search(r'via (\S+)', route)
-        m_if = re.search(r'dev (\S+)', route)
+        if _IS_MACOS:
+            raw = subprocess.run(
+                ['route', '-n', 'get', 'default'],
+                capture_output=True, text=True, timeout=3,
+            ).stdout
+            m_gw = re.search(r'gateway:\s+(\S+)', raw)
+            m_if = re.search(r'interface:\s+(\S+)', raw)
+        else:
+            raw = subprocess.run(
+                ['ip', 'route', 'show', 'default'],
+                capture_output=True, text=True, timeout=3,
+            ).stdout
+            m_gw = re.search(r'via (\S+)', raw)
+            m_if = re.search(r'dev (\S+)', raw)
         out['gateway'] = m_gw.group(1) if m_gw else '—'
         out['iface']   = m_if.group(1) if m_if else ''
     except Exception:
@@ -45,29 +57,64 @@ def _collect_local() -> dict:
 
     iface = out['iface']
 
+    # ── IPv4 address + subnet mask ────────────────────────────────────────────
     try:
-        cmd = ['ip', '-4', 'addr', 'show'] + ([iface] if iface else [])
-        raw = subprocess.run(cmd, capture_output=True, text=True, timeout=3).stdout
-        m = re.search(r'inet (\d+\.\d+\.\d+\.\d+)/(\d+)', raw)
-        out['local_ipv4']   = m.group(1) if m else '—'
-        out['subnet_mask']  = str(IPv4Network(f'0.0.0.0/{m.group(2)}', strict=False).netmask) if m else '—'
+        if _IS_MACOS:
+            cmd = ['ifconfig'] + ([iface] if iface else [])
+            raw = subprocess.run(cmd, capture_output=True, text=True, timeout=3).stdout
+            m = re.search(r'inet (\d+\.\d+\.\d+\.\d+) netmask (0x[0-9a-f]+)', raw)
+            if m:
+                out['local_ipv4']  = m.group(1)
+                out['subnet_mask'] = str(IPv4Address(int(m.group(2), 16)))
+            else:
+                out['local_ipv4']  = '—'
+                out['subnet_mask'] = '—'
+        else:
+            cmd = ['ip', '-4', 'addr', 'show'] + ([iface] if iface else [])
+            raw = subprocess.run(cmd, capture_output=True, text=True, timeout=3).stdout
+            m = re.search(r'inet (\d+\.\d+\.\d+\.\d+)/(\d+)', raw)
+            out['local_ipv4']  = m.group(1) if m else '—'
+            out['subnet_mask'] = str(IPv4Network(f'0.0.0.0/{m.group(2)}', strict=False).netmask) if m else '—'
     except Exception:
         out['local_ipv4']  = '—'
         out['subnet_mask'] = '—'
 
+    # ── IPv6 address ──────────────────────────────────────────────────────────
     try:
-        cmd = ['ip', '-6', 'addr', 'show', 'scope', 'global'] + \
-              (['dev', iface] if iface else [])
-        raw = subprocess.run(cmd, capture_output=True, text=True, timeout=3).stdout
-        m = re.search(r'inet6 (\S+)/', raw)
-        out['local_ipv6'] = m.group(1) if m else '—'
+        if _IS_MACOS:
+            cmd = ['ifconfig'] + ([iface] if iface else [])
+            raw = subprocess.run(cmd, capture_output=True, text=True, timeout=3).stdout
+            addrs = re.findall(r'inet6 (\S+) prefixlen', raw)
+            global_v6 = [a.split('%')[0] for a in addrs
+                         if not a.lower().startswith('fe80') and a.split('%')[0] != '::1']
+            out['local_ipv6'] = global_v6[0] if global_v6 else '—'
+        else:
+            cmd = ['ip', '-6', 'addr', 'show', 'scope', 'global'] + \
+                  (['dev', iface] if iface else [])
+            raw = subprocess.run(cmd, capture_output=True, text=True, timeout=3).stdout
+            m = re.search(r'inet6 (\S+)/', raw)
+            out['local_ipv6'] = m.group(1) if m else '—'
     except Exception:
         out['local_ipv6'] = '—'
 
+    # ── DNS servers ───────────────────────────────────────────────────────────
     try:
-        with open('/etc/resolv.conf') as f:
-            content = f.read()
-        out['dns_servers'] = re.findall(r'^nameserver\s+(\S+)', content, re.MULTILINE)[:3]
+        if _IS_MACOS:
+            raw = subprocess.run(
+                ['scutil', '--dns'],
+                capture_output=True, text=True, timeout=3,
+            ).stdout
+            seen: set[str] = set()
+            dns: list[str] = []
+            for ip in re.findall(r'nameserver\[\d+\]\s*:\s*(\S+)', raw):
+                if ip not in seen:
+                    seen.add(ip)
+                    dns.append(ip)
+            out['dns_servers'] = dns[:3]
+        else:
+            with open('/etc/resolv.conf') as f:
+                content = f.read()
+            out['dns_servers'] = re.findall(r'^nameserver\s+(\S+)', content, re.MULTILINE)[:3]
     except Exception:
         out['dns_servers'] = []
 

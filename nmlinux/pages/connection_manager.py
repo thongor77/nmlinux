@@ -1,12 +1,15 @@
-"""Connection Manager — view and control NetworkManager connections via nmcli."""
+"""Connection Manager — view and control NetworkManager / macOS network services."""
 
 from __future__ import annotations
 
+import platform
 import re
 import shutil
 import subprocess
 from ipaddress import IPv4Network
 from typing import NamedTuple
+
+_IS_MACOS = platform.system() == 'Darwin'
 
 from PySide6.QtCore import Qt, QThread, QTimer, Signal
 from PySide6.QtGui import QBrush, QColor
@@ -100,6 +103,21 @@ def _state_color(state: str) -> QColor:
     return _MID
 
 
+def _macos_type_key(name: str) -> str:
+    t = name.lower()
+    if 'wi-fi' in t or 'airport' in t or 'wireless' in t:
+        return '802-11-wireless'
+    if 'ethernet' in t or 'thunderbolt' in t:
+        return '802-3-ethernet'
+    if 'vpn' in t or 'ikev2' in t or 'l2tp' in t or 'pptp' in t:
+        return 'vpn'
+    if 'wireguard' in t:
+        return 'wireguard'
+    if 'bluetooth' in t:
+        return 'tun'
+    return name
+
+
 # ── Workers ───────────────────────────────────────────────────────────────────
 
 class _ListWorker(QThread):
@@ -156,6 +174,171 @@ class _ActionWorker(QThread):
             self.done.emit(-1, '', str(exc))
 
 
+class _ListWorkerMacos(QThread):
+    result = Signal(list)
+    error  = Signal(str)
+
+    def run(self) -> None:
+        try:
+            svc_proc = subprocess.run(
+                ['networksetup', '-listallnetworkservices'],
+                capture_output=True, text=True, timeout=10,
+            )
+            services: list[tuple[str, bool]] = []
+            for line in svc_proc.stdout.splitlines():
+                if line.startswith('An asterisk'):
+                    continue
+                disabled = line.startswith('*')
+                name = line.lstrip('* ').strip()
+                if name:
+                    services.append((name, disabled))
+
+            hw_proc = subprocess.run(
+                ['networksetup', '-listallhardwareports'],
+                capture_output=True, text=True, timeout=10,
+            )
+            port_device: dict[str, str] = {}
+            cur_port = None
+            for line in hw_proc.stdout.splitlines():
+                if line.startswith('Hardware Port:'):
+                    cur_port = line.split(':', 1)[1].strip()
+                elif line.startswith('Device:') and cur_port:
+                    port_device[cur_port] = line.split(':', 1)[1].strip()
+                    cur_port = None
+
+            ifc_proc = subprocess.run(
+                ['ifconfig', '-a'], capture_output=True, text=True, timeout=5,
+            )
+            active_devs: set[str] = set()
+            cur_dev = None
+            for line in ifc_proc.stdout.splitlines():
+                m = re.match(r'^(\w+):', line)
+                if m:
+                    cur_dev = m.group(1)
+                elif cur_dev and re.search(r'\binet\s+\d', line):
+                    active_devs.add(cur_dev)
+
+            conns: list[_Conn] = []
+            for name, disabled in services:
+                dev = port_device.get(name, '')
+                type_key = _macos_type_key(name)
+                if disabled:
+                    state = 'disabled'
+                elif dev and dev in active_devs:
+                    state = 'activated'
+                else:
+                    state = 'inactive'
+                conns.append(_Conn(name=name, uuid=dev, type=type_key,
+                                   device=dev, state=state, autoconnect=''))
+            self.result.emit(conns)
+        except Exception as exc:
+            self.error.emit(str(exc))
+
+
+class _DetailWorkerMacos(QThread):
+    result = Signal(str)
+
+    def __init__(self, name: str, device: str) -> None:
+        super().__init__()
+        self._name   = name
+        self._device = device
+
+    def run(self) -> None:
+        try:
+            self.result.emit(self._collect())
+        except Exception:
+            self.result.emit('')
+
+    def _collect(self) -> str:
+        name, dev = self._name, self._device
+
+        info = subprocess.run(
+            ['networksetup', '-getinfo', name],
+            capture_output=True, text=True, timeout=5,
+        )
+        ip4 = subnet = router = ''
+        for line in info.stdout.splitlines():
+            if line.startswith('IP address:'):
+                ip4 = line.split(':', 1)[1].strip()
+            elif line.startswith('Subnet mask:'):
+                subnet = line.split(':', 1)[1].strip()
+            elif line.startswith('Router:'):
+                router = line.split(':', 1)[1].strip()
+
+        ip4_cidr = ''
+        if ip4 and ip4 not in ('none', 'None'):
+            if subnet and subnet not in ('none', 'None'):
+                try:
+                    prefix = IPv4Network(f'0.0.0.0/{subnet}', strict=False).prefixlen
+                    ip4_cidr = f'{ip4}/{prefix}'
+                except Exception:
+                    ip4_cidr = ip4
+            else:
+                ip4_cidr = ip4
+
+        dns_proc = subprocess.run(
+            ['networksetup', '-getdnsservers', name],
+            capture_output=True, text=True, timeout=5,
+        )
+        dns_lines = dns_proc.stdout.strip().splitlines()
+        dns = (', '.join(dns_lines)
+               if dns_lines and "There aren" not in dns_lines[0] else '')
+
+        v6_proc = subprocess.run(
+            ['networksetup', '-getv6info', name],
+            capture_output=True, text=True, timeout=5,
+        )
+        ip6 = ''
+        for line in v6_proc.stdout.splitlines():
+            if line.startswith('IPv6 IP address:'):
+                ip6 = line.split(':', 1)[1].strip()
+                break
+
+        ifc_out = ''
+        if dev:
+            ifc = subprocess.run(
+                ['ifconfig', dev], capture_output=True, text=True, timeout=5,
+            )
+            ifc_out = ifc.stdout
+
+        mac = ''
+        m = re.search(r'ether\s+([0-9a-f:]+)', ifc_out)
+        if m:
+            mac = m.group(1)
+        has_inet = bool(re.search(r'\binet\s+\d', ifc_out))
+        state_str = 'activated' if has_inet else 'inactive'
+
+        ssid = ''
+        if dev:
+            ssid_proc = subprocess.run(
+                ['networksetup', '-getairportnetwork', dev],
+                capture_output=True, text=True, timeout=5,
+            )
+            out = ssid_proc.stdout.strip()
+            if 'Current Wi-Fi Network:' in out:
+                ssid = out.split(':', 1)[1].strip()
+
+        lines = [
+            f'GENERAL.STATE:                          {state_str}',
+            f'GENERAL.DEVICES:                        {dev or "—"}',
+            f'connection.autoconnect:                 --',
+        ]
+        if ip4_cidr:
+            lines.append(f'IP4.ADDRESS[1]:                         {ip4_cidr}')
+        if router and router not in ('none', 'None'):
+            lines.append(f'IP4.GATEWAY:                            {router}')
+        if dns:
+            lines.append(f'IP4.DNS[1]:                             {dns}')
+        if ip6 and ip6 not in ('none', 'None'):
+            lines.append(f'IP6.ADDRESS[1]:                         {ip6}')
+        if ssid:
+            lines.append(f'802-11-wireless.ssid:                   {ssid}')
+        lines.append('802-11-wireless-security.key-mgmt:      --')
+        if mac:
+            lines.append(f'connection.uuid:                        {mac}')
+        return '\n'.join(lines)
+
+
 # ── CLI bar ───────────────────────────────────────────────────────────────────
 
 class _CliButton(QPushButton):
@@ -193,7 +376,7 @@ class ConnectionManagerPage(QWidget):
         self._workers: list[QThread] = []
         self._build_ui()
 
-        if not _CMD_NMCLI:
+        if not _IS_MACOS and not _CMD_NMCLI:
             self._status.setText(tr('conn_err_nmcli'))
             return
 
@@ -229,7 +412,8 @@ class ConnectionManagerPage(QWidget):
 
         self._btn_refresh = _CliButton(
             tr('conn_refresh_btn'),
-            lambda: 'nmcli connection show',
+            lambda: ('networksetup -listallnetworkservices' if _IS_MACOS
+                     else 'nmcli connection show'),
         )
         self._btn_refresh.clicked.connect(self._refresh)
         bar.addWidget(self._btn_refresh)
@@ -296,22 +480,29 @@ class ConnectionManagerPage(QWidget):
         acts = QHBoxLayout()
         self._btn_connect = _CliButton(
             tr('conn_connect_btn'),
-            lambda: (f'nmcli connection up "{self._current.name}"'
+            lambda: (f'networksetup -setnetworkserviceenabled "{self._current.name}" on'
+                     if _IS_MACOS and self._current else
+                     f'nmcli connection up "{self._current.name}"'
                      if self._current else ''),
         )
         self._btn_disconnect = _CliButton(
             tr('conn_disconnect_btn'),
-            lambda: (f'nmcli connection down "{self._current.name}"'
+            lambda: (f'networksetup -setnetworkserviceenabled "{self._current.name}" off'
+                     if _IS_MACOS and self._current else
+                     f'nmcli connection down "{self._current.name}"'
                      if self._current else ''),
         )
         self._btn_edit = _CliButton(
             tr('conn_edit_btn'),
-            lambda: (f'nm-connection-editor --edit {self._current.uuid}'
+            lambda: ('open /System/Library/PreferencePanes/Network.prefPane'
+                     if _IS_MACOS else
+                     f'nm-connection-editor --edit {self._current.uuid}'
                      if self._current else ''),
         )
         self._btn_delete = _CliButton(
             tr('conn_delete_btn'),
-            lambda: (f'nmcli connection delete "{self._current.name}"'
+            lambda: ('' if _IS_MACOS else
+                     f'nmcli connection delete "{self._current.name}"'
                      if self._current else ''),
         )
         self._btn_connect.clicked.connect(self._on_connect)
@@ -339,8 +530,9 @@ class ConnectionManagerPage(QWidget):
     def _refresh(self) -> None:
         bar = get_cli_bar()
         if bar:
-            bar.set_cmd('nmcli connection show')
-        w = _ListWorker()
+            bar.set_cmd('networksetup -listallnetworkservices' if _IS_MACOS
+                        else 'nmcli connection show')
+        w = _ListWorkerMacos() if _IS_MACOS else _ListWorker()
         w.result.connect(self._on_list)
         w.error.connect(lambda e: self._status.setText(
             tr('common_error_prefix', msg=e)))
@@ -406,19 +598,25 @@ class ConnectionManagerPage(QWidget):
         self._det_title.setText(name)
         bar = get_cli_bar()
         if bar:
-            bar.set_cmd(f'nmcli connection show "{name}"')
+            bar.set_cmd(f'networksetup -getinfo "{name}"' if _IS_MACOS
+                        else f'nmcli connection show "{name}"')
         self._set_actions_enabled(True)
         is_active = self._current.state == 'activated'
         self._btn_connect.setEnabled(not is_active)
         self._btn_disconnect.setEnabled(is_active)
-        self._btn_edit.setEnabled(bool(_CMD_NMED))
+        if _IS_MACOS:
+            self._btn_edit.setEnabled(True)
+            self._btn_delete.setEnabled(False)
+        else:
+            self._btn_edit.setEnabled(bool(_CMD_NMED))
 
-        # Reset detail rows
         for lbl in self._det_rows.values():
             lbl.setText('…')
 
-        # Load full details in background
-        w = _DetailWorker(name)
+        if _IS_MACOS:
+            w = _DetailWorkerMacos(name, self._current.device)
+        else:
+            w = _DetailWorker(name)
         w.result.connect(self._on_details)
         w.finished.connect(lambda: self._workers.remove(w))
         self._workers.append(w)
@@ -444,24 +642,39 @@ class ConnectionManagerPage(QWidget):
     def _on_connect(self) -> None:
         if not self._current:
             return
-        cmd = [_CMD_NMCLI, 'connection', 'up', self._current.name]
+        if _IS_MACOS:
+            script = (f'do shell script "networksetup -setnetworkserviceenabled '
+                      f'\\"{self._current.name}\\" on"'
+                      f' with administrator privileges')
+            cmd = ['osascript', '-e', script]
+        else:
+            cmd = [_CMD_NMCLI, 'connection', 'up', self._current.name]
         self._run_action(cmd, tr('conn_status_connecting', name=self._current.name))
 
     def _on_disconnect(self) -> None:
         if not self._current:
             return
-        cmd = [_CMD_NMCLI, 'connection', 'down', self._current.name]
+        if _IS_MACOS:
+            script = (f'do shell script "networksetup -setnetworkserviceenabled '
+                      f'\\"{self._current.name}\\" off"'
+                      f' with administrator privileges')
+            cmd = ['osascript', '-e', script]
+        else:
+            cmd = [_CMD_NMCLI, 'connection', 'down', self._current.name]
         self._run_action(cmd, tr('conn_status_disconnecting', name=self._current.name))
 
     def _on_edit(self) -> None:
+        if _IS_MACOS:
+            subprocess.Popen(['open',
+                              '/System/Library/PreferencePanes/Network.prefPane'])
+            return
         if not self._current or not _CMD_NMED:
             self._set_status(tr('conn_no_editor'), error=True)
             return
-        import subprocess as sp
-        sp.Popen([_CMD_NMED, '--edit', self._current.uuid])
+        subprocess.Popen([_CMD_NMED, '--edit', self._current.uuid])
 
     def _on_delete(self) -> None:
-        if not self._current:
+        if _IS_MACOS or not self._current:
             return
         ans = QMessageBox.question(
             self, tr('conn_dlg_del_title'),

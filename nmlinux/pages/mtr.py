@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import platform
 import re
 import shutil
 import subprocess
+
+_IS_MACOS = platform.system() == 'Darwin'
 
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QBrush, QColor, QFont
@@ -251,7 +254,7 @@ class MtrPage(QWidget):
         self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._table.verticalHeader().setVisible(False)
         self._table.setAlternatingRowColors(True)
-        self._table.setFont(QFont('Monospace', 9))
+        self._table.setFont(QFont('Menlo' if _IS_MACOS else 'Monospace', 9))
         layout.addWidget(self._table, 1)
 
         if not _CMD_MTR:
