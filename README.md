@@ -31,7 +31,7 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 
 ### v1.3.2 — 2026-06-06
 
-- **i18n extended to 8 languages** — added Italiano, Português, 日本語 (Japanese) and 中文 (Chinese Simplified); the full UI (all 27 modules, ~720 translation keys) is now available in FR / EN / ES / DE / IT / PT / JA / ZH; language can be changed at runtime without restarting
+- **i18n extended to 8 languages** — added Italiano, Português, 日本語 (Japanese) and 中文 (Chinese Simplified); the full UI (all 27 modules, ~720 translation keys) is now available in FR / EN / ES / DE / IT / PT / JA / ZH; a restart prompt appears after changing the language in Settings
 - **Contextual help in 8 languages** — the `?` badge panel (description, usage examples and equivalent CLI commands) now covers all 8 languages for every module; previously JA and ZH fell back to English
 - **Bug fix** — nav tooltips for SMB/NFS and Hosts File were displaying in French regardless of the selected language; missing `nav_hint_smb_nfs` and `nav_hint_hosts` keys added to all 7 non-French language blocks
 
@@ -126,7 +126,7 @@ Initial public release — 13 modules: Dashboard, Interfaces, Wi-Fi, Subnet Calc
 | **Bandwidth** | Real-time per-interface throughput: 60s sliding graph, live speeds, session totals, peak |
 | **Wake on LAN** | Pure Python magic packet (UDP broadcast), persistent host book, no external tool required |
 | **Topology Map** | Auto-discovers LAN devices via `nmap -sn`; interactive graph with draggable nodes, zoom/pan, detail panel |
-| **Settings** | Language selection (FR / EN / ES / DE / IT / PT / JA / ZH), persisted; change takes effect immediately |
+| **Settings** | Language selection (FR / EN / ES / DE / IT / PT / JA / ZH), persisted; restart required after change |
 
 ---
 
