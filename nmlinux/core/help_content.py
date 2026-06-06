@@ -110,6 +110,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "resolvectl status | grep 'DNS Servers'",
             ],
         },
+        "zh": {
+            "desc": "本地机器的网络概览：主机名、IPv4/IPv6、网关、活动DNS服务器、公网IP及通过ip-api.com获取的大致地理位置。",
+            "examples": [
+                "诊断连接问题前检查本地IP和网关。",
+                "配置更改后确认使用了正确的DNS服务器。",
+                "无需打开浏览器即可查看公网IP。",
+                "验证显示的位置（使用VPN时很有用）。",
+            ],
+            "cli": [
+                "ip route",
+                "ip addr show",
+                "curl -s ifconfig.me",
+                "resolvectl status | grep 'DNS Servers'",
+            ],
+        },
     },
     "Connections": {
         "fr": {
@@ -203,6 +218,20 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "VPN接続を素早く有効化または無効化する。",
                 "アクティブなWi-Fi接続のIP/DNS/SSID詳細を確認する。",
                 "使用していない古いWi-Fiプロファイルを削除する。",
+            ],
+            "cli": [
+                "nmcli connection show",
+                "nmcli connection up 'MyWifi'",
+                "nmcli connection down 'MyVPN'",
+                "nmcli connection delete 'OldProfile'",
+            ],
+        },
+        "zh": {
+            "desc": "管理所有NetworkManager连接（Ethernet、Wi-Fi、VPN、WireGuard）。支持按类型筛选和教学式CLI栏，可连接、断开、编辑或删除连接。",
+            "examples": [
+                "快速启用或禁用VPN连接。",
+                "查看活动Wi-Fi连接的IP/DNS/SSID详情。",
+                "删除不再使用的旧Wi-Fi配置文件。",
             ],
             "cli": [
                 "nmcli connection show",
@@ -312,6 +341,20 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "nmcli device status",
             ],
         },
+        "zh": {
+            "desc": "列出所有活动网络接口（Ethernet、Wi-Fi、环回、桥接…），显示状态、MAC地址、IPv4和IPv6。点击接口可查看完整详情。",
+            "examples": [
+                "检查哪个接口处于活动状态及其up/down状态。",
+                "查找MAC地址以配置静态DHCP租约。",
+                "识别Docker或WireGuard创建的虚拟接口。",
+            ],
+            "cli": [
+                "ip addr show",
+                "ip link show",
+                "ip -j addr | python3 -m json.tool",
+                "nmcli device status",
+            ],
+        },
     },
     "Wi-Fi": {
         "fr": {
@@ -406,6 +449,19 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "iwlist wlan0 scan | grep -E 'SSID|Signal'",
             ],
         },
+        "zh": {
+            "desc": "扫描可用Wi-Fi网络，显示SSID、BSSID、信道、频率、信号强度（▂▄▆█）和安全类型。已连接的网络显示在首位。",
+            "examples": [
+                "检测附近的网络并比较信号强度。",
+                "检查网络是否工作在2.4 GHz或5 GHz。",
+                "识别附近的开放（不安全）网络。",
+            ],
+            "cli": [
+                "nmcli dev wifi list",
+                "nmcli dev wifi connect 'MySSID' password 'mypassword'",
+                "iwlist wlan0 scan | grep -E 'SSID|Signal'",
+            ],
+        },
     },
     "Subnet": {
         "fr": {
@@ -493,6 +549,19 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "静的IPを割り当てる前にアドレス範囲を計算する。",
                 "2つのIPアドレスが同じサブネットにあるか確認する。",
                 "ネットワークのサブネット分割を計画する。",
+            ],
+            "cli": [
+                "ipcalc 192.168.1.0/24",
+                "python3 -c \"import ipaddress; n=ipaddress.IPv4Network('192.168.1.0/24'); print(n.network_address, n.broadcast_address, n.num_addresses)\"",
+                "ip route show | grep 192.168.1",
+            ],
+        },
+        "zh": {
+            "desc": "CIDR计算器：根据IP和掩码（如192.168.1.0/24），计算网络地址、子网掩码、反掩码、广播地址、主机范围和总数。支持IPv4和IPv6。",
+            "examples": [
+                "分配静态IP前计算地址范围。",
+                "检查两个IP地址是否在同一子网中。",
+                "规划网络的子网划分方案。",
             ],
             "cli": [
                 "ipcalc 192.168.1.0/24",
@@ -600,6 +669,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "新たに設定したドメインのDNS伝播をテストする。",
                 "メール問題を診断するためにMXレコードを調べる。",
                 "IPのリバースルックアップでサーバーを特定する。",
+            ],
+            "cli": [
+                "dig A example.com @8.8.8.8",
+                "dig MX example.com",
+                "dig -x 8.8.8.8",
+                "dig TXT example.com +short",
+            ],
+        },
+        "zh": {
+            "desc": "使用dig查询任意DNS服务器。支持A、AAAA、MX、TXT、NS、CNAME、PTR、SOA、ANY类型。可配置备用DNS服务器，支持从IP自动反向查找。",
+            "examples": [
+                "验证A记录是否指向正确的IP。",
+                "测试新配置域名的DNS传播情况。",
+                "查找MX记录以诊断邮件问题。",
+                "对IP进行反向查找以识别服务器。",
             ],
             "cli": [
                 "dig A example.com @8.8.8.8",
@@ -716,6 +800,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "ping6 ::1",
             ],
         },
+        "zh": {
+            "desc": "持续多主机ping监控：以可配置间隔（1-30秒）同时向多个目标发送ICMP数据包。实时显示RTT最小/平均/最大值和丢包统计。",
+            "examples": [
+                "同时监控网关、8.8.8.8和远程服务器。",
+                "长期测量互联网连接的稳定性。",
+                "验证设备重启后是否响应。",
+                "比较到多个服务器的延迟。",
+            ],
+            "cli": [
+                "ping -c 4 -i 1 8.8.8.8",
+                "ping -c 100 -i 0.2 192.168.1.1",
+                "ping -s 1400 -c 10 192.168.1.1",
+                "ping6 ::1",
+            ],
+        },
     },
     "IP Scanner": {
         "fr": {
@@ -816,6 +915,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "名前またはメーカーでデバイスのIPを検索する。",
                 "OUI検索で未知のデバイスを検出する。",
                 "ネットワークインベントリ監査用にリストをエクスポートする。",
+            ],
+            "cli": [
+                "nmap -sn 192.168.1.0/24",
+                "nmap -sn 192.168.1.0/24 -oG - | grep 'Up'",
+                "arp-scan --localnet",
+                "ip neigh show",
+            ],
+        },
+        "zh": {
+            "desc": "通过ARP/ping扫描CIDR范围内的活动设备。显示IP、主机名（DNS/mDNS/NetBIOS）、MAC地址和厂商（39,000条OUI数据库）。支持CSV/TXT导出。",
+            "examples": [
+                "清点192.168.1.0/24上的所有设备。",
+                "通过名称或厂商查找设备IP。",
+                "通过OUI查找检测未知设备。",
+                "导出列表用于网络资产审计。",
             ],
             "cli": [
                 "nmap -sn 192.168.1.0/24",
@@ -932,6 +1046,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "ss -tlnp",
             ],
         },
+        "zh": {
+            "desc": "通过直接连接（无需root）扫描主机的TCP端口。支持端口范围、常用预设（Web、Mail、SSH…），识别每个开放端口的服务。最多200个线程。",
+            "examples": [
+                "验证Web服务器的80和443端口是否开放。",
+                "访问前检测服务器上的活动服务。",
+                "确认面向互联网的机器上SSH端口（22）已关闭。",
+                "在可疑设备上查找异常端口。",
+            ],
+            "cli": [
+                "nmap -sT -p 80,443,22 192.168.1.10",
+                "nmap -sT -p 1-1024 192.168.1.10",
+                "nc -zv 192.168.1.10 22",
+                "ss -tlnp",
+            ],
+        },
     },
     "Nmap": {
         "fr": {
@@ -1032,6 +1161,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "脆弱性を評価するためにサービスの正確なバージョンを検出する。",
                 "ステルスSYNスキャンを実行する（rootが必要）。",
                 "NSEスクリプトを使って既知の脆弱性を検出する。",
+            ],
+            "cli": [
+                "nmap -sV -p 1-1024 192.168.1.10",
+                "nmap -O 192.168.1.10",
+                "sudo nmap -sS 192.168.1.0/24",
+                "nmap --script ssl-cert 192.168.1.10",
+            ],
+        },
+        "zh": {
+            "desc": "通过nmap进行高级网络扫描：7种模式（发现、TCP、SYN、服务/版本、OS、完整、NSE脚本）。XML结果解析为结构化表格。支持CSV/TXT导出。",
+            "examples": [
+                "识别未知设备的操作系统（OS检测模式）。",
+                "发现确切的服务版本以评估漏洞。",
+                "执行隐蔽的SYN扫描（需要root）。",
+                "运行NSE脚本检测已知漏洞。",
             ],
             "cli": [
                 "nmap -sV -p 1-1024 192.168.1.10",
@@ -1141,6 +1285,20 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "whois -h whois.iana.org example.com",
             ],
         },
+        "zh": {
+            "desc": "对域名或IP地址进行WHOIS查询。以原始等宽格式显示注册信息、管理联系人和运营商IP范围。",
+            "examples": [
+                "检查域名的到期日期。",
+                "识别可疑域名的注册商和所有者。",
+                "查找IP背后的网络运营商（AS）。",
+                "获取滥用联系方式以举报恶意行为。",
+            ],
+            "cli": [
+                "whois example.com",
+                "whois 8.8.8.8",
+                "whois -h whois.iana.org example.com",
+            ],
+        },
     },
     "TLS Inspector": {
         "fr": {
@@ -1235,6 +1393,20 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "マルチドメイン証明書のSANを確認する。",
                 "プロトコルと暗号スイートを調査してTLSエラーを診断する。",
                 "内部プライベートCAの証明書チェーンを検査する。",
+            ],
+            "cli": [
+                "openssl s_client -connect example.com:443 </dev/null 2>/dev/null | openssl x509 -noout -dates -subject",
+                "openssl s_client -connect example.com:443 -servername example.com </dev/null 2>/dev/null",
+                "curl -vI https://example.com 2>&1 | grep -E 'expire|issuer|subject'",
+            ],
+        },
+        "zh": {
+            "desc": "检查服务器的TLS/SSL证书：CN、SAN、颁发者、有效性（绿/橙/红）、序列号、协议、加密套件及通过openssl获取的完整链。支持有效、过期和自签名证书。",
+            "examples": [
+                "在证书导致服务中断前检查其到期时间。",
+                "验证多域名证书的SAN。",
+                "通过检查协议和加密套件诊断TLS错误。",
+                "检查内部私有CA的证书链。",
             ],
             "cli": [
                 "openssl s_client -connect example.com:443 </dev/null 2>/dev/null | openssl x509 -noout -dates -subject",
@@ -1350,6 +1522,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "mount -t nfs 192.168.1.100:/export /mnt/nfs",
             ],
         },
+        "zh": {
+            "desc": "列出服务器或NAS上的SMB/Samba共享和NFS导出。SMB通过smbclient -L（可选凭据），NFS通过showmount -e。",
+            "examples": [
+                "查看NAS上所有可用的共享。",
+                "检查哪些目录通过NFS导出。",
+                "使用域凭据访问Samba共享。",
+                "诊断网络共享无法访问的原因。",
+            ],
+            "cli": [
+                "smbclient -L //192.168.1.100 -N",
+                "smbclient -L //192.168.1.100 -U user%password",
+                "showmount -e 192.168.1.100",
+                "mount -t nfs 192.168.1.100:/export /mnt/nfs",
+            ],
+        },
     },
     "Hosts File": {
         "fr": {
@@ -1444,6 +1631,20 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "ドメインを0.0.0.0にリダイレクトしてブロックする。",
                 "エントリを削除せずに一時的に無効化する。",
                 "DNS伝播前にローカルIPを強制する。",
+            ],
+            "cli": [
+                "cat /etc/hosts",
+                "sudo bash -c 'echo \"192.168.1.10 myserver.local\" >> /etc/hosts'",
+                "getent hosts myserver.local",
+            ],
+        },
+        "zh": {
+            "desc": "在表格界面中显示和编辑/etc/hosts。添加、编辑、删除或启用/禁用条目。通过pkexec（polkit认证）保存。",
+            "examples": [
+                "添加本地别名：myserver.local → 192.168.1.10。",
+                "通过重定向到0.0.0.0来屏蔽域名。",
+                "临时禁用条目而不删除它。",
+                "在DNS传播前强制使用本地IP。",
             ],
             "cli": [
                 "cat /etc/hosts",
