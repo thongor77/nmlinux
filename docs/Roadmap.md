@@ -17,10 +17,6 @@ Ces idées ont été discutées et validées — elles ne sont pas encore implé
 - Fonctionnalités discutées : longueur configurable, jeux de caractères, affichage entropie en bits, bouton Copier
 - Priorité : mentionné comme "prochaine étape candidate" après v1.3.2
 
-### Aide badge ? pour ja/zh
-
-- **Statut : TERMINÉ en v1.3.2.** Les 27 modules ont maintenant ja et zh dans `help_content.py`.
-
 ---
 
 ## Idées évoquées sans décision formelle

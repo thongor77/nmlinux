@@ -15,6 +15,8 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 
 ## Screenshots
 
+> Screenshots from v1.2.7 — the app now has 27 modules and 8 interface languages (FR/EN/ES/DE/IT/PT/JA/ZH).
+
 | Dashboard | Topology |
 |-----------|----------|
 | ![Dashboard](screenshots/main_v1.2.7.png) | ![Topology](screenshots/topology_v1.2.7.png) |
@@ -124,7 +126,7 @@ Initial public release — 13 modules: Dashboard, Interfaces, Wi-Fi, Subnet Calc
 | **Bandwidth** | Real-time per-interface throughput: 60s sliding graph, live speeds, session totals, peak |
 | **Wake on LAN** | Pure Python magic packet (UDP broadcast), persistent host book, no external tool required |
 | **Topology Map** | Auto-discovers LAN devices via `nmap -sn`; interactive graph with draggable nodes, zoom/pan, detail panel |
-| **Settings** | Language selection (French, English, Spanish, German), persisted |
+| **Settings** | Language selection (FR / EN / ES / DE / IT / PT / JA / ZH), persisted; change takes effect immediately |
 
 ---
 
@@ -243,7 +245,7 @@ python3 -m nmlinux.main
 ```
 nmlinux/
   core/
-    i18n.py         — Translation system (fr/en/es/de), tr(key) function
+    i18n.py         — Translation system (8 languages: fr/en/es/de/it/pt/ja/zh), tr(key) function
     icons.py        — themed_icon(): 21 bundled Lucide SVG icons via QSvgRenderer
     settings.py     — AppSettings dataclass, JSON persistence
     ssh.py          — SshConnection dataclass, SshStore
