@@ -204,6 +204,9 @@ git clone https://github.com/thongor77/nmlinux.git
 cd nmlinux
 pip install PySide6 ptyprocess pyte
 python3 -m nmlinux.main
+
+# Update an existing clone
+git pull && python3 -m nmlinux.main
 ```
 
 Download the `.whl` from the [latest release](https://github.com/thongor77/nmlinux/releases/latest).
