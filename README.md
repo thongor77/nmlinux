@@ -189,17 +189,24 @@ yay -S nmlinux
 
 All dependencies (PySide6, ptyprocess, pyte, nmcli, …) are handled automatically.
 
-### Option 2 — macOS (from source)
+### Option 2 — macOS
 
 ```bash
-# 1. Install Python dependencies
-pip install PySide6 ptyprocess pyte
+# 1. Install system tools (if not already present)
+brew install nmap whois net-snmp mtr curl
 
-# 2. Clone and run
+# 2. Install NMLinux and its Python dependencies
+pip install PySide6 ptyprocess pyte
+pip install nmlinux-1.3.5-py3-none-any.whl   # download from Releases, or use the line below
+
+# Alternative: run directly from source (no install)
 git clone https://github.com/thongor77/nmlinux.git
 cd nmlinux
+pip install PySide6 ptyprocess pyte
 python3 -m nmlinux.main
 ```
+
+Download the `.whl` from the [latest release](https://github.com/thongor77/nmlinux/releases/latest).
 
 > **Note:** NMLinux uses native macOS commands (`networksetup`, `scutil`, `ifconfig`, `pfctl`, `system_profiler`…) on 9 modules. Some features requiring `nmcli` (Linux NetworkManager) are not available on macOS.
 
