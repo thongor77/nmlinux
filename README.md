@@ -140,7 +140,7 @@ Initial public release — 13 modules: Dashboard, Interfaces, Wi-Fi, Subnet Calc
 
 ### System tools
 
-Most are already present on a standard Linux install:
+**Linux** — most are already present on a standard install:
 
 ```bash
 # Arch / EndeavourOS
@@ -153,14 +153,22 @@ sudo apt install iproute2 network-manager dnsutils nmap whois snmp mtr-tiny curl
 sudo dnf install iproute NetworkManager bind-utils nmap whois net-snmp-utils mtr curl
 ```
 
+**macOS** — install via [Homebrew](https://brew.sh):
+
+```bash
+brew install nmap whois net-snmp mtr curl
+```
+
+> macOS ships `ping`, `dig`, `traceroute`, `netstat`, `ifconfig` and `route` natively. `networksetup` and `scutil` are built-in macOS tools, no install needed.
+
 ### Optional tools
 
-| Tool | Feature | Package |
-|------|---------|---------|
-| `xfreerdp` / `xfreerdp3` | Remote Desktop (RDP) | Arch: `freerdp` · Debian: `freerdp2-x11` · Fedora: `freerdp` |
-| `vncviewer` | VNC | Arch: `tigervnc` · Debian: `tigervnc-viewer` · Fedora: `tigervnc` |
-| `nm-connection-editor` | Edit connections from Connection Manager | Arch: `nm-connection-editor` |
-| `traceroute` | Traceroute alternative (tracepath used by default) | Arch: `traceroute` |
+| Tool | Feature | Linux | macOS |
+|------|---------|-------|-------|
+| `xfreerdp` / `xfreerdp3` | Remote Desktop (RDP) | Arch: `freerdp` · Debian: `freerdp2-x11` | `brew install freerdp` |
+| `vncviewer` | VNC | Arch: `tigervnc` · Debian: `tigervnc-viewer` | `brew install tiger-vnc` |
+| `nm-connection-editor` | Edit connections from Connection Manager | Arch: `nm-connection-editor` | — (System Preferences opens instead) |
+| `traceroute` | Traceroute alternative (tracepath used by default) | Arch: `traceroute` | built-in |
 
 ### Python
 
@@ -181,7 +189,21 @@ yay -S nmlinux
 
 All dependencies (PySide6, ptyprocess, pyte, nmcli, …) are handled automatically.
 
-### Option 2 — Debian / Ubuntu / Linux Mint (install script)
+### Option 2 — macOS (from source)
+
+```bash
+# 1. Install Python dependencies
+pip install PySide6 ptyprocess pyte
+
+# 2. Clone and run
+git clone https://github.com/thongor77/nmlinux.git
+cd nmlinux
+python3 -m nmlinux.main
+```
+
+> **Note:** NMLinux uses native macOS commands (`networksetup`, `scutil`, `ifconfig`, `pfctl`, `system_profiler`…) on 9 modules. Some features requiring `nmcli` (Linux NetworkManager) are not available on macOS.
+
+### Option 3 — Debian / Ubuntu / Linux Mint (install script)
 
 > **Note for Linux Mint / Ubuntu users:** `pip install` is blocked system-wide on Python 3.12+ (PEP 668 — `externally-managed-environment`). Use the provided install script — it creates a virtual environment automatically and installs a `.desktop` entry.
 
@@ -200,19 +222,19 @@ The script will:
 
 After install, run `nmlinux` from a terminal or launch it from the application menu.
 
-### Option 3 — Wheel (all distros)
+### Option 4 — Wheel (all distros / macOS)
 
 Download the `.whl` from the [latest release](https://github.com/thongor77/nmlinux/releases/latest) and install it:
 
 ```bash
-# Arch / Fedora / distros without pip restrictions
-pip install nmlinux-1.2.9-py3-none-any.whl
+# Arch / Fedora / macOS — no pip restrictions
+pip install nmlinux-1.3.5-py3-none-any.whl
 
 # Debian / Ubuntu / Mint — use pipx or a venv instead
-pipx install nmlinux-1.2.9-py3-none-any.whl
+pipx install nmlinux-1.3.5-py3-none-any.whl
 ```
 
-### Option 4 — From source (Arch / Fedora)
+### Option 5 — From source (Arch / Fedora / macOS)
 
 ```bash
 git clone https://github.com/thongor77/nmlinux.git
@@ -221,7 +243,7 @@ pip install PySide6 ptyprocess pyte
 python3 -m nmlinux.main
 ```
 
-### Option 5 — Desktop entry (KDE / GNOME / etc.)
+### Option 6 — Desktop entry (KDE / GNOME / etc.)
 
 Copy the `.desktop` file to make NMLinux appear in your application launcher:
 
@@ -303,9 +325,9 @@ Since v1.2.7, NMLinux uses 21 bundled [Lucide](https://lucide.dev) SVG icons ren
 
 ## Limitations
 
-- Linux only (relies on `nmcli`, `ip`, `dig`, `ping`, subprocess tools)
-- No root/polkit integration — tools requiring elevated privileges (some Nmap
-  modes, raw sockets) must be run manually with `sudo`
+- **Linux** — full support: all 27 modules available
+- **macOS** — partial support (since v1.3.5): 9 modules use native macOS commands; modules that depend on `nmcli` or Linux-specific tools (Connection Manager full edit/delete, Bandwidth full stats, etc.) have reduced functionality
+- No root/polkit integration — tools requiring elevated privileges (some Nmap modes, raw sockets) must be run manually with `sudo`; on macOS, privilege escalation uses `osascript` + `administrator privileges`
 - SSH supports password and key-based auth; agent forwarding not yet implemented
 
 ---
