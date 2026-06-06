@@ -15,7 +15,9 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 
 ## Screenshots
 
-> Screenshots from v1.2.7 — the app now has 27 modules and 8 interface languages (FR/EN/ES/DE/IT/PT/JA/ZH).
+> Linux screenshots from v1.2.7 — macOS screenshots from v1.3.5. The app has 27 modules and 8 interface languages (FR/EN/ES/DE/IT/PT/JA/ZH).
+
+**Linux (KDE)**
 
 | Dashboard | Topology |
 |-----------|----------|
@@ -24,6 +26,12 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 | Traceroute | Wi-Fi |
 |------------|-------|
 | ![Traceroute](screenshots/traceroute_v1.2.7.png) | ![Wi-Fi](screenshots/Wi-Fi_v1.2.7.png) |
+
+**macOS**
+
+| Dashboard | Traceroute |
+|-----------|------------|
+| ![macOS Dashboard](screenshots/MacOS_Dashboard.png) | ![macOS Traceroute](screenshots/MacOS_Traceroute.png) |
 
 ---
 
