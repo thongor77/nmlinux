@@ -12,12 +12,16 @@ _SUPPORTED_LANGUAGES = {
     "en": "English",
     "es": "Español",
     "de": "Deutsch",
+    "it": "Italiano",
+    "pt": "Português",
+    "ja": "日本語",
+    "zh": "中文",
 }
 
 
 @dataclass
 class AppSettings:
-    language: str = "fr"   # fr | en | es | de
+    language: str = "fr"   # fr | en | es | de | it | pt | ja | zh
 
 
 class SettingsStore:
