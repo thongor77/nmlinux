@@ -29,9 +29,9 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 
 **macOS**
 
-| Dashboard | Traceroute |
-|-----------|------------|
-| ![macOS Dashboard](screenshots/MacOS_Dashboard.png) | ![macOS Traceroute](screenshots/MacOS_Traceroute.png) |
+| Dashboard |
+|-----------|
+| ![macOS Dashboard](screenshots/MacOS_Dashboard.png) |
 
 ---
 
