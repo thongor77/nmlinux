@@ -93,7 +93,22 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "curl -s ifconfig.me",
                 "resolvectl status | grep 'DNS Servers'",
             ],
-        },
+
+        "ja": {
+            "desc": "ローカルマシンのネットワーク概要：ホスト名、IPv4/IPv6、ゲートウェイ、有効なDNSサーバー、パブリックIPおよびip-api.com経由のおおよその位置情報。",
+            "examples": [
+                "接続の問題を診断する前にローカルIPとゲートウェイを確認する。",
+                "設定変更後に正しいDNSサーバーが使用されていることを確認する。",
+                "ブラウザを開かずにパブリックIPを確認する。",
+                "見かけの位置を確認する（VPN使用時に便利）。",
+            ],
+            "cli": [
+                "ip route",
+                "ip addr show",
+                "curl -s ifconfig.me",
+                "resolvectl status | grep 'DNS Servers'",
+            ],
+        },        },
     },
     "Connections": {
         "fr": {
@@ -179,7 +194,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "nmcli connection down 'MyVPN'",
                 "nmcli connection delete 'OldProfile'",
             ],
-        },
+
+        "ja": {
+            "desc": "すべてのNetworkManager接続（Ethernet、Wi-Fi、VPN、WireGuard）を管理。タイプフィルターと教育的CLIバーで接続・切断・編集・削除が可能。",
+            "examples": [
+                "VPN接続を素早く有効化または無効化する。",
+                "アクティブなWi-Fi接続のIP/DNS/SSID詳細を確認する。",
+                "使用していない古いWi-Fiプロファイルを削除する。",
+            ],
+            "cli": [
+                "nmcli connection show",
+                "nmcli connection up 'MyWifi'",
+                "nmcli connection down 'MyVPN'",
+                "nmcli connection delete 'OldProfile'",
+            ],
+        },        },
     },
     "Interfaces": {
         "fr": {
@@ -265,7 +294,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "ip -j addr | python3 -m json.tool",
                 "nmcli device status",
             ],
-        },
+
+        "ja": {
+            "desc": "すべてのアクティブなネットワークインターフェース（Ethernet、Wi-Fi、ループバック、ブリッジ…）を状態・MACアドレス・IPv4・IPv6と共に一覧表示。インターフェースをクリックすると詳細表示。",
+            "examples": [
+                "どのインターフェースがアクティブでその状態（up/down）を確認する。",
+                "静的DHCPリースを設定するためにMACアドレスを調べる。",
+                "DockerまたはWireGuardで作成された仮想インターフェースを特定する。",
+            ],
+            "cli": [
+                "ip addr show",
+                "ip link show",
+                "ip -j addr | python3 -m json.tool",
+                "nmcli device status",
+            ],
+        },        },
     },
     "Wi-Fi": {
         "fr": {
@@ -345,7 +388,20 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "nmcli dev wifi connect 'MySSID' password 'mypassword'",
                 "iwlist wlan0 scan | grep -E 'SSID|Signal'",
             ],
-        },
+
+        "ja": {
+            "desc": "利用可能なWi-Fiネットワークをスキャンし、SSID、BSSID、チャンネル、周波数、信号強度（▂▄▆█）およびセキュリティタイプを表示。接続中のネットワークが先頭に表示される。",
+            "examples": [
+                "近隣のネットワークを検出し、信号強度を比較する。",
+                "ネットワークが2.4 GHzか5 GHzかを確認する。",
+                "近くのオープン（非暗号化）ネットワークを特定する。",
+            ],
+            "cli": [
+                "nmcli dev wifi list",
+                "nmcli dev wifi connect 'MySSID' password 'mypassword'",
+                "iwlist wlan0 scan | grep -E 'SSID|Signal'",
+            ],
+        },        },
     },
     "Subnet": {
         "fr": {
@@ -425,7 +481,20 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "python3 -c \\\"import ipaddress; n=ipaddress.IPv4Network('192.168.1.0/24'); print(n.network_address, n.broadcast_address, n.num_addresses)\\\"",
                 "ip route show | grep 192.168.1",
             ],
-        },
+
+        "ja": {
+            "desc": "CIDRカリキュレーター：IPとマスク（例：192.168.1.0/24）からネットワーク、マスク、ワイルドカード、ブロードキャスト、ホスト範囲と合計数を計算。IPv4とIPv6に対応。",
+            "examples": [
+                "静的IPを割り当てる前にアドレス範囲を計算する。",
+                "2つのIPアドレスが同じサブネットにあるか確認する。",
+                "ネットワークのサブネット分割を計画する。",
+            ],
+            "cli": [
+                "ipcalc 192.168.1.0/24",
+                "python3 -c \"import ipaddress; n=ipaddress.IPv4Network('192.168.1.0/24'); print(n.network_address, n.broadcast_address, n.num_addresses)\"",
+                "ip route show | grep 192.168.1",
+            ],
+        },        },
     },
     "DNS": {
         "fr": {
@@ -517,7 +586,22 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "dig -x 8.8.8.8",
                 "dig TXT example.com +short",
             ],
-        },
+
+        "ja": {
+            "desc": "digを使用して任意のDNSサーバーをクエリ。A、AAAA、MX、TXT、NS、CNAME、PTR、SOA、ANYをサポート。代替DNSサーバーの設定可能、IPからの自動リバースルックアップ。",
+            "examples": [
+                "AレコードがIPを正しく指していることを確認する。",
+                "新たに設定したドメインのDNS伝播をテストする。",
+                "メール問題を診断するためにMXレコードを調べる。",
+                "IPのリバースルックアップでサーバーを特定する。",
+            ],
+            "cli": [
+                "dig A example.com @8.8.8.8",
+                "dig MX example.com",
+                "dig -x 8.8.8.8",
+                "dig TXT example.com +short",
+            ],
+        },        },
     },
     "Ping": {
         "fr": {
@@ -609,7 +693,22 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "ping -s 1400 -c 10 192.168.1.1",
                 "ping6 ::1",
             ],
-        },
+
+        "ja": {
+            "desc": "継続的なマルチホストpingモニター：設定可能な間隔（1〜30秒）で複数の宛先へ同時にICMPパケットを送信。RTT最小/平均/最大とパケットロス統計をリアルタイム表示。",
+            "examples": [
+                "ゲートウェイ、8.8.8.8、リモートサーバーを同時に監視する。",
+                "長期間にわたってインターネット接続の安定性を測定する。",
+                "再起動後にデバイスが応答することを確認する。",
+                "複数のサーバーへのレイテンシーを比較する。",
+            ],
+            "cli": [
+                "ping -c 4 -i 1 8.8.8.8",
+                "ping -c 100 -i 0.2 192.168.1.1",
+                "ping -s 1400 -c 10 192.168.1.1",
+                "ping6 ::1",
+            ],
+        },        },
     },
     "IP Scanner": {
         "fr": {
@@ -701,7 +800,22 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "arp-scan --localnet",
                 "ip neigh show",
             ],
-        },
+
+        "ja": {
+            "desc": "ARP/pingスキャンによりCIDR範囲内のアクティブなデバイスを検出。IP、ホスト名（DNS/mDNS/NetBIOS）、MACアドレス、メーカー（39,000件OUIデータベース）を表示。CSV/TXTエクスポート。",
+            "examples": [
+                "192.168.1.0/24上のすべてのデバイスをインベントリする。",
+                "名前またはメーカーでデバイスのIPを検索する。",
+                "OUI検索で未知のデバイスを検出する。",
+                "ネットワークインベントリ監査用にリストをエクスポートする。",
+            ],
+            "cli": [
+                "nmap -sn 192.168.1.0/24",
+                "nmap -sn 192.168.1.0/24 -oG - | grep 'Up'",
+                "arp-scan --localnet",
+                "ip neigh show",
+            ],
+        },        },
     },
     "Port Scanner": {
         "fr": {
@@ -793,7 +907,22 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "nc -zv 192.168.1.10 22",
                 "ss -tlnp",
             ],
-        },
+
+        "ja": {
+            "desc": "ルート不要の直接接続でホストのTCPポートをスキャン。ポート範囲、一般的なプリセット（Web、Mail、SSH…）、開いているポートのサービスを識別。最大200スレッド。",
+            "examples": [
+                "Webサーバーのポート80と443が開いていることを確認する。",
+                "アクセス前にサーバーのアクティブなサービスを検出する。",
+                "インターネット側のマシンでSSHポート（22）が閉じていることを確認する。",
+                "不審なデバイスで異常なポートを探す。",
+            ],
+            "cli": [
+                "nmap -sT -p 80,443,22 192.168.1.10",
+                "nmap -sT -p 1-1024 192.168.1.10",
+                "nc -zv 192.168.1.10 22",
+                "ss -tlnp",
+            ],
+        },        },
     },
     "Nmap": {
         "fr": {
@@ -885,7 +1014,22 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "sudo nmap -sS 192.168.1.0/24",
                 "nmap --script ssl-cert 192.168.1.10",
             ],
-        },
+
+        "ja": {
+            "desc": "nmapによる高度なネットワークスキャン：7つのモード（検出、TCP、SYN、サービス/バージョン、OS、フル、NSEスクリプト）。XML結果を構造化テーブルに解析。CSV/TXTエクスポート。",
+            "examples": [
+                "未知のデバイスのOSを特定する（OS検出モード）。",
+                "脆弱性を評価するためにサービスの正確なバージョンを検出する。",
+                "ステルスSYNスキャンを実行する（rootが必要）。",
+                "NSEスクリプトを使って既知の脆弱性を検出する。",
+            ],
+            "cli": [
+                "nmap -sV -p 1-1024 192.168.1.10",
+                "nmap -O 192.168.1.10",
+                "sudo nmap -sS 192.168.1.0/24",
+                "nmap --script ssl-cert 192.168.1.10",
+            ],
+        },        },
     },
     "Whois": {
         "fr": {
@@ -971,7 +1115,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "whois 8.8.8.8",
                 "whois -h whois.iana.org example.com",
             ],
-        },
+
+        "ja": {
+            "desc": "ドメイン名またはIPアドレスへのWHOISクエリ。登録情報、管理者連絡先、オペレーターのIP範囲を生のモノスペースフォーマットで表示。",
+            "examples": [
+                "ドメイン名の有効期限を確認する。",
+                "不審なドメインのレジストラと所有者を特定する。",
+                "IPの背後にあるネットワーク事業者（AS）を調べる。",
+                "悪意のある行為を報告するための不正連絡先を取得する。",
+            ],
+            "cli": [
+                "whois example.com",
+                "whois 8.8.8.8",
+                "whois -h whois.iana.org example.com",
+            ],
+        },        },
     },
     "TLS Inspector": {
         "fr": {
@@ -1057,7 +1215,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "openssl s_client -connect example.com:443 -servername example.com </dev/null 2>/dev/null",
                 "curl -vI https://example.com 2>&1 | grep -E 'expire|issuer|subject'",
             ],
-        },
+
+        "ja": {
+            "desc": "サーバーのTLS/SSL証明書を検査：CN、SAN、発行者、有効性（緑/橙/赤）、シリアル番号、プロトコル、暗号スイート、openssl経由の完全なチェーン。有効・期限切れ・自己署名証明書に対応。",
+            "examples": [
+                "サービス停止前に証明書の有効期限を確認する。",
+                "マルチドメイン証明書のSANを確認する。",
+                "プロトコルと暗号スイートを調査してTLSエラーを診断する。",
+                "内部プライベートCAの証明書チェーンを検査する。",
+            ],
+            "cli": [
+                "openssl s_client -connect example.com:443 </dev/null 2>/dev/null | openssl x509 -noout -dates -subject",
+                "openssl s_client -connect example.com:443 -servername example.com </dev/null 2>/dev/null",
+                "curl -vI https://example.com 2>&1 | grep -E 'expire|issuer|subject'",
+            ],
+        },        },
     },
     "SMB / NFS": {
         "fr": {
@@ -1149,7 +1321,22 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "showmount -e 192.168.1.100",
                 "mount -t nfs 192.168.1.100:/export /mnt/nfs",
             ],
-        },
+
+        "ja": {
+            "desc": "サーバーまたはNASのSMB/Samba共有とNFSエクスポートを一覧表示。SMBはsmbclient -L（オプションの認証情報）、NFSはshowmount -e経由。",
+            "examples": [
+                "NASで利用可能なすべての共有を確認する。",
+                "NFS経由でエクスポートされているディレクトリを確認する。",
+                "ドメイン認証情報でSamba共有にアクセスする。",
+                "ネットワーク共有にアクセスできない原因を診断する。",
+            ],
+            "cli": [
+                "smbclient -L //192.168.1.100 -N",
+                "smbclient -L //192.168.1.100 -U user%password",
+                "showmount -e 192.168.1.100",
+                "mount -t nfs 192.168.1.100:/export /mnt/nfs",
+            ],
+        },        },
     },
     "Hosts File": {
         "fr": {
@@ -1235,7 +1422,21 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "sudo bash -c 'echo \\\"192.168.1.10 myserver.local\\\" >> /etc/hosts'",
                 "getent hosts myserver.local",
             ],
-        },
+
+        "ja": {
+            "desc": "/etc/hostsをテーブルUIで表示・編集。エントリの追加・編集・削除・有効化/無効化。pkexec（polkit認証）経由で保存。",
+            "examples": [
+                "ローカルエイリアスを追加：myserver.local → 192.168.1.10。",
+                "ドメインを0.0.0.0にリダイレクトしてブロックする。",
+                "エントリを削除せずに一時的に無効化する。",
+                "DNS伝播前にローカルIPを強制する。",
+            ],
+            "cli": [
+                "cat /etc/hosts",
+                "sudo bash -c 'echo \"192.168.1.10 myserver.local\" >> /etc/hosts'",
+                "getent hosts myserver.local",
+            ],
+        },        },
     },
     "SNMP": {
         "fr": {
