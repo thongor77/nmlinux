@@ -64,6 +64,36 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "resolvectl status | grep 'DNS Servers'",
             ],
         },
+        "it": {
+            "desc": "Panoramica di rete della macchina locale: hostname, IPv4/IPv6, gateway, server DNS attivi, IP pubblico e geolocalizzazione approssimativa tramite ip-api.com.",
+            "examples": [
+                "Verificare IP locale e gateway prima di diagnosticare un problema di connettività.",
+                "Confermare che i server DNS corretti vengono utilizzati dopo una modifica della configurazione.",
+                "Conoscere il proprio IP pubblico senza aprire un browser.",
+                "Verificare la posizione apparente (utile con una VPN attiva).",
+            ],
+            "cli": [
+                "ip route",
+                "ip addr show",
+                "curl -s ifconfig.me",
+                "resolvectl status | grep 'DNS Servers'",
+            ],
+        },
+        "pt": {
+            "desc": "Visão geral da rede da máquina local: hostname, IPv4/IPv6, gateway, servidores DNS ativos, IP público e geolocalização aproximada via ip-api.com.",
+            "examples": [
+                "Verificar o IP local e o gateway antes de diagnosticar um problema de conectividade.",
+                "Confirmar que os servidores DNS corretos estão a ser utilizados após uma alteração de configuração.",
+                "Conhecer o IP público sem abrir um browser.",
+                "Verificar a localização aparente (útil com uma VPN ativa).",
+            ],
+            "cli": [
+                "ip route",
+                "ip addr show",
+                "curl -s ifconfig.me",
+                "resolvectl status | grep 'DNS Servers'",
+            ],
+        },
     },
     "Connections": {
         "fr": {
@@ -122,6 +152,34 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "nmcli connection delete 'AlteresProfil'",
             ],
         },
+        "it": {
+            "desc": "Gestisce tutte le connessioni di rete NetworkManager (Ethernet, Wi-Fi, VPN, WireGuard). Connettere, disconnettere, modificare o eliminare connessioni con filtro per tipo e barra CLI didattica.",
+            "examples": [
+                "Attivare o disattivare rapidamente una connessione VPN.",
+                "Vedere i dettagli IP/DNS/SSID di una connessione Wi-Fi attiva.",
+                "Eliminare un vecchio profilo Wi-Fi non utilizzato.",
+            ],
+            "cli": [
+                "nmcli connection show",
+                "nmcli connection up 'MyWifi'",
+                "nmcli connection down 'MyVPN'",
+                "nmcli connection delete 'OldProfile'",
+            ],
+        },
+        "pt": {
+            "desc": "Gere todas as ligações de rede NetworkManager (Ethernet, Wi-Fi, VPN, WireGuard). Ligar, desligar, editar ou eliminar ligações com filtro por tipo e barra CLI pedagógica.",
+            "examples": [
+                "Ativar ou desativar rapidamente uma ligação VPN.",
+                "Ver os detalhes IP/DNS/SSID de uma ligação Wi-Fi ativa.",
+                "Eliminar um perfil Wi-Fi antigo que já não é utilizado.",
+            ],
+            "cli": [
+                "nmcli connection show",
+                "nmcli connection up 'MyWifi'",
+                "nmcli connection down 'MyVPN'",
+                "nmcli connection delete 'OldProfile'",
+            ],
+        },
     },
     "Interfaces": {
         "fr": {
@@ -172,6 +230,34 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "Prüfen, welche Schnittstelle aktiv ist und ihren Up/Down-Status.",
                 "MAC-Adresse für eine statische DHCP-Reservierung finden.",
                 "Von Docker oder WireGuard erstellte virtuelle Schnittstellen identifizieren.",
+            ],
+            "cli": [
+                "ip addr show",
+                "ip link show",
+                "ip -j addr | python3 -m json.tool",
+                "nmcli device status",
+            ],
+        },
+        "it": {
+            "desc": "Elenca tutte le interfacce di rete attive (Ethernet, Wi-Fi, loopback, bridge…) con stato, indirizzo MAC, IPv4 e IPv6. Clic su un'interfaccia → dettagli completi.",
+            "examples": [
+                "Verificare quale interfaccia è attiva e il suo stato up/down.",
+                "Trovare l'indirizzo MAC per configurare una prenotazione DHCP statica.",
+                "Identificare le interfacce virtuali create da Docker o WireGuard.",
+            ],
+            "cli": [
+                "ip addr show",
+                "ip link show",
+                "ip -j addr | python3 -m json.tool",
+                "nmcli device status",
+            ],
+        },
+        "pt": {
+            "desc": "Lista todas as interfaces de rede ativas (Ethernet, Wi-Fi, loopback, bridges…) com estado, endereço MAC, IPv4 e IPv6. Clique numa interface → detalhes completos.",
+            "examples": [
+                "Verificar qual interface está ativa e o seu estado up/down.",
+                "Encontrar o endereço MAC para configurar uma reserva DHCP estática.",
+                "Identificar interfaces virtuais criadas pelo Docker ou WireGuard.",
             ],
             "cli": [
                 "ip addr show",
@@ -234,6 +320,32 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "iwlist wlan0 scan | grep -E 'SSID|Signal'",
             ],
         },
+        "it": {
+            "desc": "Scansiona le reti Wi-Fi disponibili e mostra SSID, BSSID, canale, frequenza, segnale (barre ▂▄▆█) e tipo di sicurezza. La rete connessa appare per prima.",
+            "examples": [
+                "Rilevare le reti vicine e confrontare i livelli di segnale.",
+                "Verificare se una rete è a 2,4 GHz o 5 GHz.",
+                "Identificare le reti non protette (Open) nelle vicinanze.",
+            ],
+            "cli": [
+                "nmcli dev wifi list",
+                "nmcli dev wifi connect 'MySSID' password 'mypassword'",
+                "iwlist wlan0 scan | grep -E 'SSID|Signal'",
+            ],
+        },
+        "pt": {
+            "desc": "Analisa as redes Wi-Fi disponíveis e mostra SSID, BSSID, canal, frequência, sinal (barras ▂▄▆█) e tipo de segurança. A rede ligada aparece primeiro.",
+            "examples": [
+                "Detetar redes próximas e comparar os níveis de sinal.",
+                "Verificar se uma rede está em 2,4 GHz ou 5 GHz.",
+                "Identificar redes não seguras (Open) nas proximidades.",
+            ],
+            "cli": [
+                "nmcli dev wifi list",
+                "nmcli dev wifi connect 'MySSID' password 'mypassword'",
+                "iwlist wlan0 scan | grep -E 'SSID|Signal'",
+            ],
+        },
     },
     "Subnet": {
         "fr": {
@@ -285,6 +397,32 @@ _CONTENT: dict[str, dict[str, dict]] = {
             "cli": [
                 "ipcalc 192.168.1.0/24",
                 "python3 -c \"import ipaddress; n=ipaddress.IPv4Network('192.168.1.0/24'); print(n.network_address, n.broadcast_address, n.num_addresses)\"",
+                "ip route show | grep 192.168.1",
+            ],
+        },
+        "it": {
+            "desc": "Calcolatore CIDR: da un IP e una maschera (es. 192.168.1.0/24) calcola rete, maschera, wildcard, broadcast, intervallo di host e totale. IPv4 e IPv6.",
+            "examples": [
+                "Calcolare l'intervallo di indirizzi prima di assegnare IP statici.",
+                "Verificare se due indirizzi IP si trovano nella stessa subnet.",
+                "Pianificare il subnetting per una rete.",
+            ],
+            "cli": [
+                "ipcalc 192.168.1.0/24",
+                "python3 -c \\\"import ipaddress; n=ipaddress.IPv4Network('192.168.1.0/24'); print(n.network_address, n.broadcast_address, n.num_addresses)\\\"",
+                "ip route show | grep 192.168.1",
+            ],
+        },
+        "pt": {
+            "desc": "Calculadora CIDR: a partir de um IP e máscara (ex. 192.168.1.0/24) calcula rede, máscara, wildcard, broadcast, intervalo de hosts e total. IPv4 e IPv6.",
+            "examples": [
+                "Calcular o intervalo de endereços antes de atribuir IPs estáticos.",
+                "Verificar se dois endereços IP estão na mesma sub-rede.",
+                "Planear o subnetting de uma rede.",
+            ],
+            "cli": [
+                "ipcalc 192.168.1.0/24",
+                "python3 -c \\\"import ipaddress; n=ipaddress.IPv4Network('192.168.1.0/24'); print(n.network_address, n.broadcast_address, n.num_addresses)\\\"",
                 "ip route show | grep 192.168.1",
             ],
         },
@@ -342,6 +480,36 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "DNS-Propagation einer neu konfigurierten Domain testen.",
                 "MX-Einträge nachschlagen, um E-Mail-Probleme zu diagnostizieren.",
                 "Reverse-Lookup einer IP zur Server-Identifikation.",
+            ],
+            "cli": [
+                "dig A example.com @8.8.8.8",
+                "dig MX example.com",
+                "dig -x 8.8.8.8",
+                "dig TXT example.com +short",
+            ],
+        },
+        "it": {
+            "desc": "Interroga qualsiasi server DNS tramite dig. Supporta A, AAAA, MX, TXT, NS, CNAME, PTR, SOA, ANY. Server DNS alternativo configurabile, reverse lookup automatico da un IP.",
+            "examples": [
+                "Verificare che un record A punti all'IP corretto.",
+                "Testare la propagazione DNS di un dominio appena configurato.",
+                "Cercare i record MX per diagnosticare problemi email.",
+                "Reverse lookup di un IP per identificare un server.",
+            ],
+            "cli": [
+                "dig A example.com @8.8.8.8",
+                "dig MX example.com",
+                "dig -x 8.8.8.8",
+                "dig TXT example.com +short",
+            ],
+        },
+        "pt": {
+            "desc": "Consulta qualquer servidor DNS através do dig. Suporta A, AAAA, MX, TXT, NS, CNAME, PTR, SOA, ANY. Servidor DNS alternativo configurável, reverse lookup automático a partir de um IP.",
+            "examples": [
+                "Verificar se um registo A aponta para o IP correto.",
+                "Testar a propagação DNS de um domínio recentemente configurado.",
+                "Procurar registos MX para diagnosticar problemas de email.",
+                "Reverse lookup de um IP para identificar um servidor.",
             ],
             "cli": [
                 "dig A example.com @8.8.8.8",
@@ -412,6 +580,36 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "ping6 ::1",
             ],
         },
+        "it": {
+            "desc": "Monitor ping multi-host continuo: pacchetti ICMP a intervalli configurabili (1-30s) verso più destinazioni simultanee. Statistiche RTT min/avg/max e perdita pacchetti in tempo reale.",
+            "examples": [
+                "Monitorare contemporaneamente gateway, 8.8.8.8 e un server remoto.",
+                "Misurare la stabilità della connessione internet su un lungo periodo.",
+                "Verificare che un dispositivo risponda dopo un riavvio.",
+                "Confrontare la latenza verso più server.",
+            ],
+            "cli": [
+                "ping -c 4 -i 1 8.8.8.8",
+                "ping -c 100 -i 0.2 192.168.1.1",
+                "ping -s 1400 -c 10 192.168.1.1",
+                "ping6 ::1",
+            ],
+        },
+        "pt": {
+            "desc": "Monitor de ping multi-host contínuo: pacotes ICMP a intervalos configuráveis (1-30s) para múltiplos destinos simultâneos. Estatísticas RTT mín/méd/máx e taxa de perda em tempo real.",
+            "examples": [
+                "Monitorizar simultaneamente o gateway, 8.8.8.8 e um servidor remoto.",
+                "Medir a estabilidade da ligação à internet durante um longo período.",
+                "Verificar se um dispositivo responde após um reinício.",
+                "Comparar a latência para vários servidores.",
+            ],
+            "cli": [
+                "ping -c 4 -i 1 8.8.8.8",
+                "ping -c 100 -i 0.2 192.168.1.1",
+                "ping -s 1400 -c 10 192.168.1.1",
+                "ping6 ::1",
+            ],
+        },
     },
     "IP Scanner": {
         "fr": {
@@ -466,6 +664,36 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "IP eines Geräts über seinen Namen oder Hersteller finden.",
                 "Unbekanntes Gerät über OUI-Nachschlagen erkennen.",
                 "Liste für ein Netzwerkinventar-Audit exportieren.",
+            ],
+            "cli": [
+                "nmap -sn 192.168.1.0/24",
+                "nmap -sn 192.168.1.0/24 -oG - | grep 'Up'",
+                "arp-scan --localnet",
+                "ip neigh show",
+            ],
+        },
+        "it": {
+            "desc": "Scopre i dispositivi attivi su una rete locale tramite scansione ARP/ping su un intervallo CIDR. Mostra IP, hostname (DNS/mDNS/NetBIOS), MAC e produttore (database OUI 39.000 voci). Export CSV/TXT.",
+            "examples": [
+                "Inventariare tutti i dispositivi su 192.168.1.0/24.",
+                "Trovare l'IP di un dispositivo tramite nome o produttore.",
+                "Rilevare un dispositivo sconosciuto tramite OUI.",
+                "Esportare la lista per un audit di inventario di rete.",
+            ],
+            "cli": [
+                "nmap -sn 192.168.1.0/24",
+                "nmap -sn 192.168.1.0/24 -oG - | grep 'Up'",
+                "arp-scan --localnet",
+                "ip neigh show",
+            ],
+        },
+        "pt": {
+            "desc": "Descobre dispositivos ativos numa rede local por varrimento ARP/ping num intervalo CIDR. Mostra IP, hostname (DNS/mDNS/NetBIOS), MAC e fabricante (base OUI 39.000 entradas). Exportação CSV/TXT.",
+            "examples": [
+                "Inventariar todos os dispositivos em 192.168.1.0/24.",
+                "Encontrar o IP de um dispositivo pelo nome ou fabricante.",
+                "Detetar um dispositivo desconhecido via OUI.",
+                "Exportar a lista para uma auditoria de inventário de rede.",
             ],
             "cli": [
                 "nmap -sn 192.168.1.0/24",
@@ -536,6 +764,36 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "ss -tlnp",
             ],
         },
+        "it": {
+            "desc": "Scansiona le porte TCP di un host tramite connessione diretta (senza root). Intervalli di porte, preset comuni (Web, Mail, SSH…), servizio identificato per ogni porta aperta. Fino a 200 thread.",
+            "examples": [
+                "Verificare che le porte 80 e 443 siano aperte su un server web.",
+                "Rilevare i servizi attivi su un server prima di accedervi.",
+                "Confermare che la porta SSH (22) sia chiusa su una macchina esposta.",
+                "Cercare porte insolite su un dispositivo sospetto.",
+            ],
+            "cli": [
+                "nmap -sT -p 80,443,22 192.168.1.10",
+                "nmap -sT -p 1-1024 192.168.1.10",
+                "nc -zv 192.168.1.10 22",
+                "ss -tlnp",
+            ],
+        },
+        "pt": {
+            "desc": "Analisa portas TCP de um host por ligação direta (sem root). Intervalos de portas, presets comuns (Web, Mail, SSH…), serviço identificado por porta aberta. Até 200 threads.",
+            "examples": [
+                "Verificar se as portas 80 e 443 estão abertas num servidor web.",
+                "Detetar os serviços ativos num servidor antes de aceder.",
+                "Confirmar que a porta SSH (22) está fechada numa máquina exposta.",
+                "Procurar portas incomuns num dispositivo suspeito.",
+            ],
+            "cli": [
+                "nmap -sT -p 80,443,22 192.168.1.10",
+                "nmap -sT -p 1-1024 192.168.1.10",
+                "nc -zv 192.168.1.10 22",
+                "ss -tlnp",
+            ],
+        },
     },
     "Nmap": {
         "fr": {
@@ -590,6 +848,36 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "Exakte Dienstversionen zur Schwachstellenbewertung entdecken.",
                 "Unauffälligen SYN-Scan durchführen (Root erforderlich).",
                 "NSE-Skripte zur Erkennung bekannter Schwachstellen starten.",
+            ],
+            "cli": [
+                "nmap -sV -p 1-1024 192.168.1.10",
+                "nmap -O 192.168.1.10",
+                "sudo nmap -sS 192.168.1.0/24",
+                "nmap --script ssl-cert 192.168.1.10",
+            ],
+        },
+        "it": {
+            "desc": "Scansione di rete avanzata tramite nmap: 7 modalità (scoperta, TCP, SYN, servizi/versione, OS, completo, NSE). Risultati XML analizzati in tabella strutturata. Export CSV/TXT.",
+            "examples": [
+                "Identificare l'OS di un dispositivo sconosciuto (modalità OS detection).",
+                "Scoprire le versioni esatte dei servizi per valutare le vulnerabilità.",
+                "Eseguire una scansione SYN furtiva (richiede root).",
+                "Lanciare script NSE per rilevare vulnerabilità note.",
+            ],
+            "cli": [
+                "nmap -sV -p 1-1024 192.168.1.10",
+                "nmap -O 192.168.1.10",
+                "sudo nmap -sS 192.168.1.0/24",
+                "nmap --script ssl-cert 192.168.1.10",
+            ],
+        },
+        "pt": {
+            "desc": "Análise avançada de rede via nmap: 7 modos (descoberta, TCP, SYN, serviços/versão, OS, completo, NSE). Resultados XML analisados em tabela estruturada. Exportação CSV/TXT.",
+            "examples": [
+                "Identificar o OS de um dispositivo desconhecido (modo deteção OS).",
+                "Descobrir as versões exatas dos serviços para avaliar vulnerabilidades.",
+                "Executar uma análise SYN furtiva (requer root).",
+                "Lançar scripts NSE para detetar vulnerabilidades conhecidas.",
             ],
             "cli": [
                 "nmap -sV -p 1-1024 192.168.1.10",
@@ -656,6 +944,34 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "whois -h whois.iana.org example.com",
             ],
         },
+        "it": {
+            "desc": "Query WHOIS su un nome di dominio o indirizzo IP. Mostra informazioni di registrazione, contatti amministrativi e intervalli IP dell'operatore in formato monospace grezzo.",
+            "examples": [
+                "Verificare la data di scadenza di un nome di dominio.",
+                "Identificare il registrar e il proprietario di un dominio sospetto.",
+                "Trovare l'operatore di rete (AS) dietro un IP.",
+                "Ottenere i contatti per abusi per segnalare comportamenti dannosi.",
+            ],
+            "cli": [
+                "whois example.com",
+                "whois 8.8.8.8",
+                "whois -h whois.iana.org example.com",
+            ],
+        },
+        "pt": {
+            "desc": "Consulta WHOIS sobre um nome de domínio ou endereço IP. Mostra informações de registo, contactos administrativos e intervalos IP do operador em formato monospace sem formatação.",
+            "examples": [
+                "Verificar a data de expiração de um nome de domínio.",
+                "Identificar o registrar e proprietário de um domínio suspeito.",
+                "Encontrar o operador de rede (AS) por trás de um IP.",
+                "Obter contactos de abuso para reportar comportamento malicioso.",
+            ],
+            "cli": [
+                "whois example.com",
+                "whois 8.8.8.8",
+                "whois -h whois.iana.org example.com",
+            ],
+        },
     },
     "TLS Inspector": {
         "fr": {
@@ -707,6 +1023,34 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "SANs eines Multi-Domain-Zertifikats überprüfen.",
                 "TLS-Fehler durch Protokoll- und Cipher-Inspektion diagnostizieren.",
                 "Zertifikatskette einer internen privaten CA prüfen.",
+            ],
+            "cli": [
+                "openssl s_client -connect example.com:443 </dev/null 2>/dev/null | openssl x509 -noout -dates -subject",
+                "openssl s_client -connect example.com:443 -servername example.com </dev/null 2>/dev/null",
+                "curl -vI https://example.com 2>&1 | grep -E 'expire|issuer|subject'",
+            ],
+        },
+        "it": {
+            "desc": "Ispeziona il certificato TLS/SSL di un server: CN, SAN, emittente, validità (verde/arancione/rosso), seriale, protocollo, cipher e catena completa via openssl. Funziona su certificati validi, scaduti e autofirmati.",
+            "examples": [
+                "Verificare la scadenza di un certificato prima che causi un'interruzione del servizio.",
+                "Controllare i SAN di un certificato multi-dominio.",
+                "Diagnosticare errori TLS ispezionando protocollo e cipher.",
+                "Ispezionare la catena di certificazione di una CA privata interna.",
+            ],
+            "cli": [
+                "openssl s_client -connect example.com:443 </dev/null 2>/dev/null | openssl x509 -noout -dates -subject",
+                "openssl s_client -connect example.com:443 -servername example.com </dev/null 2>/dev/null",
+                "curl -vI https://example.com 2>&1 | grep -E 'expire|issuer|subject'",
+            ],
+        },
+        "pt": {
+            "desc": "Inspeciona o certificado TLS/SSL de um servidor: CN, SAN, emissor, validade (verde/laranja/vermelho), série, protocolo, cipher e cadeia completa via openssl. Funciona com certificados válidos, expirados e autoassinados.",
+            "examples": [
+                "Verificar a expiração de um certificado antes de causar uma interrupção.",
+                "Controlar os SAN de um certificado multi-domínio.",
+                "Diagnosticar erros TLS inspecionando protocolo e cipher.",
+                "Inspecionar a cadeia de certificação de uma CA privada interna.",
             ],
             "cli": [
                 "openssl s_client -connect example.com:443 </dev/null 2>/dev/null | openssl x509 -noout -dates -subject",
@@ -776,6 +1120,36 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "mount -t nfs 192.168.1.100:/export /mnt/nfs",
             ],
         },
+        "it": {
+            "desc": "Elenca le condivisioni SMB/Samba e le esportazioni NFS di un server o NAS. SMB via smbclient -L (credenziali opzionali), NFS via showmount -e.",
+            "examples": [
+                "Vedere tutte le condivisioni disponibili su un NAS.",
+                "Verificare quali directory vengono esportate via NFS.",
+                "Accedere a una condivisione Samba con credenziali di dominio.",
+                "Diagnosticare perché una condivisione di rete non è accessibile.",
+            ],
+            "cli": [
+                "smbclient -L //192.168.1.100 -N",
+                "smbclient -L //192.168.1.100 -U user%password",
+                "showmount -e 192.168.1.100",
+                "mount -t nfs 192.168.1.100:/export /mnt/nfs",
+            ],
+        },
+        "pt": {
+            "desc": "Lista as partilhas SMB/Samba e as exportações NFS de um servidor ou NAS. SMB via smbclient -L (credenciais opcionais), NFS via showmount -e.",
+            "examples": [
+                "Ver todas as partilhas disponíveis num NAS.",
+                "Verificar quais diretórios são exportados via NFS.",
+                "Aceder a uma partilha Samba com credenciais de domínio.",
+                "Diagnosticar por que uma partilha de rede não está acessível.",
+            ],
+            "cli": [
+                "smbclient -L //192.168.1.100 -N",
+                "smbclient -L //192.168.1.100 -U user%password",
+                "showmount -e 192.168.1.100",
+                "mount -t nfs 192.168.1.100:/export /mnt/nfs",
+            ],
+        },
     },
     "Hosts File": {
         "fr": {
@@ -834,6 +1208,34 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "getent hosts meinserver.local",
             ],
         },
+        "it": {
+            "desc": "Visualizza e modifica /etc/hosts in un'interfaccia tabellare. Aggiungere, modificare, eliminare o attivare/disattivare voci. Salvataggio via pkexec (autenticazione polkit).",
+            "examples": [
+                "Aggiungere un alias locale: mioserver.local → 192.168.1.10.",
+                "Bloccare un dominio reindirizzandolo a 0.0.0.0.",
+                "Disabilitare temporaneamente una voce senza eliminarla.",
+                "Forzare un IP locale prima della propagazione DNS.",
+            ],
+            "cli": [
+                "cat /etc/hosts",
+                "sudo bash -c 'echo \\\"192.168.1.10 myserver.local\\\" >> /etc/hosts'",
+                "getent hosts myserver.local",
+            ],
+        },
+        "pt": {
+            "desc": "Apresenta e edita /etc/hosts numa interface tabular. Adicionar, editar, eliminar ou ativar/desativar entradas. Guarda via pkexec (autenticação polkit).",
+            "examples": [
+                "Adicionar um alias local: meuservidor.local → 192.168.1.10.",
+                "Bloquear um domínio redirecionando-o para 0.0.0.0.",
+                "Desativar temporariamente uma entrada sem a eliminar.",
+                "Forçar um IP local antes da propagação DNS.",
+            ],
+            "cli": [
+                "cat /etc/hosts",
+                "sudo bash -c 'echo \\\"192.168.1.10 myserver.local\\\" >> /etc/hosts'",
+                "getent hosts myserver.local",
+            ],
+        },
     },
     "SNMP": {
         "fr": {
@@ -888,6 +1290,36 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "Schnittstellenliste eines Geräts abrufen.",
                 "CPU-Last eines SNMP-kompatiblen Servers abfragen.",
                 "SNMP-Community testen, bevor sie in ein Monitoring-Tool integriert wird.",
+            ],
+            "cli": [
+                "snmpwalk -v2c -c public 192.168.1.1 system",
+                "snmpget -v2c -c public 192.168.1.1 sysDescr.0",
+                "snmpwalk -v2c -c public 192.168.1.1 ifTable",
+                "snmpwalk -v2c -c public 192.168.1.1 1.3.6.1.2.1.25.3.3.1.2",
+            ],
+        },
+        "it": {
+            "desc": "Interroga dispositivi di rete compatibili SNMP (router, switch, NAS…) via snmpwalk/snmpget. Supporta v1/v2c con 10 preset OID comuni (nome sistema, uptime, interfacce, CPU, memoria…).",
+            "examples": [
+                "Leggere l'uptime di uno switch o router.",
+                "Recuperare la lista delle interfacce di un dispositivo.",
+                "Interrogare il carico CPU di un server compatibile SNMP.",
+                "Testare la community SNMP prima di integrarla in uno strumento di monitoraggio.",
+            ],
+            "cli": [
+                "snmpwalk -v2c -c public 192.168.1.1 system",
+                "snmpget -v2c -c public 192.168.1.1 sysDescr.0",
+                "snmpwalk -v2c -c public 192.168.1.1 ifTable",
+                "snmpwalk -v2c -c public 192.168.1.1 1.3.6.1.2.1.25.3.3.1.2",
+            ],
+        },
+        "pt": {
+            "desc": "Consulta dispositivos de rede compatíveis SNMP (routers, switches, NAS…) via snmpwalk/snmpget. Suporta v1/v2c com 10 presets OID comuns (nome sistema, uptime, interfaces, CPU, memória…).",
+            "examples": [
+                "Ler o uptime de um switch ou router.",
+                "Recuperar a lista de interfaces de um dispositivo.",
+                "Consultar a carga de CPU de um servidor compatível SNMP.",
+                "Testar a community SNMP antes de integrar numa ferramenta de monitorização.",
             ],
             "cli": [
                 "snmpwalk -v2c -c public 192.168.1.1 system",
@@ -958,6 +1390,36 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "sntp -q pool.ntp.org",
             ],
         },
+        "it": {
+            "desc": "Testa la sincronizzazione NTP tramite un client UDP Python puro (RFC 4330). Mostra offset, ritardo roundtrip, stratum e sorgente di riferimento. Fino a 5 richieste mediate.",
+            "examples": [
+                "Verificare che il server NTP locale sia raggiungibile e risponda.",
+                "Misurare la deriva dell'orologio di un server.",
+                "Testare più server del pool ntp.org.",
+                "Diagnosticare errori TLS causati da un orologio di sistema errato.",
+            ],
+            "cli": [
+                "ntpdate -q pool.ntp.org",
+                "chronyc tracking",
+                "timedatectl status",
+                "sntp -q pool.ntp.org",
+            ],
+        },
+        "pt": {
+            "desc": "Testa a sincronização NTP através de um cliente UDP Python puro (RFC 4330). Mostra offset, atraso roundtrip, stratum e fonte de referência. Até 5 pedidos mediados.",
+            "examples": [
+                "Verificar se o servidor NTP local está acessível e a responder.",
+                "Medir o desvio de relógio de um servidor.",
+                "Testar múltiplos servidores do pool ntp.org.",
+                "Diagnosticar erros TLS causados por um relógio de sistema incorreto.",
+            ],
+            "cli": [
+                "ntpdate -q pool.ntp.org",
+                "chronyc tracking",
+                "timedatectl status",
+                "sntp -q pool.ntp.org",
+            ],
+        },
     },
     "SSH": {
         "fr": {
@@ -1012,6 +1474,36 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "Mehrere Server in Gruppen verwalten (Produktion, Dev…).",
                 "Vim, htop oder beliebige TUI-Tools im eingebetteten Terminal verwenden.",
                 "Verbindungshistorie pflegen, um Server schnell zu finden.",
+            ],
+            "cli": [
+                "ssh user@192.168.1.10",
+                "ssh -p 2222 user@192.168.1.10",
+                "ssh -i ~/.ssh/id_ed25519 user@server.example.com",
+                "ssh -L 8080:localhost:80 user@192.168.1.10",
+            ],
+        },
+        "it": {
+            "desc": "Terminale SSH integrato con rubrica gerarchica (gruppi/sottogruppi). Autenticazione a chiave e password, scrollback 2000 righe, PTY dinamico, tutte le sequenze VT100/xterm.",
+            "examples": [
+                "Connettersi a un server ed eseguire comandi in modo interattivo.",
+                "Gestire più server organizzati in gruppi (Produzione, Dev…).",
+                "Usare Vim, htop o qualsiasi strumento TUI nel terminale integrato.",
+                "Tenere uno storico delle connessioni per trovare rapidamente un server.",
+            ],
+            "cli": [
+                "ssh user@192.168.1.10",
+                "ssh -p 2222 user@192.168.1.10",
+                "ssh -i ~/.ssh/id_ed25519 user@server.example.com",
+                "ssh -L 8080:localhost:80 user@192.168.1.10",
+            ],
+        },
+        "pt": {
+            "desc": "Terminal SSH integrado com livro de endereços hierárquico (grupos/subgrupos). Autenticação por chave e palavra-passe, scrollback de 2000 linhas, PTY dinâmico, todas as sequências VT100/xterm.",
+            "examples": [
+                "Ligar a um servidor e executar comandos de forma interativa.",
+                "Gerir múltiplos servidores organizados em grupos (Produção, Dev…).",
+                "Usar Vim, htop ou qualquer ferramenta TUI no terminal integrado.",
+                "Manter um histórico de ligações para encontrar rapidamente um servidor.",
             ],
             "cli": [
                 "ssh user@192.168.1.10",
@@ -1082,6 +1574,36 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "ssh-keygen -l -f ~/.ssh/id_ed25519.pub",
             ],
         },
+        "it": {
+            "desc": "Gestore di chiavi SSH: elenca le coppie da ~/.ssh/ (tipo, bit, commento, fingerprint SHA256). Generazione Ed25519/RSA con passphrase opzionale, copia chiave pubblica, distribuzione via ssh-copy-id in terminale inline.",
+            "examples": [
+                "Generare una chiave Ed25519 per accedere a un server o GitHub.",
+                "Copiare rapidamente la chiave pubblica da incollare in authorized_keys.",
+                "Distribuire una chiave su un nuovo server via ssh-copy-id in un clic.",
+                "Inventariare ed eliminare le vecchie coppie inutilizzate.",
+            ],
+            "cli": [
+                "ssh-keygen -t ed25519 -C \\\"user@host\\\"",
+                "ssh-keygen -t rsa -b 4096 -C \\\"user@host\\\"",
+                "ssh-copy-id -i ~/.ssh/id_ed25519.pub user@192.168.1.10",
+                "ssh-keygen -l -f ~/.ssh/id_ed25519.pub",
+            ],
+        },
+        "pt": {
+            "desc": "Gestor de chaves SSH: lista os pares de ~/.ssh/ (tipo, bits, comentário, fingerprint SHA256). Geração Ed25519/RSA com frase-passe opcional, cópia de chave pública, distribuição via ssh-copy-id em terminal inline.",
+            "examples": [
+                "Gerar uma chave Ed25519 para aceder a um servidor ou GitHub.",
+                "Copiar rapidamente a chave pública para colar em authorized_keys.",
+                "Distribuir uma chave num novo servidor via ssh-copy-id com um clique.",
+                "Inventariar e eliminar pares de chaves antigos não utilizados.",
+            ],
+            "cli": [
+                "ssh-keygen -t ed25519 -C \\\"user@host\\\"",
+                "ssh-keygen -t rsa -b 4096 -C \\\"user@host\\\"",
+                "ssh-copy-id -i ~/.ssh/id_ed25519.pub user@192.168.1.10",
+                "ssh-keygen -l -f ~/.ssh/id_ed25519.pub",
+            ],
+        },
     },
     "Remote Desktop": {
         "fr": {
@@ -1133,6 +1655,34 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "Mehrere Windows-Server nach Standort oder Kunde verwalten.",
                 "Eine 1920×1080-Vollbildverbindung einrichten.",
                 "Auf einen Server in einer Active Directory-Domäne zugreifen.",
+            ],
+            "cli": [
+                "xfreerdp /v:192.168.1.100 /u:Administrator /dynamic-resolution",
+                "xfreerdp /v:192.168.1.100 /u:user /d:DOMAIN /f",
+                "xfreerdp3 /v:192.168.1.100 /u:user /p:password /cert:ignore",
+            ],
+        },
+        "it": {
+            "desc": "Profili di connessione Desktop Remoto (RDP) verso macchine Windows. Gruppi/sottogruppi, avvia xfreerdp. La password viene richiesta alla connessione, mai memorizzata.",
+            "examples": [
+                "Connettersi a un PC Windows da Linux con un doppio clic.",
+                "Gestire più server Windows per sito o cliente.",
+                "Configurare una connessione a schermo intero 1920×1080.",
+                "Accedere a un server su un dominio Active Directory.",
+            ],
+            "cli": [
+                "xfreerdp /v:192.168.1.100 /u:Administrator /dynamic-resolution",
+                "xfreerdp /v:192.168.1.100 /u:user /d:DOMAIN /f",
+                "xfreerdp3 /v:192.168.1.100 /u:user /p:password /cert:ignore",
+            ],
+        },
+        "pt": {
+            "desc": "Perfis de ligação de Ambiente de Trabalho Remoto (RDP) para máquinas Windows. Grupos/subgrupos, lança xfreerdp. Palavra-passe pedida na ligação, nunca armazenada.",
+            "examples": [
+                "Ligar a um PC Windows a partir do Linux com um duplo clique.",
+                "Gerir múltiplos servidores Windows por site ou cliente.",
+                "Configurar uma ligação em ecrã inteiro 1920×1080.",
+                "Aceder a um servidor num domínio Active Directory.",
             ],
             "cli": [
                 "xfreerdp /v:192.168.1.100 /u:Administrator /dynamic-resolution",
@@ -1194,6 +1744,32 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "vncviewer 192.168.1.100:1",
             ],
         },
+        "it": {
+            "desc": "Profili di connessione VNC. Avvia vncviewer (TigerVNC) verso Linux, macOS (ARD) o Windows. Auth DH(30) macOS gestita nativamente. Password mai memorizzata.",
+            "examples": [
+                "Accedere al desktop grafico di un server Linux remoto.",
+                "Connettersi a un Mac via Apple Remote Desktop (ARD).",
+                "Gestire più macchine VNC in gruppi.",
+            ],
+            "cli": [
+                "vncviewer 192.168.1.100::5900",
+                "vncviewer -FullScreen 192.168.1.100::5901",
+                "vncviewer 192.168.1.100:1",
+            ],
+        },
+        "pt": {
+            "desc": "Perfis de ligação VNC. Lança vncviewer (TigerVNC) para Linux, macOS (ARD) ou Windows. Auth DH(30) do macOS gerida nativamente. Palavra-passe nunca armazenada.",
+            "examples": [
+                "Aceder ao ambiente de trabalho gráfico de um servidor Linux remoto.",
+                "Ligar a um Mac via Apple Remote Desktop (ARD).",
+                "Gerir múltiplas máquinas VNC em grupos.",
+            ],
+            "cli": [
+                "vncviewer 192.168.1.100::5900",
+                "vncviewer -FullScreen 192.168.1.100::5901",
+                "vncviewer 192.168.1.100:1",
+            ],
+        },
     },
     "Traceroute": {
         "fr": {
@@ -1248,6 +1824,36 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "Identifizieren, bei welchem Hop ein Paket verloren geht oder verlangsamt wird.",
                 "Routen zu zwei verschiedenen CDNs vergleichen.",
                 "Erkennen, ob Traffic durch ein unerwartetes Land geleitet wird.",
+            ],
+            "cli": [
+                "traceroute -n google.com",
+                "tracepath -b google.com",
+                "mtr -n --report google.com",
+                "traceroute -I -n 8.8.8.8",
+            ],
+        },
+        "it": {
+            "desc": "Percorso di rete verso una destinazione con geolocalizzazione in tempo reale su una mappa mondiale interattiva (Natural Earth). Supporta traceroute e tracepath. Mappa con zoom e panoramica.",
+            "examples": [
+                "Visualizzare geograficamente il percorso verso un server straniero.",
+                "Identificare in quale hop un pacchetto viene perso o rallentato.",
+                "Confrontare i percorsi verso due CDN diversi.",
+                "Rilevare se il traffico passa per un paese inaspettato.",
+            ],
+            "cli": [
+                "traceroute -n google.com",
+                "tracepath -b google.com",
+                "mtr -n --report google.com",
+                "traceroute -I -n 8.8.8.8",
+            ],
+        },
+        "pt": {
+            "desc": "Caminho de rede para um destino com geolocalização em tempo real num mapa mundial interativo (Natural Earth). Suporta traceroute e tracepath. Mapa com zoom e panorâmica.",
+            "examples": [
+                "Visualizar geograficamente o caminho para um servidor estrangeiro.",
+                "Identificar em que hop um pacote é perdido ou atrasado.",
+                "Comparar os caminhos para dois CDN diferentes.",
+                "Detetar se o tráfego passa por um país inesperado.",
             ],
             "cli": [
                 "traceroute -n google.com",
@@ -1318,6 +1924,36 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "mtr --json google.com",
             ],
         },
+        "it": {
+            "desc": "Combina traceroute e ping: statistiche continue di perdita e latenza per ogni hop via mtr --report. Tabella Hop/Host/Perdita%/Inviati/Ultimo/Media/Min/Max/Jitter. Export CSV/TXT.",
+            "examples": [
+                "Identificare quale router è responsabile di una latenza elevata.",
+                "Misurare la perdita di pacchetti per hop verso un server di gioco.",
+                "Confrontare la qualità di due collegamenti internet verso lo stesso host.",
+                "Generare un rapporto da condividere con il supporto di un provider.",
+            ],
+            "cli": [
+                "mtr --report -c 10 google.com",
+                "mtr -n --report google.com",
+                "mtr --report-wide -c 100 8.8.8.8",
+                "mtr --json google.com",
+            ],
+        },
+        "pt": {
+            "desc": "Combina traceroute e ping: estatísticas contínuas de perda e latência por hop via mtr --report. Tabela Hop/Host/Perda%/Enviados/Último/Méd/Mín/Máx/Jitter. Exportação CSV/TXT.",
+            "examples": [
+                "Identificar qual router é responsável por uma latência elevada.",
+                "Medir a perda de pacotes por hop para um servidor de jogos.",
+                "Comparar a qualidade de duas ligações à internet para o mesmo host.",
+                "Gerar um relatório para partilhar com o suporte de um fornecedor.",
+            ],
+            "cli": [
+                "mtr --report -c 10 google.com",
+                "mtr -n --report google.com",
+                "mtr --report-wide -c 100 8.8.8.8",
+                "mtr --json google.com",
+            ],
+        },
     },
     "Firewall": {
         "fr": {
@@ -1372,6 +2008,36 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "Regeln nach Port oder Chain (INPUT, OUTPUT) filtern.",
                 "Konfigurationsdatei mit Live-Ruleset vergleichen.",
                 "Eine DROP-Regel identifizieren, die einen Dienst blockiert.",
+            ],
+            "cli": [
+                "nft list ruleset",
+                "iptables -L -n -v --line-numbers",
+                "ip6tables -L -n -v",
+                "nft list table inet filter",
+            ],
+        },
+        "it": {
+            "desc": "Legge e visualizza le regole nftables e iptables/ip6tables senza root (file di config), con ruleset live via pkexec. Colonne Tabella/Catena/Regola/Porta/Azione/Commento, filtro live, colorazione per azione.",
+            "examples": [
+                "Verificare le regole attive senza memorizzare la sintassi nft/iptables.",
+                "Filtrare le regole per porta o catena (INPUT, OUTPUT).",
+                "Confrontare il file di configurazione con il ruleset live.",
+                "Identificare una regola DROP che blocca un servizio.",
+            ],
+            "cli": [
+                "nft list ruleset",
+                "iptables -L -n -v --line-numbers",
+                "ip6tables -L -n -v",
+                "nft list table inet filter",
+            ],
+        },
+        "pt": {
+            "desc": "Lê e apresenta as regras nftables e iptables/ip6tables sem root (ficheiros de config), com ruleset live via pkexec. Colunas Tabela/Cadeia/Regra/Porta/Ação/Comentário, filtro live, codificação de cor por ação.",
+            "examples": [
+                "Rever as regras ativas sem memorizar a sintaxe nft/iptables.",
+                "Filtrar regras por porta ou cadeia (INPUT, OUTPUT).",
+                "Comparar o ficheiro de configuração com o ruleset live.",
+                "Identificar uma regra DROP que bloqueia um serviço.",
             ],
             "cli": [
                 "nft list ruleset",
@@ -1438,6 +2104,34 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "ping -c 10 1.1.1.1 | tail -1",
             ],
         },
+        "it": {
+            "desc": "Misura download (25 MB), upload (10 MB) e ping via Cloudflare (speed.cloudflare.com) usando curl. Risultati in tempo reale, storico 5 test, grafico di tendenza.",
+            "examples": [
+                "Misurare il throughput reale senza browser.",
+                "Confrontare le velocità Wi-Fi vs Ethernet.",
+                "Monitorare la velocità nel tempo con il grafico storico.",
+                "Rilevare una degradazione della connessione presso un cliente.",
+            ],
+            "cli": [
+                "curl -o /dev/null -s -w '%{speed_download}\\\\n' https://speed.cloudflare.com/__down?bytes=25000000",
+                "curl -o /dev/null -s -w '%{speed_upload}\\\\n' -T /dev/zero https://speed.cloudflare.com/__up",
+                "ping -c 10 1.1.1.1 | tail -1",
+            ],
+        },
+        "pt": {
+            "desc": "Mede download (25 MB), upload (10 MB) e ping via Cloudflare (speed.cloudflare.com) usando curl. Resultados em tempo real, histórico de 5 testes, gráfico de tendência.",
+            "examples": [
+                "Medir o throughput real sem browser.",
+                "Comparar velocidades Wi-Fi vs Ethernet.",
+                "Monitorizar a velocidade ao longo do tempo com o gráfico histórico.",
+                "Detetar degradação da ligação num site cliente.",
+            ],
+            "cli": [
+                "curl -o /dev/null -s -w '%{speed_download}\\\\n' https://speed.cloudflare.com/__down?bytes=25000000",
+                "curl -o /dev/null -s -w '%{speed_upload}\\\\n' -T /dev/zero https://speed.cloudflare.com/__up",
+                "ping -c 10 1.1.1.1 | tail -1",
+            ],
+        },
     },
     "Bandwidth": {
         "fr": {
@@ -1492,6 +2186,36 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "Identifizieren, welche Schnittstelle am meisten verbraucht (Ethernet, Wi-Fi, VPN).",
                 "Unerwarteten Hintergrund-Netzwerktraffic erkennen.",
                 "Effektive Übertragungsgeschwindigkeit zu einem NAS messen.",
+            ],
+            "cli": [
+                "cat /proc/net/dev",
+                "watch -n 1 'cat /proc/net/dev | grep eth0'",
+                "nethogs eth0",
+                "iftop -i eth0",
+            ],
+        },
+        "it": {
+            "desc": "Monitora il throughput di rete in tempo reale su un'interfaccia selezionata. Grafico scorrevole 60 secondi, curve download/upload, velocità attuali, totali sessione e picchi.",
+            "examples": [
+                "Visualizzare l'utilizzo della banda durante un backup.",
+                "Identificare quale interfaccia consuma di più (Ethernet, Wi-Fi, VPN).",
+                "Rilevare traffico di rete inatteso in background.",
+                "Misurare la velocità di trasferimento effettiva verso un NAS.",
+            ],
+            "cli": [
+                "cat /proc/net/dev",
+                "watch -n 1 'cat /proc/net/dev | grep eth0'",
+                "nethogs eth0",
+                "iftop -i eth0",
+            ],
+        },
+        "pt": {
+            "desc": "Monitoriza o débito de rede em tempo real numa interface selecionada. Gráfico deslizante de 60 segundos, curvas download/upload, velocidades atuais, totais de sessão e picos.",
+            "examples": [
+                "Visualizar o uso de largura de banda durante um backup.",
+                "Identificar qual interface consome mais (Ethernet, Wi-Fi, VPN).",
+                "Detetar tráfego de rede inesperado em segundo plano.",
+                "Medir a velocidade de transferência efetiva para um NAS.",
             ],
             "cli": [
                 "cat /proc/net/dev",
@@ -1558,6 +2282,34 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "etherwake -i eth0 AA:BB:CC:DD:EE:FF",
             ],
         },
+        "it": {
+            "desc": "Invia un Magic Packet UDP Python nativo per avviare un dispositivo da remoto. Rubrica host persistente (JSON) con nome, indirizzo MAC e broadcast.",
+            "examples": [
+                "Avviare un PC desktop prima di accedervi via SSH o RDP.",
+                "Svegliare un NAS in sospensione prima di accedere ai file.",
+                "Testare se il WoL è abilitato nel BIOS.",
+                "Gestire più dispositivi WoL (PC, server, NAS) in una rubrica centralizzata.",
+            ],
+            "cli": [
+                "wakeonlan AA:BB:CC:DD:EE:FF",
+                "wakeonlan -i 192.168.1.255 AA:BB:CC:DD:EE:FF",
+                "etherwake -i eth0 AA:BB:CC:DD:EE:FF",
+            ],
+        },
+        "pt": {
+            "desc": "Envia um Magic Packet UDP Python nativo para iniciar remotamente um dispositivo. Livro de hosts persistente (JSON) com nome, endereço MAC e broadcast.",
+            "examples": [
+                "Iniciar um PC de secretária antes de aceder via SSH ou RDP.",
+                "Acordar um NAS em suspensão antes de aceder aos ficheiros.",
+                "Testar se o WoL está ativado no BIOS.",
+                "Gerir múltiplos dispositivos WoL (PCs, servidores, NAS) num livro centralizado.",
+            ],
+            "cli": [
+                "wakeonlan AA:BB:CC:DD:EE:FF",
+                "wakeonlan -i 192.168.1.255 AA:BB:CC:DD:EE:FF",
+                "etherwake -i eth0 AA:BB:CC:DD:EE:FF",
+            ],
+        },
     },
     "Topology": {
         "fr": {
@@ -1609,6 +2361,34 @@ _CONTENT: dict[str, dict[str, dict]] = {
                 "Gateway und umgebende Geräte visuell identifizieren.",
                 "Unbekanntes Gerät über Icon oder Hersteller erkennen.",
                 "Netzwerkinfrastruktur mit einer visuellen Karte dokumentieren.",
+            ],
+            "cli": [
+                "nmap -sn 192.168.1.0/24",
+                "nmap -sn -oX - 192.168.1.0/24 | grep -E 'addr|hostname'",
+                "arp-scan --localnet",
+            ],
+        },
+        "it": {
+            "desc": "Mappa visiva interattiva dei dispositivi LAN scoperti via nmap -sn. Nodi trascinabili, icone che distinguono router/monitor/torre PC. IP, MAC, hostname e produttore al clic o al passaggio del mouse.",
+            "examples": [
+                "Panoramica visiva rapida di tutti i dispositivi attivi sulla LAN.",
+                "Identificare visivamente il gateway e i dispositivi attorno ad esso.",
+                "Rilevare un dispositivo sconosciuto tramite icona o produttore.",
+                "Documentare l'infrastruttura di rete con una mappa visiva.",
+            ],
+            "cli": [
+                "nmap -sn 192.168.1.0/24",
+                "nmap -sn -oX - 192.168.1.0/24 | grep -E 'addr|hostname'",
+                "arp-scan --localnet",
+            ],
+        },
+        "pt": {
+            "desc": "Mapa visual interativo dos dispositivos LAN descobertos via nmap -sn. Nós arrastáveis, ícones distinguindo router/monitor/torre PC. IP, MAC, hostname e fabricante ao clicar ou ao passar o rato.",
+            "examples": [
+                "Vista geral visual rápida de todos os dispositivos ativos na LAN.",
+                "Identificar visualmente o gateway e os dispositivos à sua volta.",
+                "Detetar um dispositivo desconhecido pelo ícone ou fabricante.",
+                "Documentar a infraestrutura de rede com um mapa visual.",
             ],
             "cli": [
                 "nmap -sn 192.168.1.0/24",
