@@ -173,7 +173,7 @@ brew install nmap whois net-snmp mtr curl
 
 | Tool | Feature | Linux | macOS |
 |------|---------|-------|-------|
-| `xfreerdp` / `xfreerdp3` | Remote Desktop (RDP) | Arch: `freerdp` · Debian: `freerdp2-x11` | `brew install freerdp` |
+| `xfreerdp` / `xfreerdp3` | Remote Desktop (RDP) | Arch: `freerdp` · Ubuntu ≤24.04: `freerdp2-x11` · Ubuntu 26.04+: `freerdp3-x11` | `brew install freerdp` |
 | `vncviewer` | VNC | Arch: `tigervnc` · Debian: `tigervnc-viewer` | `brew install tiger-vnc` |
 | `nm-connection-editor` | Edit connections from Connection Manager | Arch: `nm-connection-editor` | — (System Preferences opens instead) |
 | `traceroute` | Traceroute alternative (tracepath used by default) | Arch: `traceroute` | built-in |
@@ -248,9 +248,16 @@ Download the `.whl` from the [latest release](https://github.com/thongor77/nmlin
 # Arch / Fedora / macOS — no pip restrictions
 pip install nmlinux-1.3.5-py3-none-any.whl
 
-# Debian / Ubuntu / Mint — use pipx or a venv instead
+# Debian / Ubuntu / Mint — install system libs first, then use pipx
+# Ubuntu ≤24.04:
+sudo apt install libgl1 libglib2.0-0 libdbus-1-3 freerdp2-x11 tigervnc-viewer
+# Ubuntu 26.04+:
+sudo apt install libgl1 libglib2.0-0 libdbus-1-3 freerdp3-x11 tigervnc-viewer
+
 pipx install nmlinux-1.3.5-py3-none-any.whl
 ```
+
+> **Note for Ubuntu 26.04+:** `pipx` requires system libraries (libGL, etc.) to be installed first — the commands above cover them. If `pipx install` fails due to a PySide6 build error, use **Option 3** (install script) instead, which handles everything automatically.
 
 ### Option 5 — From source (Arch / Fedora / macOS)
 

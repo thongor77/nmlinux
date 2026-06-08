@@ -24,9 +24,18 @@ install_sys_deps() {
     if command -v apt-get &>/dev/null; then
         info "Detected apt — installing system dependencies..."
         sudo apt-get update -qq
+
+        # freerdp3-x11 on Ubuntu 26.04+, freerdp2-x11 on older releases
+        if apt-cache show freerdp3-x11 &>/dev/null 2>&1; then
+            FREERDP_PKG="freerdp3-x11"
+        else
+            FREERDP_PKG="freerdp2-x11"
+        fi
+        info "Using RDP package: $FREERDP_PKG"
+
         sudo apt-get install -y python3-full python3-venv libgl1 libglib2.0-0 \
             libdbus-1-3 libxkbcommon0 libxkbcommon-x11-0 \
-            freerdp2-x11 tigervnc-viewer nmap net-tools iputils-ping traceroute
+            "$FREERDP_PKG" tigervnc-viewer nmap net-tools iputils-ping traceroute
     elif command -v pacman &>/dev/null; then
         info "Detected pacman — use the AUR package instead: yay -S nmlinux"
         warn "Continuing anyway with pip install..."
@@ -56,6 +65,15 @@ fi
 # ── System deps ───────────────────────────────────────────────────────────────
 install_sys_deps
 
+# ── Python version check ──────────────────────────────────────────────────────
+PY_VER=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+PY_MAJOR=$(python3 -c "import sys; print(sys.version_info.major)")
+PY_MINOR=$(python3 -c "import sys; print(sys.version_info.minor)")
+info "Detected Python $PY_VER"
+if [[ "$PY_MAJOR" -lt 3 || ("$PY_MAJOR" -eq 3 && "$PY_MINOR" -lt 11) ]]; then
+    die "Python 3.11+ is required (found $PY_VER). Install a newer Python and retry."
+fi
+
 # ── Create venv ───────────────────────────────────────────────────────────────
 info "Creating virtual environment at $VENV_DIR ..."
 mkdir -p "$VENV_DIR"
@@ -66,7 +84,11 @@ info "Upgrading pip..."
 
 # ── Install nmlinux ───────────────────────────────────────────────────────────
 info "Installing NMLinux..."
-"$VENV_DIR/bin/pip" install --quiet "$REPO_DIR"
+if ! "$VENV_DIR/bin/pip" install --quiet "$REPO_DIR"; then
+    warn "Standard install failed — trying with --no-build-isolation (sometimes needed for PySide6 on newer Python)..."
+    "$VENV_DIR/bin/pip" install --no-build-isolation "$REPO_DIR" \
+        || die "Installation failed. Check pip output above. You may need: sudo apt install python3-pyside6*"
+fi
 
 success "NMLinux installed in venv."
 
