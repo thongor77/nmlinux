@@ -187,9 +187,10 @@ class _MapWidget(QWidget):
         self._country_paths: list[QPainterPath] = []
         self._hops: list[tuple[float, float, int, float]] = []
         # Zoom / pan state
-        self._zoom: float = 1.0
-        self._cx:   float = 0.5    # world-x of viewport centre (0-1)
-        self._cy:   float = 0.5    # world-y of viewport centre (0-1)
+        self._zoom:      float = 1.0
+        self._cx:        float = 0.5    # world-x of viewport centre (0-1)
+        self._cy:        float = 0.5    # world-y of viewport centre (0-1)
+        self._auto_fit:  bool  = True   # False once user zooms/pans manually
         self._drag_origin: QPointF | None = None
         self._drag_cx0:    float = 0.5
         self._drag_cy0:    float = 0.5
@@ -224,6 +225,8 @@ class _MapWidget(QWidget):
 
     def set_hops(self, hops: list[tuple[float, float, int, float]]) -> None:
         self._hops = hops
+        if not hops:
+            self._auto_fit = True
         self.update()
 
     # ── Zoom / pan ───────────────────────────────────────────────────────────
@@ -267,11 +270,37 @@ class _MapWidget(QWidget):
         self._zoom = 1.0
         self._cx = 0.5
         self._cy = 0.5
+        self._auto_fit = True
+        self.update()
+
+    def fit_hops(self) -> None:
+        """Auto-zoom to the bounding box of geolocated hops (unless user already panned)."""
+        if not self._auto_fit or len(self._hops) < 2:
+            return
+        w, h = self.width(), self.height()
+        if w <= 0 or h <= 0:
+            return
+
+        wxs = [(lon + 180) / 360 for _, lon, _, _ in self._hops]
+        wys = [(90 - lat) / 180  for lat, _, _, _ in self._hops]
+        min_wx, max_wx = min(wxs), max(wxs)
+        min_wy, max_wy = min(wys), max(wys)
+        bbox_w = max_wx - min_wx
+        bbox_h = max_wy - min_wy
+
+        PAD = 0.25
+        zoom_x = (1 - PAD) / bbox_w if bbox_w > 1e-4 else 20.0
+        zoom_y = (1 - PAD) / bbox_h if bbox_h > 1e-4 else 20.0
+        self._zoom = max(1.0, min(20.0, min(zoom_x, zoom_y)))
+        self._cx = (min_wx + max_wx) / 2
+        self._cy = (min_wy + max_wy) / 2
+        self._clamp()
         self.update()
 
     # ── Mouse events ─────────────────────────────────────────────────────────
 
     def wheelEvent(self, event) -> None:                    # noqa: N802
+        self._auto_fit = False
         factor = 1.20 if event.angleDelta().y() > 0 else 1 / 1.20
         pos = event.position()
         self._zoom_at(pos.x(), pos.y(), factor)
@@ -285,6 +314,7 @@ class _MapWidget(QWidget):
 
     def mouseMoveEvent(self, event) -> None:                # noqa: N802
         if self._drag_origin is not None:
+            self._auto_fit = False
             d = event.position() - self._drag_origin
             w, h = self.width(), self.height()
             self._cx = self._drag_cx0 - d.x() / (self._zoom * w)
@@ -299,6 +329,7 @@ class _MapWidget(QWidget):
 
     def mouseDoubleClickEvent(self, event) -> None:         # noqa: N802
         if event.button() == Qt.MouseButton.LeftButton:
+            self._auto_fit = False
             pos = event.position()
             self._zoom_at(pos.x(), pos.y(), 2.0)
 
@@ -587,6 +618,7 @@ class TraceroutePage(QWidget):
             if h['lat'] is not None
         ]
         self._map.set_hops(pts)
+        self._map.fit_hops()
 
     # ── Table helpers ─────────────────────────────────────────────────────────
 

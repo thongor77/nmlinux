@@ -8,7 +8,9 @@ import re
 import shutil
 import subprocess
 import xml.etree.ElementTree as ET
+from functools import lru_cache
 from ipaddress import IPv4Network
+from pathlib import Path
 
 _IS_MACOS = platform.system() == 'Darwin'
 _mono = 'Menlo' if _IS_MACOS else 'Monospace'
@@ -17,6 +19,7 @@ from PySide6.QtCore import Qt, QLineF, QPointF, QRectF, QThread, Signal
 from PySide6.QtGui import (
     QBrush, QColor, QFont, QPainter, QPen, QPalette,
 )
+from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
     QApplication, QFormLayout, QGraphicsItem, QGraphicsLineItem,
     QGraphicsScene, QGraphicsView, QGroupBox,
@@ -28,7 +31,8 @@ from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 from nmlinux.core.theme import color_err
 
-_CMD_NMAP = shutil.which('nmap')
+_CMD_NMAP  = shutil.which('nmap')
+_CMD_AVAHI = shutil.which('avahi-browse')
 
 # Semantic node colours — balanced for both light and dark themes
 _C_GATEWAY = QColor('#e8954f')   # amber  — router / gateway
@@ -38,6 +42,104 @@ _C_HOST    = QColor('#4aaa6e')   # green  — other hosts
 
 def _node_color(node_type: str) -> QColor:
     return {'gateway': _C_GATEWAY, 'self': _C_SELF}.get(node_type, _C_HOST)
+
+
+# ── SVG icon rendering ────────────────────────────────────────────────────────
+
+_ICONS_DIR = Path(__file__).parent.parent / "assets" / "icons"
+
+_DEV_ICON: dict[str, str] = {
+    'router':   'wifi',
+    'self':     'monitor',
+    'computer': 'laptop',
+    'printer':  'printer',
+    'nas':      'server',
+    'phone':    'smartphone',
+    'switch':   'network',
+    'rpi':      'cpu',
+}
+
+
+@lru_cache(maxsize=32)
+def _svg_renderer(dev_class: str, color_hex: str) -> QSvgRenderer | None:
+    svg_name = _DEV_ICON.get(dev_class, 'laptop')
+    path = _ICONS_DIR / f"{svg_name}.svg"
+    if not path.exists():
+        return None
+    svg = path.read_text(encoding='utf-8')
+    svg = re.sub(r'stroke="currentColor"', f'stroke="{color_hex}"', svg)
+    svg = re.sub(r'stroke="#[0-9a-fA-F]+"', f'stroke="{color_hex}"', svg)
+    return QSvgRenderer(svg.encode())
+
+
+# ── Device-class detection (vendor heuristics) ────────────────────────────────
+
+_PRINTER_KW = ('canon', 'epson', 'brother', 'ricoh', 'xerox', 'kyocera',
+               'konica', 'lexmark', 'pantum', 'oki data', 'toshiba tec')
+_NAS_KW     = ('synology', 'qnap', 'western digital', 'wd technolog',
+               'seagate', 'buffalo', 'drobo')
+_PHONE_KW   = ('apple', 'samsung electronics', 'xiaomi', 'huawei',
+               'oneplus', 'oppo', 'realme', 'vivo mobile',
+               'motorola', 'nokia', 'honor device')
+_RPI_KW     = ('raspberry pi',)
+_SWITCH_KW  = ('cisco', 'ubiquiti', 'mikrotik', 'juniper', 'aruba',
+               'ruckus', 'extreme networks', 'tp-link', 'tp link',
+               'd-link', 'zyxel', 'fritz!', 'linksys', 'netgear', 'asus')
+
+
+_HOSTNAME_NAS     = ('diskstation', 'qnap', 'nas', 'readynas', 'freenas', 'truenas',
+                     'synology', 'buffalo', 'drobo')
+_HOSTNAME_PHONE   = ('android', 'iphone', 'ipad', 'galaxy', 'pixel', 'oneplus',
+                     'huawei', 'xiaomi', 'redmi', 'honor')
+_HOSTNAME_PRINTER = ('print', 'printer', 'canon', 'epson', 'brother', 'hp-', 'hprt')
+_HOSTNAME_RPI     = ('raspberry', 'raspberrypi', 'rpi')
+_HOSTNAME_SWITCH  = ('repeater', 'repeta', 'repete', 'extender', 'ap-', 'wap-',
+                     'switch', 'ubnt', 'unifi', 'mikrotik', 'router')
+
+
+def _detect_device_class(data: dict) -> str:
+    """Infer device class from node type, MAC vendor, then hostname."""
+    if data['type'] == 'self':
+        return 'self'
+    if data['type'] == 'gateway':
+        return 'router'
+
+    v = (data.get('vendor') or '').lower()
+    for kw in _RPI_KW:
+        if kw in v:
+            return 'rpi'
+    for kw in _NAS_KW:
+        if kw in v:
+            return 'nas'
+    for kw in _PRINTER_KW:
+        if kw in v:
+            return 'printer'
+    for kw in _PHONE_KW:
+        if kw in v:
+            return 'phone'
+    for kw in _SWITCH_KW:
+        if kw in v:
+            return 'switch'
+
+    # Fallback: hostname heuristics (vendor may be NIC manufacturer, not device brand)
+    h = (data.get('hostname') or '').lower()
+    for kw in _HOSTNAME_RPI:
+        if kw in h:
+            return 'rpi'
+    for kw in _HOSTNAME_NAS:
+        if kw in h:
+            return 'nas'
+    for kw in _HOSTNAME_PRINTER:
+        if kw in h:
+            return 'printer'
+    for kw in _HOSTNAME_PHONE:
+        if kw in h:
+            return 'phone'
+    for kw in _HOSTNAME_SWITCH:
+        if kw in h:
+            return 'switch'
+
+    return 'computer'
 
 
 def _place_on_ring(nodes: list, R: float) -> None:
@@ -140,14 +242,15 @@ class _EdgeItem(QGraphicsLineItem):
 
 
 class _NodeItem(QGraphicsItem):
-    """Draggable circle node with IP / hostname label."""
-    _R    = 18   # radius for regular hosts
-    _R_GW = 24   # larger radius for gateway
+    """Draggable SVG icon node with IP / hostname label."""
+    _R    = 18   # half-size for regular hosts
+    _R_GW = 24   # half-size for gateway
 
     def __init__(self, data: dict) -> None:
         super().__init__()
         self.data   = data
-        self._color = _node_color(data['type'])
+        self._color     = _node_color(data['type'])
+        self._dev_class = data.get('device_class', 'computer')
         self._edges: list[_EdgeItem] = []
         self._r     = float(self._R_GW if data['type'] == 'gateway' else self._R)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
@@ -165,19 +268,22 @@ class _NodeItem(QGraphicsItem):
         col = self._color
         pal = QApplication.palette()
 
-        # Selection ring
+        # Selection highlight
         if self.isSelected():
-            painter.setPen(QPen(col.lighter(160), 3, Qt.PenStyle.DotLine))
+            painter.setPen(QPen(col.lighter(160), 2.5, Qt.PenStyle.DotLine))
+            painter.setBrush(QBrush(QColor(col.red(), col.green(), col.blue(), 40)))
+            painter.drawRoundedRect(QRectF(-r - 4, -r - 4, r * 2 + 8, r * 2 + 8), 6, 6)
             painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.drawEllipse(QPointF(0, 0), r + 5, r + 5)
 
-        # Circle body
-        painter.setPen(QPen(col.darker(160), 2))
-        painter.setBrush(QBrush(col))
-        painter.drawEllipse(QPointF(0, 0), r, r)
-
-        # Icon
-        self._paint_icon(painter)
+        # SVG icon
+        renderer = _svg_renderer(self._dev_class, col.name())
+        if renderer and renderer.isValid():
+            renderer.render(painter, QRectF(-r, -r, r * 2, r * 2))
+        else:
+            # Fallback: plain circle
+            painter.setPen(QPen(col.darker(160), 2))
+            painter.setBrush(QBrush(col))
+            painter.drawEllipse(QPointF(0, 0), r, r)
 
         # Primary label: hostname or IP
         hostname = self.data.get('hostname', '')
@@ -221,36 +327,6 @@ class _NodeItem(QGraphicsItem):
             parts.append(f'({vendor})')
         return '\n'.join(parts)
 
-    def _paint_icon(self, painter: QPainter) -> None:
-        r   = self._r
-        s   = r * 0.38
-        typ = self.data['type']
-
-        pen = QPen(QColor(255, 255, 255, 210), 1.3)
-        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-        painter.setPen(pen)
-        painter.setBrush(Qt.BrushStyle.NoBrush)
-
-        if typ == 'gateway':
-            # Router: rectangular body + 2 antennas
-            bw, bh = s * 1.7, s * 0.75
-            painter.drawRoundedRect(QRectF(-bw / 2, -bh / 2, bw, bh), 1.5, 1.5)
-            for dx in (-s * 0.45, s * 0.45):
-                painter.drawLine(QLineF(dx, -bh / 2, dx, -bh / 2 - s * 0.8))
-        elif typ == 'self':
-            # Monitor: screen rectangle + vertical stand + horizontal base
-            sw, sh = s * 1.6, s * 1.1
-            painter.drawRoundedRect(QRectF(-sw / 2, -sh * 0.8, sw, sh), 1.5, 1.5)
-            cy = sh * 0.2
-            painter.drawLine(QLineF(0.0, cy, 0.0, cy + s * 0.55))
-            painter.drawLine(QLineF(-s * 0.5, cy + s * 0.55, s * 0.5, cy + s * 0.55))
-        else:
-            # PC tower: tall rounded rect + small power-button dot
-            tw, th = s * 0.85, s * 1.6
-            painter.drawRoundedRect(QRectF(-tw / 2, -th / 2, tw, th), 1.5, 1.5)
-            painter.setBrush(QBrush(QColor(255, 255, 255, 160)))
-            painter.drawEllipse(QPointF(0.0, -th / 2 + s * 0.5), s * 0.22, s * 0.22)
 
 
 # ── Custom view (zoom + pan + selection signal) ───────────────────────────────
@@ -394,12 +470,122 @@ class _TopoWorker(QThread):
         self.wait(3000)
 
 
+# ── mDNS detection ───────────────────────────────────────────────────────────
+
+_MDNS_CLASS: dict[str, str] = {
+    # Standard _type._proto
+    '_ipp._tcp':              'printer',
+    '_printer._tcp':          'printer',
+    '_pdl-datastream._tcp':   'printer',
+    '_scanner._tcp':          'printer',
+    '_uscan._tcp':            'printer',
+    '_uscans._tcp':           'printer',
+    '_apple-mobdev2._tcp':    'phone',
+    '_googlecast._tcp':       'phone',
+    '_androidtvremote2._tcp':  'phone',
+    '_nv_shield_remote._tcp':  'phone',
+    '_companion-link._tcp':    'computer',
+    '_kdeconnect._udp':       'computer',
+    '_kdeconnect_phone':      'phone',
+    '_workstation._tcp':      'computer',
+    '_rfb._tcp':              'computer',
+    '_smb._tcp':              'computer',
+    '_afpovertcp._tcp':       'nas',
+    '_nfs._tcp':              'nas',
+    # Human-readable names avahi-browse substitutes for some types
+    'AirTunes Remote Audio':  'computer',
+    'AirPlay Remote Video':   'computer',
+    'PDL Printer':            'printer',
+    'Internet Printer':       'printer',
+    'Microsoft Windows Network': 'computer',
+}
+
+_MDNS_MODEL_CLASS: dict[str, str] = {
+    'iphone':  'phone',
+    'ipad':    'phone',
+    'ipod':    'phone',
+    'mac':     'computer',
+    'xserve':  'nas',    # Synology NASes report model=Xserve
+}
+
+
+def _class_from_mdns(services: list[str], model: str) -> str | None:
+    model_l = model.lower()
+    for kw, cls in _MDNS_MODEL_CLASS.items():
+        if kw in model_l:
+            return cls
+    for svc in services:
+        cls = _MDNS_CLASS.get(svc)
+        if cls:
+            return cls
+    return None
+
+
+class _MDNSWorker(QThread):
+    result = Signal(dict)   # ip -> {'services': [str], 'model': str}
+
+    def run(self) -> None:
+        if not _CMD_AVAHI:
+            self.result.emit({})
+            return
+        try:
+            proc = subprocess.run(
+                [_CMD_AVAHI, '-a', '-t', '-r', '-p'],
+                capture_output=True, text=True, timeout=8,
+            )
+        except Exception:
+            self.result.emit({})
+            return
+
+        data: dict[str, dict] = {}
+        for line in proc.stdout.splitlines():
+            if not line.startswith('='):
+                continue
+            parts = line.split(';')
+            if len(parts) < 9 or parts[2] != 'IPv4':
+                continue
+            svc_type = parts[4]
+            ip       = parts[7]
+            txt      = ' '.join(parts[9:]) if len(parts) > 9 else ''
+            if not ip:
+                continue
+            if ip not in data:
+                data[ip] = {'services': [], 'model': ''}
+            if svc_type not in data[ip]['services']:
+                data[ip]['services'].append(svc_type)
+
+            # KDE Connect: refine via type= in TXT
+            if svc_type == '_kdeconnect._udp':
+                m = re.search(r'"type=([^"]+)"', txt)
+                if m and m.group(1) == 'phone':
+                    if '_kdeconnect_phone' not in data[ip]['services']:
+                        data[ip]['services'].append('_kdeconnect_phone')
+
+            # Extract device model from TXT records (various service types)
+            if not data[ip]['model']:
+                for key in ('model=', 'am='):
+                    m = re.search(rf'{key}([^";\s]+)', txt)
+                    if m:
+                        data[ip]['model'] = m.group(1)
+                        break
+
+            # "Device Info" is avahi's human-readable name for _device-info._tcp
+            if svc_type == 'Device Info' and not data[ip]['model']:
+                m = re.search(r'model=([^";\s]+)', txt)
+                if m:
+                    data[ip]['model'] = m.group(1)
+
+        self.result.emit(data)
+
+
 # ── Page ─────────────────────────────────────────────────────────────────────
 
 class TopologyPage(QWidget):
     def __init__(self) -> None:
         super().__init__()
-        self._worker:       _TopoWorker | None = None
+        self._worker:       _TopoWorker  | None = None
+        self._mdns_worker:  _MDNSWorker  | None = None
+        self._mdns_cache:   dict[str, dict]     = {}
         self._nodes:        dict[str, _NodeItem] = {}
         self._gateway_node: _NodeItem | None     = None
         self._scene_hint                          = None
@@ -520,12 +706,18 @@ class TopologyPage(QWidget):
         self._scene.clear()
         self._nodes.clear()
         self._gateway_node = None
+        self._mdns_cache.clear()
         self._add_scene_hint()
 
         self._btn_scan.setEnabled(False)
         self._btn_stop.setEnabled(True)
         self._lbl_status.setText(tr('topo_scanning'))
         self._lbl_status.setStyleSheet('color: palette(mid);')
+
+        if _CMD_AVAHI:
+            self._mdns_worker = _MDNSWorker()
+            self._mdns_worker.result.connect(self._on_mdns_result)
+            self._mdns_worker.start()
 
         self._worker = _TopoWorker(cidr, gateway, self_ip)
         self._worker.node_found.connect(self._on_node)
@@ -536,13 +728,32 @@ class TopologyPage(QWidget):
     def _stop(self) -> None:
         if self._worker:
             self._worker.stop()
+        if self._mdns_worker and self._mdns_worker.isRunning():
+            self._mdns_worker.terminate()
         self._btn_scan.setEnabled(True)
         self._btn_stop.setEnabled(False)
         self._lbl_status.setText(tr('topo_stopped'))
 
     # ── Node handling ─────────────────────────────────────────────────────────
 
+    def _on_mdns_result(self, mdns_data: dict) -> None:
+        self._mdns_cache = mdns_data
+        for ip, info in mdns_data.items():
+            cls = _class_from_mdns(info['services'], info['model'])
+            if cls and ip in self._nodes:
+                node = self._nodes[ip]
+                node.data['device_class'] = cls
+                node._dev_class = cls
+                node.update()
+
     def _on_node(self, data: dict) -> None:
+        data['device_class'] = _detect_device_class(data)
+        mdns = self._mdns_cache.get(data['ip'])
+        if mdns:
+            cls = _class_from_mdns(mdns['services'], mdns['model'])
+            if cls:
+                data['device_class'] = cls
+
         if self._scene_hint is not None:
             self._scene.removeItem(self._scene_hint)
             self._scene_hint = None
@@ -622,7 +833,7 @@ class TopologyPage(QWidget):
             lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             self._det_form.addRow(tr(key) + ' :', lbl)
 
-        row('topo_lbl_type',     tr(f'topo_type_{data["type"]}'))
+        row('topo_lbl_type',     tr(f'topo_type_{data.get("device_class", data["type"])}'))
         row('topo_lbl_ip',       data['ip'])
         row('topo_lbl_hostname', data.get('hostname', ''))
         row('topo_lbl_mac',      data.get('mac', '—'))
