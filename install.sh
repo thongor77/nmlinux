@@ -35,18 +35,19 @@ install_sys_deps() {
 
         sudo apt-get install -y python3-full python3-venv libgl1 libglib2.0-0 \
             libdbus-1-3 libxkbcommon0 libxkbcommon-x11-0 \
-            "$FREERDP_PKG" tigervnc-viewer nmap net-tools iputils-ping traceroute
+            "$FREERDP_PKG" tigervnc-viewer nmap net-tools iputils-ping traceroute \
+            avahi-utils
     elif command -v pacman &>/dev/null; then
         info "Detected pacman — use the AUR package instead: yay -S nmlinux"
         warn "Continuing anyway with pip install..."
     elif command -v dnf &>/dev/null; then
         info "Detected dnf — installing system dependencies..."
         sudo dnf install -y python3 python3-virtualenv mesa-libGL dbus-libs \
-            freerdp tigervnc nmap net-tools iputils traceroute
+            freerdp tigervnc nmap net-tools iputils traceroute avahi-tools
     elif command -v zypper &>/dev/null; then
         info "Detected zypper — installing system dependencies..."
         sudo zypper install -y python3 python3-virtualenv libGL1 dbus-1 \
-            freerdp tigervnc nmap net-tools iputils traceroute
+            freerdp tigervnc nmap net-tools iputils traceroute avahi
     else
         warn "Unknown package manager — skipping system dependencies."
         warn "Make sure python3-venv and OpenGL libs are installed."
