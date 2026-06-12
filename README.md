@@ -1,4 +1,4 @@
-# NMLinux · v1.3.5
+# NMLinux · v1.3.6
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.com/donate/?business=JFQGY7NU3ANCN&no_recurring=0&item_name=Every+donation%2C+no+matter+how+small%2C+helps+me+keep+this+project+alive.+Thank+you%21%0A&currency_code=EUR)
 
@@ -36,6 +36,13 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 ---
 
 ## Changelog
+
+### v1.3.6 — 2026-06-12
+
+- **Topology — device icons** — each node now displays a Lucide SVG icon matching its device type (router/wifi, computer/laptop, printer, NAS/server, smartphone, network switch, Raspberry Pi) instead of a generic circle; 5 new bundled SVG icons (`printer`, `server`, `smartphone`, `cpu`, `laptop`)
+- **Topology — mDNS detection** — device type is detected via `avahi-browse` (optional, runs in parallel with nmap scan); identifies printers (`_ipp._tcp`, `PDL Printer`), Android phones and TVs (`_googlecast._tcp`, `_androidtvremote2._tcp`), Apple Macs (`am=Mac16,x` model in AirPlay TXT), NAS devices (Synology reports `model=Xserve`), KDE Connect desktops; falls back to MAC vendor OUI and hostname heuristics when avahi is unavailable
+- **Topology — detail panel** shows the detected device class (Printer, Smartphone, NAS…) instead of the generic "Host" label; i18n in all 8 languages
+- **Traceroute — auto-zoom** — the world map automatically zooms and centres on the bounding box of geolocated hops at the end of each route; disables when the user pans or zooms manually; restores on next traceroute; right-click resets to full world view
 
 ### v1.3.5 — 2026-06-06
 
