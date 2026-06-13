@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
     QListWidget, QListWidgetItem, QStackedWidget, QFrame, QSizePolicy,
@@ -284,6 +286,7 @@ class MainWindow(QMainWindow):
         root.addWidget(right, 1)
 
         self._setup_palette()
+        self._setup_export_menu()
 
     def _build_sidebar(self) -> QFrame:
         frame = QFrame()
@@ -411,6 +414,33 @@ class MainWindow(QMainWindow):
         labels = [label for _, label, _, _ in _TOOLS]
         self._palette = CommandPalette(labels, self.navigate_to, parent=self)
         QShortcut(QKeySequence("Ctrl+P"), self).activated.connect(self._open_palette)
+
+    def _setup_export_menu(self) -> None:
+        file_menu = self.menuBar().addMenu("File")
+        export_action = file_menu.addAction("Export Network Report…")
+        export_action.triggered.connect(self._on_export_report)
+
+    def _on_export_report(self) -> None:
+        from PySide6.QtWidgets import QFileDialog, QMessageBox
+        from nmlinux.export_manager import collect_snapshot, save_export
+
+        filepath, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Network Report",
+            "network-report",
+            "JSON (*.json);;Markdown (*.md);;Text (*.txt);;PDF (*.pdf)",
+        )
+        if not filepath:
+            return
+
+        ext_map = {".json": "json", ".md": "md", ".txt": "txt", ".pdf": "pdf"}
+        fmt = ext_map.get(Path(filepath).suffix.lower(), "json")
+        data = collect_snapshot()
+        error = save_export(data, fmt, filepath)
+        if error:
+            QMessageBox.warning(self, "Export Error", error)
+        else:
+            QMessageBox.information(self, "Export", f"Report saved to:\n{filepath}")
 
     def navigate_to(self, index: int) -> None:
         if 0 <= index < len(_TOOLS):
