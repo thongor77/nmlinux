@@ -1,6 +1,6 @@
-# NMLinux · v1.3.8
+# NMLinux · v1.3.9
 
-[![Version](https://img.shields.io/badge/version-1.3.8-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.3.9-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -49,6 +49,10 @@ Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkM
 ---
 
 ## Changelog
+
+### v1.3.9 — 2026-06-13
+
+- **SSH agent forwarding** — nouvelle option "Agent forwarding" dans le formulaire de connexion SSH ; ajoute `-A` à la commande `ssh` ; permet de rebondir de serveur en serveur (PC → A → B) sans copier la clé privée ; nécessite un agent SSH actif (`SSH_AUTH_SOCK`) ; aide contextuelle mise à jour en 8 langues
 
 ### v1.3.8 — 2026-06-13
 
