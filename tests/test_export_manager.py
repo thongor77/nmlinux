@@ -58,12 +58,7 @@ def test_to_pdf_missing_reportlab_returns_message():
         "reportlab.pdfgen": None,
         "reportlab.pdfgen.canvas": None,
     }):
-        def patched_to_pdf(data, filepath):
-            try:
-                import reportlab  # noqa: F401
-            except (ImportError, TypeError):
-                return "PDF export requires 'reportlab'. Install with: pip install reportlab"
-        error = patched_to_pdf(SAMPLE, "/tmp/test_nmlinux.pdf")
+        error = to_pdf(SAMPLE, "/tmp/test_nmlinux.pdf")
     assert error is not None
     assert "reportlab" in error
 
@@ -109,3 +104,10 @@ def test_collect_dns_ignores_comments(tmp_path):
 def test_collect_dns_missing_file_returns_empty():
     result = _collect_dns("/nonexistent/resolv.conf")
     assert result == []
+
+
+def test_save_export_unknown_format_returns_error(tmp_path):
+    path = str(tmp_path / "report.xyz")
+    error = save_export(SAMPLE, "xyz", path)
+    assert error is not None
+    assert "xyz" in error

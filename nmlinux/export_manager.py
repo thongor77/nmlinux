@@ -162,12 +162,17 @@ def save_export(data: dict, fmt: str, filepath: str) -> str | None:
     """Serialize data to filepath in the given format.
     fmt: 'json' | 'txt' | 'md' | 'pdf'
     Returns an error message string on failure, None on success."""
-    if fmt == "json":
-        Path(filepath).write_text(to_json(data), encoding="utf-8")
-    elif fmt == "txt":
-        Path(filepath).write_text(to_text(data), encoding="utf-8")
-    elif fmt == "md":
-        Path(filepath).write_text(to_markdown(data), encoding="utf-8")
-    elif fmt == "pdf":
-        return to_pdf(data, filepath)
+    try:
+        if fmt == "json":
+            Path(filepath).write_text(to_json(data), encoding="utf-8")
+        elif fmt == "txt":
+            Path(filepath).write_text(to_text(data), encoding="utf-8")
+        elif fmt == "md":
+            Path(filepath).write_text(to_markdown(data), encoding="utf-8")
+        elif fmt == "pdf":
+            return to_pdf(data, filepath)
+        else:
+            return f"Unsupported format: {fmt!r}"
+    except OSError as e:
+        return str(e)
     return None
