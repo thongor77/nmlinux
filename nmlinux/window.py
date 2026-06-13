@@ -4,7 +4,8 @@ from PySide6.QtWidgets import (
     QStyledItemDelegate, QStyle,
 )
 from PySide6.QtCore import QSize, Qt, Signal
-from PySide6.QtGui import QPainter, QColor, QFont
+from PySide6.QtGui import QPainter, QColor, QFont, QShortcut, QKeySequence
+from nmlinux.command_palette import CommandPalette
 
 from nmlinux.core.i18n import tr
 from nmlinux.core.icons import themed_icon
@@ -282,6 +283,8 @@ class MainWindow(QMainWindow):
         rv.addWidget(CliBar())
         root.addWidget(right, 1)
 
+        self._setup_palette()
+
     def _build_sidebar(self) -> QFrame:
         frame = QFrame()
         frame.setFixedWidth(190)
@@ -403,3 +406,15 @@ class MainWindow(QMainWindow):
     def _on_language_changed(self) -> None:
         self._settings_item.setText(tr("nav_settings"))
         self._about_item.setText(tr("nav_about"))
+
+    def _setup_palette(self) -> None:
+        labels = [label for _, label, _, _ in _TOOLS]
+        self._palette = CommandPalette(labels, self.navigate_to, parent=self)
+        QShortcut(QKeySequence("Ctrl+P"), self).activated.connect(self._open_palette)
+
+    def navigate_to(self, index: int) -> None:
+        if 0 <= index < len(_TOOLS):
+            self._nav.setCurrentRow(index)
+
+    def _open_palette(self) -> None:
+        self._palette.open_palette()
