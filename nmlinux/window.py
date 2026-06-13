@@ -184,7 +184,6 @@ _TOOLS = [
     ),
 ]
 
-
 class _NavList(QListWidget):
     """QListWidget that detects clicks on the ? badge and emits help_requested."""
 
@@ -421,25 +420,13 @@ class MainWindow(QMainWindow):
         export_action.triggered.connect(self._on_export_report)
 
     def _on_export_report(self) -> None:
-        from PySide6.QtWidgets import QFileDialog, QMessageBox
-        import re
+        from PySide6.QtWidgets import QMessageBox
         from nmlinux.export_manager import collect_snapshot, save_export
+        from nmlinux.core.export_dialog import open_export_dialog
 
-        filepath, selected_filter = QFileDialog.getSaveFileName(
-            self,
-            "Export Network Report",
-            "network-report.json",
-            "JSON (*.json);;Markdown (*.md);;Text (*.txt);;PDF (*.pdf)",
-        )
+        filepath, fmt = open_export_dialog(self, "Export Network Report", "network-report")
         if not filepath:
             return
-
-        m = re.search(r'\*(\.\w+)', selected_filter)
-        if m:
-            filepath = str(Path(filepath).with_suffix(m.group(1)))
-
-        ext_map = {".json": "json", ".md": "md", ".txt": "txt", ".pdf": "pdf"}
-        fmt = ext_map.get(Path(filepath).suffix.lower(), "json")
         data = collect_snapshot()
         error = save_export(data, fmt, filepath)
         if error:

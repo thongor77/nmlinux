@@ -335,32 +335,20 @@ class InterfacesPage(QWidget):
             self._detail.setVisible(False)
 
     def _export(self) -> None:
-        from PySide6.QtWidgets import QFileDialog, QMessageBox
-        from pathlib import Path
+        from PySide6.QtWidgets import QMessageBox
         from datetime import datetime
-        import re
         from nmlinux.export_manager import save_export
+        from nmlinux.core.export_dialog import open_export_dialog
 
-        filepath, selected_filter = QFileDialog.getSaveFileName(
-            self,
-            "Export Interfaces",
-            "interfaces.json",
-            "JSON (*.json);;Markdown (*.md);;Text (*.txt);;PDF (*.pdf)",
-        )
+        filepath, fmt = open_export_dialog(self, "Export Interfaces", "interfaces")
         if not filepath:
             return
-
-        m = re.search(r'\*(\.\w+)', selected_filter)
-        if m:
-            filepath = str(Path(filepath).with_suffix(m.group(1)))
 
         data = {
             "timestamp": datetime.now().isoformat(),
             "module": "Interfaces",
             "interfaces": getattr(self, "_ifaces", []),
         }
-        ext_map = {".json": "json", ".md": "md", ".txt": "txt", ".pdf": "pdf"}
-        fmt = ext_map.get(Path(filepath).suffix.lower(), "json")
         error = save_export(data, fmt, filepath)
         if error:
             QMessageBox.warning(self, "Export Error", error)
