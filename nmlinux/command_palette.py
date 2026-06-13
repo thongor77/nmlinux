@@ -49,3 +49,67 @@ def filter_modules(query: str, module_labels: list[str]) -> list[tuple[int, str]
         if q in label.lower() or any(q in kw for kw in keywords):
             results.append((i, label))
     return results
+
+
+class CommandPalette(QDialog):
+    def __init__(
+        self,
+        module_labels: list[str],
+        navigate_fn: Callable[[int], None],
+        parent=None,
+    ) -> None:
+        super().__init__(parent)
+        self._labels = module_labels
+        self._navigate_fn = navigate_fn
+        self._setup_ui()
+
+    def _setup_ui(self) -> None:
+        self.setWindowTitle("")
+        self.setFixedWidth(500)
+        self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(4)
+
+        self._search = QLineEdit()
+        self._search.setPlaceholderText("Go to module…  (Esc to close)")
+        self._search.textChanged.connect(self._on_text_changed)
+        self._search.returnPressed.connect(self._navigate_selected)
+        layout.addWidget(self._search)
+
+        self._list = QListWidget()
+        self._list.setMaximumHeight(240)
+        self._list.itemActivated.connect(self._navigate_selected)
+        layout.addWidget(self._list)
+
+    def _on_text_changed(self, text: str) -> None:
+        self._list.clear()
+        query = text.strip()
+        # Only filter when 2+ chars to avoid noisy single-character results
+        effective_query = query if len(query) >= 2 else ""
+        for idx, label in filter_modules(effective_query, self._labels):
+            item = QListWidgetItem(label)
+            item.setData(Qt.ItemDataRole.UserRole, idx)
+            self._list.addItem(item)
+        if self._list.count() > 0:
+            self._list.setCurrentRow(0)
+
+    def _navigate_selected(self) -> None:
+        item = self._list.currentItem()
+        if item:
+            idx = item.data(Qt.ItemDataRole.UserRole)
+            self._navigate_fn(idx)
+            self.accept()
+
+    def open_palette(self) -> None:
+        """Show palette centered at the top of the parent window."""
+        self._search.clear()
+        self._on_text_changed("")
+        self._search.setFocus()
+        if self.parent():
+            pw = self.parent().geometry()  # type: ignore[union-attr]
+            self.adjustSize()
+            x = pw.x() + (pw.width() - self.width()) // 2
+            y = pw.y() + 60
+            self.move(x, y)
+        self.exec()
