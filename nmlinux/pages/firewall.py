@@ -376,6 +376,11 @@ class FirewallPage(QWidget):
         self._btn_refresh.clicked.connect(self._on_refresh)
         bar.addWidget(self._btn_refresh)
 
+        self._btn_export = QPushButton("Export")
+        self._btn_export.setFixedWidth(80)
+        self._btn_export.clicked.connect(self._export)
+        bar.addWidget(self._btn_export)
+
         layout.addLayout(bar)
 
         # Status
@@ -571,6 +576,28 @@ class FirewallPage(QWidget):
             self._table.setItem(r, col, item)
 
     # ── Filter ───────────────────────────────────────────────────────────────
+
+    def _export(self) -> None:
+        from PySide6.QtWidgets import QMessageBox
+        from datetime import datetime
+        from nmlinux.export_manager import save_export
+        from nmlinux.core.export_dialog import open_export_dialog
+
+        filepath, fmt = open_export_dialog(self, "Export Firewall Rules", "firewall-rules")
+        if not filepath:
+            return
+
+        data = {
+            "timestamp": datetime.now().isoformat(),
+            "module": "Firewall",
+            "source": self._src_box.currentText(),
+            "rules": self._rows,
+        }
+        error = save_export(data, fmt, filepath)
+        if error:
+            QMessageBox.warning(self, "Export Error", error)
+        else:
+            QMessageBox.information(self, "Export", f"Saved to:\n{filepath}")
 
     def _apply_filter(self, text: str) -> None:
         needle = text.lower()

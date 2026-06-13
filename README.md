@@ -1,15 +1,23 @@
-# NMLinux · v1.3.6
+# NMLinux · v1.3.8
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.com/donate/?business=JFQGY7NU3ANCN&no_recurring=0&item_name=Every+donation%2C+no+matter+how+small%2C+helps+me+keep+this+project+alive.+Thank+you%21%0A&currency_code=EUR)
 
-**A free Linux adaptation of [NETworkManager](https://github.com/BornToBeRoot/NETworkManager) by BornToBeRoot.**
+**A unified network toolkit for Linux and macOS — inspect, connect, diagnose.**
 
-NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented from scratch in Python and PySide6 (Qt 6). It is not a port of the original C# code, but an independent project inspired by the same idea: a single, unified GUI for the most common network tools a sysadmin or power user needs.
+NMLinux is a single, unified GUI that brings together 27 network modules in one window: interface monitoring, Wi-Fi, DNS, SSH terminal, firewall viewer, topology map, traceroute, and more. Built from scratch in Python and PySide6 (Qt 6), with 8 interface languages and no external dependencies beyond standard system tools.
+
+Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkManager) by BornToBeRoot (a Windows-only tool), NMLinux has since grown well beyond that starting point — adding a PTY-embedded SSH terminal, interactive topology map, macOS support, TLS inspector, and now a command palette and multi-format export engine.
 
 > [!NOTE]
-> **NMLinux is not related to the Linux system daemon `/usr/bin/NetworkManager` (NetworkManager by Red Hat/GNOME).** The name comes from [NETworkManager](https://github.com/BornToBeRoot/NETworkManager) by BornToBeRoot, a similar tool for Windows that served as the original inspiration.
+> **NMLinux is not related to the Linux system daemon `/usr/bin/NetworkManager` (NetworkManager by Red Hat/GNOME).** The name refers to [NETworkManager](https://github.com/BornToBeRoot/NETworkManager) by BornToBeRoot, the Windows tool that originally inspired this project.
 
 > Built with [Claude Code](https://claude.ai/code) (Anthropic) and the contribution of its author.
+
+---
+
+## Community
+
+**[GitHub Discussions](https://github.com/thongor77/nmlinux/discussions) are open** — share feedback, report ideas, ask questions, or just say hello. The author has 30+ years in infrastructure and operations, and built this tool because good, free, and simple software should exist for Linux too.
 
 ---
 
@@ -36,6 +44,12 @@ NMLinux brings the spirit of NETworkManager to Linux desktops, reimplemented fro
 ---
 
 ## Changelog
+
+### v1.3.8 — 2026-06-13
+
+- **Command Palette (Ctrl+P)** — instant keyboard navigation to any of the 27 modules; fuzzy search on name and keywords (e.g. "firewall", "tls", "ssh key", "scan"); Up/Down arrows + Enter or single click to navigate; opens with Ctrl+P from anywhere in the app
+- **Export Manager** — export a full network snapshot (interfaces, routes, DNS resolvers) from File → Export Network Report… in JSON, Markdown, plain text or PDF (optional: `pip install reportlab`)
+- **Module-level export buttons** — Export buttons added to Interfaces, DNS, Firewall, SSH Connections, and Connection Manager pages; each page exports its current data in the chosen format with live filename extension update when the format filter changes
 
 ### v1.3.6 — 2026-06-12
 
@@ -148,6 +162,8 @@ Initial public release — 13 modules: Dashboard, Interfaces, Wi-Fi, Subnet Calc
 | **Wake on LAN** | Pure Python magic packet (UDP broadcast), persistent host book, no external tool required |
 | **Topology Map** | Auto-discovers LAN devices via `nmap -sn`; interactive graph with draggable nodes, zoom/pan, detail panel |
 | **Settings** | Language selection (FR / EN / ES / DE / IT / PT / JA / ZH), persisted; restart required after change |
+| **Command Palette** | Ctrl+P overlay: fuzzy search across all 27 modules by name or keyword |
+| **Export** | File → Export Network Report (JSON/Markdown/Text/PDF); per-module export on Interfaces, DNS, Firewall, SSH, Connections |
 
 ---
 
@@ -212,7 +228,7 @@ brew install nmap whois net-snmp mtr curl
 
 # 2. Install NMLinux and its Python dependencies
 pip install PySide6 ptyprocess pyte
-pip install nmlinux-1.3.5-py3-none-any.whl   # download from Releases, or use the line below
+pip install nmlinux-1.3.8-py3-none-any.whl   # download from Releases, or use the line below
 
 # Alternative: run directly from source (no install)
 git clone https://github.com/thongor77/nmlinux.git
@@ -253,7 +269,7 @@ Download the `.whl` from the [latest release](https://github.com/thongor77/nmlin
 
 ```bash
 # Arch / Fedora / macOS — no pip restrictions
-pip install nmlinux-1.3.5-py3-none-any.whl
+pip install nmlinux-1.3.8-py3-none-any.whl
 
 # Debian / Ubuntu / Mint — install system libs first, then use pipx
 # Ubuntu ≤24.04:
@@ -261,7 +277,7 @@ sudo apt install libgl1 libglib2.0-0 libdbus-1-3 freerdp2-x11 tigervnc-viewer
 # Ubuntu 26.04+:
 sudo apt install libgl1 libglib2.0-0 libdbus-1-3 freerdp3-x11 tigervnc-viewer
 
-pipx install nmlinux-1.3.5-py3-none-any.whl
+pipx install nmlinux-1.3.8-py3-none-any.whl
 ```
 
 > **Note for Ubuntu 26.04+:** `pipx` requires system libraries (libGL, etc.) to be installed first — the commands above cover them. If `pipx install` fails due to a PySide6 build error, use **Option 3** (install script) instead, which handles everything automatically.
@@ -313,6 +329,9 @@ nmlinux/
     vnc.py          — VncConnection dataclass, VncStore, find_vncviewer()
     terminal.py     — SshWorker (QThread) + PTY via ptyprocess, emits raw bytes
     cli_bar.py      — CliBar singleton: pedagogical CLI equivalent bar
+    export_dialog.py — open_export_dialog(): QFileDialog with live extension update
+  command_palette.py — CommandPalette (Ctrl+P): fuzzy search across 27 modules
+  export_manager.py  — collect_snapshot(), to_json/text/markdown/pdf, save_export()
   pages/
     about.py        — About page (credits, tools & services)
     bandwidth.py    — Bandwidth Monitor: per-interface 60s graph, live stats

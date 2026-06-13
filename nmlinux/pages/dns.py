@@ -97,6 +97,7 @@ class DnsPage(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self._worker: DnsWorker | None = None
+        self._result_rows: list = []
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -132,11 +133,16 @@ class DnsPage(QWidget):
         self._btn.setDefault(True)
         self._btn.clicked.connect(self._on_query)
 
+        self._btn_export = QPushButton("Export")
+        self._btn_export.setFixedWidth(80)
+        self._btn_export.clicked.connect(self._export)
+
         bar.addWidget(self._input, 1)
         bar.addWidget(self._rtype_cb)
         bar.addWidget(QLabel(tr("dns_server_lbl")))
         bar.addWidget(self._server_cb)
         bar.addWidget(self._btn)
+        bar.addWidget(self._btn_export)
         layout.addLayout(bar)
 
         self._table = QTableWidget(0, 3)
@@ -214,6 +220,7 @@ class DnsPage(QWidget):
 
     def _on_done(self, rows: list) -> None:
         self._btn.setEnabled(True)
+        self._result_rows = rows
         self._status.setStyleSheet("color: palette(mid);")
         self._status.setText(tr("dns_records_found", n=len(rows)))
 
@@ -228,6 +235,31 @@ class DnsPage(QWidget):
             self._table.setItem(r, 2, QTableWidgetItem(value))
 
         self._table.setVisible(True)
+
+    def _export(self) -> None:
+        from PySide6.QtWidgets import QMessageBox
+        from datetime import datetime
+        from nmlinux.export_manager import save_export
+        from nmlinux.core.export_dialog import open_export_dialog
+
+        filepath, fmt = open_export_dialog(self, "Export DNS Results", "dns-results")
+        if not filepath:
+            return
+
+        records = [{"type": t, "ttl": ttl, "value": v} for t, ttl, v in self._result_rows]
+        data = {
+            "timestamp": datetime.now().isoformat(),
+            "module": "DNS",
+            "query": self._input.text().strip(),
+            "record_type": self._rtype_cb.currentText(),
+            "server": self._server_cb.currentText(),
+            "records": records,
+        }
+        error = save_export(data, fmt, filepath)
+        if error:
+            QMessageBox.warning(self, "Export Error", error)
+        else:
+            QMessageBox.information(self, "Export", f"Saved to:\n{filepath}")
 
     def showEvent(self, event) -> None:  # noqa: N802
         self._update_cli()

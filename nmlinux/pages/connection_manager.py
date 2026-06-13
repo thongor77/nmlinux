@@ -417,6 +417,12 @@ class ConnectionManagerPage(QWidget):
         )
         self._btn_refresh.clicked.connect(self._refresh)
         bar.addWidget(self._btn_refresh)
+
+        self._btn_export = QPushButton("Export")
+        self._btn_export.setFixedWidth(80)
+        self._btn_export.clicked.connect(self._export)
+        bar.addWidget(self._btn_export)
+
         root.addLayout(bar)
 
         # Splitter
@@ -724,6 +730,27 @@ class ConnectionManagerPage(QWidget):
         color = color_err() if error else color_ok()
         self._status.setStyleSheet(f'color: {color};')
         self._status.setText(msg)
+
+    def _export(self) -> None:
+        from PySide6.QtWidgets import QMessageBox
+        from datetime import datetime
+        from nmlinux.export_manager import save_export
+        from nmlinux.core.export_dialog import open_export_dialog
+
+        filepath, fmt = open_export_dialog(self, "Export Connections", "connections")
+        if not filepath:
+            return
+
+        data = {
+            "timestamp": datetime.now().isoformat(),
+            "module": "Connections",
+            "connections": [c._asdict() for c in self._conns],
+        }
+        error = save_export(data, fmt, filepath)
+        if error:
+            QMessageBox.warning(self, "Export Error", error)
+        else:
+            QMessageBox.information(self, "Export", f"Saved to:\n{filepath}")
 
     def hideEvent(self, event) -> None:                     # noqa: N802
         if hasattr(self, '_timer'):

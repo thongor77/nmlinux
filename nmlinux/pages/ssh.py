@@ -66,8 +66,11 @@ class SshPage(QWidget):
         btn_new_conn.clicked.connect(self._on_new)
         btn_new_grp  = QPushButton(QIcon.fromTheme("folder-new"), " " + tr("ssh_new_grp_btn"))
         btn_new_grp.clicked.connect(self._on_new_group)
+        btn_export = QPushButton("Export")
+        btn_export.clicked.connect(self._export)
         layout.addWidget(btn_new_conn)
         layout.addWidget(btn_new_grp)
+        layout.addWidget(btn_export)
 
         self._tree = QTreeWidget()
         self._tree.setHeaderHidden(True)
@@ -672,6 +675,28 @@ class SshPage(QWidget):
             self._term_view.set_writer(None)
             w.stop()
             self._worker = None
+
+    def _export(self) -> None:
+        from PySide6.QtWidgets import QMessageBox
+        from datetime import datetime
+        from dataclasses import asdict
+        from nmlinux.export_manager import save_export
+        from nmlinux.core.export_dialog import open_export_dialog
+
+        filepath, fmt = open_export_dialog(self, "Export SSH Connections", "ssh-connections")
+        if not filepath:
+            return
+
+        data = {
+            "timestamp": datetime.now().isoformat(),
+            "module": "SSH",
+            "connections": [asdict(c) for c in self._connections],
+        }
+        error = save_export(data, fmt, filepath)
+        if error:
+            QMessageBox.warning(self, "Export Error", error)
+        else:
+            QMessageBox.information(self, "Export", f"Saved to:\n{filepath}")
 
     def closeEvent(self, event) -> None:  # type: ignore[override]
         self._stop_worker()
