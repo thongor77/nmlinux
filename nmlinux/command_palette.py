@@ -79,7 +79,7 @@ class CommandPalette(QDialog):
 
         self._list = QListWidget()
         self._list.setMaximumHeight(240)
-        self._list.itemActivated.connect(self._navigate_selected)
+        self._list.itemClicked.connect(self._navigate_selected)
         layout.addWidget(self._list)
 
     def _on_text_changed(self, text: str) -> None:
@@ -101,10 +101,20 @@ class CommandPalette(QDialog):
             self._navigate_fn(idx)
             self.accept()
 
+    def keyPressEvent(self, event) -> None:
+        key = event.key()
+        if key == Qt.Key.Key_Down:
+            row = min(self._list.currentRow() + 1, self._list.count() - 1)
+            self._list.setCurrentRow(row)
+        elif key == Qt.Key.Key_Up:
+            row = max(self._list.currentRow() - 1, 0)
+            self._list.setCurrentRow(row)
+        else:
+            super().keyPressEvent(event)
+
     def open_palette(self) -> None:
         """Show palette centered at the top of the parent window."""
         self._search.clear()
-        self._on_text_changed("")
         self._search.setFocus()
         if self.parent():
             pw = self.parent().geometry()  # type: ignore[union-attr]
