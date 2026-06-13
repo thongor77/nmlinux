@@ -52,7 +52,7 @@ Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkM
 
 ### v1.3.9 — 2026-06-13
 
-- **SSH agent forwarding** — nouvelle option "Agent forwarding" dans le formulaire de connexion SSH ; ajoute `-A` à la commande `ssh` ; permet de rebondir de serveur en serveur (PC → A → B) sans copier la clé privée ; nécessite un agent SSH actif (`SSH_AUTH_SOCK`) ; aide contextuelle mise à jour en 8 langues
+- **SSH agent forwarding** — new "Agent forwarding" checkbox in the SSH connection form; adds `-A` to the `ssh` command; allows jumping between servers without copying your private key (PC → A → B); requires an active SSH agent (`SSH_AUTH_SOCK`); contextual help updated in all 8 languages
 
 ### v1.3.8 — 2026-06-13
 
