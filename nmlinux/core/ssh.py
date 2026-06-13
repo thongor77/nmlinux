@@ -22,14 +22,15 @@ class SshGroup:
 
 @dataclass
 class SshConnection:
-    id:       str = field(default_factory=lambda: str(uuid.uuid4()))
-    name:     str = ""
-    host:     str = ""
-    port:     int = 22
-    username: str = ""
-    key_path: str = ""
-    notes:    str = ""
-    group_id: str = ""    # "" = no group (root level)
+    id:            str  = field(default_factory=lambda: str(uuid.uuid4()))
+    name:          str  = ""
+    host:          str  = ""
+    port:          int  = 22
+    username:      str  = ""
+    key_path:      str  = ""
+    notes:         str  = ""
+    group_id:      str  = ""    # "" = no group (root level)
+    forward_agent: bool = False
 
     @property
     def display_name(self) -> str:
@@ -101,6 +102,8 @@ class SshStore:
 
 def build_ssh_args(conn: SshConnection) -> list[str]:
     args = ["ssh"]
+    if conn.forward_agent:
+        args.append("-A")
     if conn.key_path:
         args += ["-i", conn.key_path]
     if conn.port != 22:

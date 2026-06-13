@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QLabel, QLineEdit, QSpinBox, QPushButton, QTextEdit,
     QFrame, QGroupBox, QSplitter, QFileDialog,
     QMessageBox, QToolButton, QApplication,
-    QComboBox, QInputDialog, QMenu,
+    QComboBox, QInputDialog, QMenu, QCheckBox,
 )
 from PySide6.QtGui import (
     QIcon, QFontDatabase,
@@ -124,12 +124,13 @@ class SshPage(QWidget):
         self._det: dict[str, QLabel] = {}
         mono = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
         for key, label in [
-            ("host",     "Hôte"),
-            ("port",     "Port"),
-            ("username", "Utilisateur"),
-            ("key_path", "Clé SSH"),
-            ("command",  "Commande"),
-            ("notes",    "Notes"),
+            ("host",          "Hôte"),
+            ("port",          "Port"),
+            ("username",      "Utilisateur"),
+            ("key_path",      "Clé SSH"),
+            ("forward_agent", "Agent forwarding"),
+            ("command",       "Commande"),
+            ("notes",         "Notes"),
         ]:
             val = QLabel()
             val.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
@@ -191,13 +192,21 @@ class SshPage(QWidget):
         btn_browse.clicked.connect(self._on_browse_key)
         key_row.addWidget(self._f_key, 1); key_row.addWidget(btn_browse)
 
-        form.addRow("Nom :",         self._f_name)
-        form.addRow("Groupe :",      self._f_group)
-        form.addRow("Hôte * :",      self._f_host)
-        form.addRow("Port :",        self._f_port)
-        form.addRow("Utilisateur :", self._f_user)
-        form.addRow("Clé SSH :",     key_row)
-        form.addRow("Notes :",       self._f_notes)
+        self._f_forward_agent = QCheckBox("Activer")
+        self._f_forward_agent.setToolTip(
+            "Ajoute -A à la commande SSH.\n"
+            "Nécessite un agent SSH actif (SSH_AUTH_SOCK).\n"
+            "Permet de rebondir vers d'autres serveurs sans copier ta clé privée."
+        )
+
+        form.addRow("Nom :",              self._f_name)
+        form.addRow("Groupe :",           self._f_group)
+        form.addRow("Hôte * :",           self._f_host)
+        form.addRow("Port :",             self._f_port)
+        form.addRow("Utilisateur :",      self._f_user)
+        form.addRow("Clé SSH :",          key_row)
+        form.addRow("Agent forwarding :", self._f_forward_agent)
+        form.addRow("Notes :",            self._f_notes)
         layout.addWidget(card)
         layout.addStretch(1)
 
@@ -430,6 +439,7 @@ class SshPage(QWidget):
         self._det["port"].setText(str(conn.port))
         self._det["username"].setText(conn.username or "—")
         self._det["key_path"].setText(conn.key_path or "— (mot de passe)")
+        self._det["forward_agent"].setText("Oui (-A)" if conn.forward_agent else "Non")
         self._det["command"].setText(conn.ssh_command)
         self._det["notes"].setText(conn.notes or "")
         self._right.setCurrentIndex(_DETAIL)
@@ -459,6 +469,7 @@ class SshPage(QWidget):
         self._f_port.setValue(conn.port)
         self._f_user.setText(conn.username)
         self._f_key.setText(conn.key_path)
+        self._f_forward_agent.setChecked(conn.forward_agent)
         self._f_notes.setPlainText(conn.notes)
         self._right.setCurrentIndex(_FORM)
         self._f_host.setFocus()
@@ -496,6 +507,7 @@ class SshPage(QWidget):
         self._f_port.setValue(22)
         self._f_user.clear()
         self._f_key.clear()
+        self._f_forward_agent.setChecked(False)
         self._f_notes.clear()
         self._right.setCurrentIndex(_FORM)
         self._f_host.setFocus()
@@ -513,9 +525,10 @@ class SshPage(QWidget):
             host     = host,
             port     = self._f_port.value(),
             username = self._f_user.text().strip(),
-            key_path = self._f_key.text().strip(),
-            notes    = self._f_notes.toPlainText().strip(),
-            group_id = self._f_group.currentData() or "",
+            key_path      = self._f_key.text().strip(),
+            forward_agent = self._f_forward_agent.isChecked(),
+            notes         = self._f_notes.toPlainText().strip(),
+            group_id      = self._f_group.currentData() or "",
         )
         if self._editing_id:
             self._connections = [
