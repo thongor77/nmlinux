@@ -266,6 +266,10 @@ class InterfacesPage(QWidget):
         header.addWidget(title)
         header.addStretch(1)
         header.addWidget(self._btn_refresh)
+        self._btn_export = QPushButton("Export")
+        self._btn_export.setFixedWidth(80)
+        self._btn_export.clicked.connect(self._export)
+        header.addWidget(self._btn_export)
         layout.addLayout(header)
 
         headers = [
@@ -329,6 +333,34 @@ class InterfacesPage(QWidget):
             self._detail.show_iface(self._ifaces[row])
         else:
             self._detail.setVisible(False)
+
+    def _export(self) -> None:
+        from PySide6.QtWidgets import QFileDialog, QMessageBox
+        from pathlib import Path
+        from datetime import datetime
+        from nmlinux.export_manager import save_export
+
+        filepath, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Interfaces",
+            "interfaces",
+            "JSON (*.json);;Markdown (*.md);;Text (*.txt);;PDF (*.pdf)",
+        )
+        if not filepath:
+            return
+
+        data = {
+            "timestamp": datetime.now().isoformat(),
+            "module": "Interfaces",
+            "interfaces": getattr(self, "_ifaces", []),
+        }
+        ext_map = {".json": "json", ".md": "md", ".txt": "txt", ".pdf": "pdf"}
+        fmt = ext_map.get(Path(filepath).suffix.lower(), "json")
+        error = save_export(data, fmt, filepath)
+        if error:
+            QMessageBox.warning(self, "Export Error", error)
+        else:
+            QMessageBox.information(self, "Export", f"Saved to:\n{filepath}")
 
     def showEvent(self, event) -> None:  # noqa: N802
         bar = get_cli_bar()
