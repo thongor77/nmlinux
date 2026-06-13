@@ -422,9 +422,10 @@ class MainWindow(QMainWindow):
 
     def _on_export_report(self) -> None:
         from PySide6.QtWidgets import QFileDialog, QMessageBox
+        import re
         from nmlinux.export_manager import collect_snapshot, save_export
 
-        filepath, _ = QFileDialog.getSaveFileName(
+        filepath, selected_filter = QFileDialog.getSaveFileName(
             self,
             "Export Network Report",
             "network-report",
@@ -432,6 +433,10 @@ class MainWindow(QMainWindow):
         )
         if not filepath:
             return
+
+        m = re.search(r'\*(\.\w+)', selected_filter)
+        if m and not filepath.lower().endswith(m.group(1)):
+            filepath += m.group(1)
 
         ext_map = {".json": "json", ".md": "md", ".txt": "txt", ".pdf": "pdf"}
         fmt = ext_map.get(Path(filepath).suffix.lower(), "json")

@@ -338,9 +338,10 @@ class InterfacesPage(QWidget):
         from PySide6.QtWidgets import QFileDialog, QMessageBox
         from pathlib import Path
         from datetime import datetime
+        import re
         from nmlinux.export_manager import save_export
 
-        filepath, _ = QFileDialog.getSaveFileName(
+        filepath, selected_filter = QFileDialog.getSaveFileName(
             self,
             "Export Interfaces",
             "interfaces",
@@ -348,6 +349,10 @@ class InterfacesPage(QWidget):
         )
         if not filepath:
             return
+
+        m = re.search(r'\*(\.\w+)', selected_filter)
+        if m and not filepath.lower().endswith(m.group(1)):
+            filepath += m.group(1)
 
         data = {
             "timestamp": datetime.now().isoformat(),
