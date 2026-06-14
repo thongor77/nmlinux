@@ -251,7 +251,7 @@ git pull && python3 -m nmlinux.main
 
 Download the `.whl` from the [latest release](https://github.com/thongor77/nmlinux/releases/latest).
 
-> **Note:** NMLinux uses native macOS commands (`networksetup`, `scutil`, `ifconfig`, `pfctl`, `system_profiler`…) on 9 modules. Some features requiring `nmcli` (Linux NetworkManager) are not available on macOS.
+> **Note:** Most modules work on macOS without modification. 9 modules use native macOS commands (`networksetup`, `scutil`, `ifconfig`, `pfctl`, `system_profiler`…) instead of their Linux equivalents. A small number of modules have reduced functionality (RDP, VNC, IP Scanner, SMB/NFS) — see [Limitations](#limitations).
 
 ### Option 3 — Debian / Ubuntu / Linux Mint (install script)
 
@@ -385,10 +385,27 @@ Since v1.2.7, NMLinux uses 21 bundled [Lucide](https://lucide.dev) SVG icons ren
 
 ## Limitations
 
-- **Linux** — full support: all 27 modules available
-- **macOS** — partial support (since v1.3.5): 9 modules use native macOS commands; modules that depend on `nmcli` or Linux-specific tools (Connection Manager full edit/delete, Bandwidth full stats, etc.) have reduced functionality
-- No root/polkit integration — tools requiring elevated privileges (some Nmap modes, raw sockets) must be run manually with `sudo`; on macOS, privilege escalation uses `osascript` + `administrator privileges`
-- SSH supports password and key-based auth; agent forwarding not yet implemented
+### Linux
+Full support — all 27 modules available.
+
+### macOS
+Most modules work out of the box since they rely on tools available on both platforms (`ssh`, `dig`, `ping`, `curl`, `nmap`, `openssl`…).
+
+**9 modules required explicit macOS adaptation** (dual code paths detecting the platform at startup): Dashboard, Interfaces, Wi-Fi, Topology, Bandwidth, Firewall, Connection Manager, Hosts File, MTR — these use native macOS commands (`ifconfig`, `networksetup`, `scutil`, `pfctl`, `system_profiler`…) instead of their Linux equivalents.
+
+**Modules with limited or no macOS support:**
+
+| Module | Status | Reason |
+|--------|--------|--------|
+| **RDP** | ⚠ Limited | `xfreerdp` not available natively; requires XQuartz |
+| **VNC** | ⚠ Limited | TigerVNC not available; use macOS Screen Sharing instead |
+| **IP Scanner** | ⚠ Partial | `getent` absent on macOS; hostname resolution reduced |
+| **SMB / NFS** | ⚠ Partial | `smbclient` / `showmount` require Homebrew packages |
+| **Connection Manager** | ⚠ Reduced | Edit/delete require `nmcli` (Linux only); list view works |
+
+### General
+- No root/polkit integration — tools requiring elevated privileges (some Nmap modes, raw sockets) must be run with `sudo`; on macOS, privilege escalation uses `osascript` + `administrator privileges`
+- SSH agent forwarding requires an active SSH agent (`SSH_AUTH_SOCK`); on macOS this is handled automatically by the system, no manual setup needed
 
 ---
 
