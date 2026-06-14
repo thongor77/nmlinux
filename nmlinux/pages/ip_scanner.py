@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import ipaddress
+import platform
 import re
 import shutil
 import socket
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+
+_IS_MACOS = platform.system() == 'Darwin'
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
@@ -69,7 +72,9 @@ def _vendor_of(mac: str) -> str:
 
 
 def _arp_entry(ip: str) -> tuple[str, str]:
-    """Return (mac_upper, iface) from /proc/net/arp, or ('', '') if absent."""
+    """Return (mac_upper, iface) from ARP table, or ('', '') if absent."""
+    if _IS_MACOS:
+        return _arp_entry_macos(ip)
     try:
         for line in Path('/proc/net/arp').read_text().splitlines()[1:]:
             parts = line.split()
@@ -77,6 +82,20 @@ def _arp_entry(ip: str) -> tuple[str, str]:
                 mac = parts[3].upper()
                 if mac != '00:00:00:00:00:00':
                     return mac, parts[5]
+    except Exception:
+        pass
+    return '', ''
+
+
+def _arp_entry_macos(ip: str) -> tuple[str, str]:
+    """Return (mac_upper, iface) from macOS arp output, or ('', '') if absent."""
+    try:
+        proc = subprocess.run(
+            ['arp', '-n', ip], capture_output=True, text=True, timeout=2,
+        )
+        m = re.search(r'at ([0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}) on (\S+)', proc.stdout)
+        if m:
+            return m.group(1).upper(), m.group(2)
     except Exception:
         pass
     return '', ''

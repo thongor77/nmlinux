@@ -1,6 +1,6 @@
-# NMLinux · v1.4.0
+# NMLinux · v1.4.1
 
-[![Version](https://img.shields.io/badge/version-1.4.0-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.4.1-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -49,6 +49,11 @@ Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkM
 ---
 
 ## Changelog
+
+### v1.4.1 — 2026-06-14
+
+- **macOS — IP Scanner**: fixed MAC address, vendor and interface lookup on macOS; `_arp_entry()` now calls `arp -n <ip>` on macOS and parses its output format (`? (IP) at AA:BB:CC on en0`) instead of reading `/proc/net/arp` (Linux-only); all four scanner columns now populate correctly on macOS
+- **VNC help**: added a note in all 8 languages clarifying that Linux has no VNC server by default and listing common options to install (x11vnc, tigervnc-server, wayvnc)
 
 ### v1.4.0 — 2026-06-14
 
@@ -245,7 +250,7 @@ brew install nmap whois net-snmp mtr curl
 
 # 2. Install NMLinux and its Python dependencies
 pip install PySide6 ptyprocess pyte
-pip install nmlinux-1.4.0-py3-none-any.whl   # download from Releases, or use the line below
+pip install nmlinux-1.4.1-py3-none-any.whl   # download from Releases, or use the line below
 
 # Alternative: run directly from source (no install)
 git clone https://github.com/thongor77/nmlinux.git
@@ -286,7 +291,7 @@ Download the `.whl` from the [latest release](https://github.com/thongor77/nmlin
 
 ```bash
 # Arch / Fedora / macOS — no pip restrictions
-pip install nmlinux-1.4.0-py3-none-any.whl
+pip install nmlinux-1.4.1-py3-none-any.whl
 
 # Debian / Ubuntu / Mint — install system libs first, then use pipx
 # Ubuntu ≤24.04:
@@ -294,7 +299,7 @@ sudo apt install libgl1 libglib2.0-0 libdbus-1-3 freerdp2-x11 tigervnc-viewer
 # Ubuntu 26.04+:
 sudo apt install libgl1 libglib2.0-0 libdbus-1-3 freerdp3-x11 tigervnc-viewer
 
-pipx install nmlinux-1.4.0-py3-none-any.whl
+pipx install nmlinux-1.4.1-py3-none-any.whl
 ```
 
 > **Note for Ubuntu 26.04+:** `pipx` requires system libraries (libGL, etc.) to be installed first — the commands above cover them. If `pipx install` fails due to a PySide6 build error, use **Option 3** (install script) instead, which handles everything automatically.

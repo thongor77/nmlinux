@@ -2259,6 +2259,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
         "fr": {
             "desc": "Profils de connexion VNC. Lance vncviewer (TigerVNC) vers Linux, macOS (ARD) ou Windows. Auth DH(30) macOS gérée nativement. Mot de passe jamais stocké.",
             "examples": [
+                "Note : Linux n'a pas de serveur VNC par défaut — installer x11vnc, tigervnc-server ou wayvnc (Wayland).",
                 "Accéder au bureau graphique d'un serveur Linux distant.",
                 "Se connecter à un Mac via Apple Remote Desktop (ARD).",
                 "Gérer plusieurs machines VNC en groupes.",
@@ -2272,6 +2273,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
         "en": {
             "desc": "VNC connection profiles. Launches vncviewer (TigerVNC) to Linux, macOS (ARD) or Windows. macOS DH(30) auth handled natively. Password never stored.",
             "examples": [
+                "Note: Linux has no VNC server by default — install x11vnc, tigervnc-server or wayvnc (Wayland).",
                 "Access the graphical desktop of a remote Linux server.",
                 "Connect to a Mac via Apple Remote Desktop (ARD).",
                 "Manage multiple VNC machines in groups.",
@@ -2285,6 +2287,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
         "es": {
             "desc": "Perfiles de conexión VNC. Lanza vncviewer (TigerVNC) hacia Linux, macOS (ARD) o Windows. Auth DH(30) de macOS gestionada nativamente. Contraseña nunca almacenada.",
             "examples": [
+                "Nota: Linux no tiene servidor VNC por defecto — instalar x11vnc, tigervnc-server o wayvnc (Wayland).",
                 "Acceder al escritorio gráfico de un servidor Linux remoto.",
                 "Conectarse a un Mac via Apple Remote Desktop (ARD).",
                 "Gestionar múltiples máquinas VNC en grupos.",
@@ -2298,6 +2301,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
         "de": {
             "desc": "VNC-Verbindungsprofile. Startet vncviewer (TigerVNC) zu Linux, macOS (ARD) oder Windows. macOS-DH(30)-Auth nativ unterstützt. Passwort wird nie gespeichert.",
             "examples": [
+                "Hinweis: Linux hat keinen VNC-Server standardmäßig — x11vnc, tigervnc-server oder wayvnc (Wayland) installieren.",
                 "Auf den grafischen Desktop eines entfernten Linux-Servers zugreifen.",
                 "Über Apple Remote Desktop (ARD) mit einem Mac verbinden.",
                 "Mehrere VNC-Maschinen in Gruppen verwalten.",
@@ -2311,6 +2315,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
         "it": {
             "desc": "Profili di connessione VNC. Avvia vncviewer (TigerVNC) verso Linux, macOS (ARD) o Windows. Auth DH(30) macOS gestita nativamente. Password mai memorizzata.",
             "examples": [
+                "Nota: Linux non ha un server VNC predefinito — installare x11vnc, tigervnc-server o wayvnc (Wayland).",
                 "Accedere al desktop grafico di un server Linux remoto.",
                 "Connettersi a un Mac via Apple Remote Desktop (ARD).",
                 "Gestire più macchine VNC in gruppi.",
@@ -2324,6 +2329,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
         "pt": {
             "desc": "Perfis de ligação VNC. Lança vncviewer (TigerVNC) para Linux, macOS (ARD) ou Windows. Auth DH(30) do macOS gerida nativamente. Palavra-passe nunca armazenada.",
             "examples": [
+                "Nota: o Linux não tem servidor VNC por defeito — instalar x11vnc, tigervnc-server ou wayvnc (Wayland).",
                 "Aceder ao ambiente de trabalho gráfico de um servidor Linux remoto.",
                 "Ligar a um Mac via Apple Remote Desktop (ARD).",
                 "Gerir múltiplas máquinas VNC em grupos.",
@@ -2337,6 +2343,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
         "ja": {
             "desc": "VNC接続プロファイル。Linux、macOS（ARD）、Windowsへvncviewer（TigerVNC）を起動。macOSのDH(30)認証をネイティブサポート。パスワードは保存されない。",
             "examples": [
+                "注：LinuxにはデフォルトのVNCサーバーがない。x11vnc、tigervnc-server、またはwayvnc（Wayland）をインストールすること。",
                 "リモートLinuxサーバーのグラフィカルデスクトップにアクセスする。",
                 "Apple Remote Desktop（ARD）経由でMacに接続する。",
                 "複数のVNCマシンをグループで管理する。",
@@ -2350,6 +2357,7 @@ _CONTENT: dict[str, dict[str, dict]] = {
         "zh": {
             "desc": "VNC连接配置文件。启动vncviewer（TigerVNC）连接到Linux、macOS（ARD）或Windows。原生支持macOS DH(30)认证。密码从不保存。",
             "examples": [
+                "注意：Linux默认没有VNC服务器——请安装x11vnc、tigervnc-server或wayvnc（Wayland）。",
                 "访问远程Linux服务器的图形桌面。",
                 "通过Apple Remote Desktop（ARD）连接Mac。",
                 "在组中管理多台VNC机器。",
