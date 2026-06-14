@@ -1,6 +1,6 @@
-# NMLinux · v1.3.9
+# NMLinux · v1.4.0
 
-[![Version](https://img.shields.io/badge/version-1.3.9-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.4.0-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -49,6 +49,14 @@ Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkM
 ---
 
 ## Changelog
+
+### v1.4.0 — 2026-06-14
+
+- **macOS — IP Scanner**: replaced `getent` (Linux-only) with Python's `socket.gethostbyaddr()` for cross-platform reverse DNS resolution; hostname lookup now works natively on macOS without any extra tool
+- **macOS — SMB Browser**: switched from `smbclient` (requires Homebrew samba) to `smbutil view` (built-in macOS tool); SMB share listing now works on macOS without any install
+- **macOS — NFS Browser**: `showmount` is built-in on macOS but doesn't support `--no-headers`; flag removed on macOS, header line skipped in parser; NFS export listing now works natively
+- **macOS — RDP**: when `xfreerdp` is not found, falls back to `open rdp://` URL scheme; opens Microsoft Remote Desktop (App Store) if installed, with host, port, username and domain pre-filled
+- **macOS — VNC**: when `vncviewer` is not found, falls back to `open vnc://` URL scheme; opens macOS Screen Sharing (built-in, zero install required)
 
 ### v1.3.9 — 2026-06-13
 
@@ -395,12 +403,13 @@ Most modules work out of the box since they rely on tools available on both plat
 
 **Modules with limited or no macOS support:**
 
-| Module | Status | Reason |
-|--------|--------|--------|
-| **RDP** | ⚠ Limited | `xfreerdp` not available natively; requires XQuartz |
-| **VNC** | ⚠ Limited | TigerVNC not available; use macOS Screen Sharing instead |
-| **IP Scanner** | ⚠ Partial | `getent` absent on macOS; hostname resolution reduced |
-| **SMB / NFS** | ⚠ Partial | `smbclient` / `showmount` require Homebrew packages |
+| Module | Status | Notes |
+|--------|--------|-------|
+| **RDP** | ✓ macOS | Falls back to `open rdp://` → Microsoft Remote Desktop (App Store) |
+| **VNC** | ✓ macOS | Falls back to `open vnc://` → Screen Sharing (built-in, zero install) |
+| **IP Scanner** | ✓ macOS | Uses `socket.gethostbyaddr()` — native Python, no extra tool |
+| **SMB** | ✓ macOS | Uses `smbutil view` (built-in) instead of `smbclient` |
+| **NFS** | ✓ macOS | `showmount` built-in; header parsing adapted |
 | **Connection Manager** | ⚠ Reduced | Edit/delete require `nmcli` (Linux only); list view works |
 
 ### General
