@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import json
+import platform
 import shutil
+import subprocess
 import uuid
+
+_IS_MACOS = platform.system() == 'Darwin'
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -93,3 +97,13 @@ class VncStore:
 
 def build_vnc_args(conn: VncConnection, binary: str) -> list[str]:
     return [binary, f"{conn.host}::{conn.port}"]
+
+
+def launch_vnc_macos(conn: VncConnection) -> tuple[bool, str]:
+    """Open VNC via macOS Screen Sharing — no extra install needed."""
+    url = f"vnc://{conn.host}:{conn.port}"
+    try:
+        subprocess.Popen(["open", url], start_new_session=True)
+        return True, ""
+    except Exception as exc:
+        return False, str(exc)

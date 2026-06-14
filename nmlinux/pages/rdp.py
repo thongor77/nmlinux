@@ -13,7 +13,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import Qt, QProcess
 
-from nmlinux.core.rdp import RdpConnection, RdpGroup, RdpStore, build_rdp_args, find_xfreerdp
+from nmlinux.core.rdp import (
+    RdpConnection, RdpGroup, RdpStore,
+    build_rdp_args, find_xfreerdp, launch_rdp_macos, _IS_MACOS,
+)
 from nmlinux.core.i18n import tr
 
 _EMPTY  = 0
@@ -553,6 +556,11 @@ class RdpPage(QWidget):
     def _launch_rdp(self, conn: RdpConnection) -> None:
         binary = find_xfreerdp()
         if binary is None:
+            if _IS_MACOS:
+                ok, err = launch_rdp_macos(conn)
+                if not ok:
+                    QMessageBox.warning(self, "RDP", err)
+                return
             QMessageBox.warning(self, tr("rdp_missing_title"), tr("rdp_missing_msg"))
             return
         password, ok = QInputDialog.getText(

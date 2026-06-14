@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import platform
 import re
 import subprocess
+
+_IS_MACOS = platform.system() == 'Darwin'
 
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
@@ -27,38 +30,64 @@ class _SmbWorker(QThread):
 
     def run(self) -> None:
         try:
-            cmd = ["smbclient", "-L", self._host, "-N", "--no-pass"]
-            if self._user:
-                cmd = ["smbclient", "-L", self._host,
-                       "-U", f"{self._user}%{self._password}"]
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-            output = proc.stdout + proc.stderr
-
-            shares = []
-            in_shares = False
-            for line in output.splitlines():
-                if re.match(r"\s+Sharename\s+Type\s+Comment", line):
-                    in_shares = True
-                    continue
-                if in_shares:
-                    if not line.strip() or re.match(r"\s+-+", line):
-                        continue
-                    if re.match(r"\s+Server\s+Comment", line):
-                        break
-                    m = re.match(r"\s+(\S+)\s+(Disk|IPC\$?|Printer|Special)\s*(.*)", line)
-                    if m:
-                        shares.append((m.group(1), m.group(2), m.group(3).strip()))
-
-            if not shares and proc.returncode != 0:
-                self.error.emit(tr("smb_err_failed", msg=proc.stderr.strip()[:120]))
-                return
-            self.result.emit(shares)
+            if _IS_MACOS:
+                self._run_macos()
+            else:
+                self._run_linux()
         except FileNotFoundError:
             self.error.emit(tr("smb_err_not_found"))
         except subprocess.TimeoutExpired:
             self.error.emit(tr("smb_err_timeout"))
         except Exception as exc:
             self.error.emit(str(exc))
+
+    def _run_linux(self) -> None:
+        cmd = ["smbclient", "-L", self._host, "-N", "--no-pass"]
+        if self._user:
+            cmd = ["smbclient", "-L", self._host,
+                   "-U", f"{self._user}%{self._password}"]
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        output = proc.stdout + proc.stderr
+
+        shares = []
+        in_shares = False
+        for line in output.splitlines():
+            if re.match(r"\s+Sharename\s+Type\s+Comment", line):
+                in_shares = True
+                continue
+            if in_shares:
+                if not line.strip() or re.match(r"\s+-+", line):
+                    continue
+                if re.match(r"\s+Server\s+Comment", line):
+                    break
+                m = re.match(r"\s+(\S+)\s+(Disk|IPC\$?|Printer|Special)\s*(.*)", line)
+                if m:
+                    shares.append((m.group(1), m.group(2), m.group(3).strip()))
+
+        if not shares and proc.returncode != 0:
+            self.error.emit(tr("smb_err_failed", msg=proc.stderr.strip()[:120]))
+            return
+        self.result.emit(shares)
+
+    def _run_macos(self) -> None:
+        # smbutil is built-in on macOS; no Homebrew required
+        host = self._host
+        if self._user:
+            host = f"{self._user}:{self._password}@{self._host}"
+        proc = subprocess.run(
+            ["smbutil", "view", f"//{host}"],
+            capture_output=True, text=True, timeout=15,
+        )
+        shares = []
+        for line in proc.stdout.splitlines():
+            # smbutil output: "ShareName   Disk   Comment" after header
+            m = re.match(r"^(\S+)\s+(Disk|Pipe|Printer)\s*(.*)", line)
+            if m:
+                shares.append((m.group(1), m.group(2), m.group(3).strip()))
+        if not shares and proc.returncode != 0:
+            self.error.emit(tr("smb_err_failed", msg=(proc.stderr or proc.stdout).strip()[:120]))
+            return
+        self.result.emit(shares)
 
 
 class _NfsWorker(QThread):
@@ -71,12 +100,15 @@ class _NfsWorker(QThread):
 
     def run(self) -> None:
         try:
-            proc = subprocess.run(
-                ["showmount", "-e", "--no-headers", self._host],
-                capture_output=True, text=True, timeout=10,
-            )
+            # --no-headers is Linux-only; macOS showmount doesn't support it
+            cmd = ["showmount", "-e", self._host] if _IS_MACOS else \
+                  ["showmount", "-e", "--no-headers", self._host]
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
             exports = []
             for line in proc.stdout.splitlines():
+                # Skip macOS header line "Exports list on <host>:"
+                if _IS_MACOS and line.startswith("Exports list"):
+                    continue
                 m = re.match(r"^(/\S+)\s+(.*)", line.strip())
                 if m:
                     exports.append((m.group(1), m.group(2).strip()))

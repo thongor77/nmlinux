@@ -3,6 +3,7 @@ from __future__ import annotations
 import ipaddress
 import re
 import shutil
+import socket
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -139,16 +140,11 @@ class ScanWorker(QThread):
 
 def _resolve_hostname(ip: str, timeout: int = 2) -> str:
     """Try reverse DNS → mDNS (avahi) → NetBIOS (nmblookup)."""
-    # 1. Standard reverse DNS via getent (respects /etc/nsswitch.conf, timeout-safe)
+    # 1. Pure Python reverse DNS — cross-platform (Linux, macOS, Windows)
     try:
-        proc = subprocess.run(
-            ['getent', 'hosts', ip],
-            capture_output=True, text=True, timeout=timeout,
-        )
-        if proc.returncode == 0:
-            parts = proc.stdout.strip().split()
-            if len(parts) >= 2:
-                return parts[-1]
+        hostname, _, _ = socket.gethostbyaddr(ip)
+        if hostname and hostname != ip:
+            return hostname
     except Exception:
         pass
 

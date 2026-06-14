@@ -14,7 +14,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import Qt
 
-from nmlinux.core.vnc import VncConnection, VncGroup, VncStore, build_vnc_args, find_vncviewer
+from nmlinux.core.vnc import (
+    VncConnection, VncGroup, VncStore,
+    build_vnc_args, find_vncviewer, launch_vnc_macos, _IS_MACOS,
+)
 from nmlinux.core.i18n import tr
 
 _EMPTY  = 0
@@ -502,6 +505,11 @@ class VncPage(QWidget):
     def _launch_vnc(self, conn: VncConnection) -> None:
         binary = find_vncviewer()
         if binary is None:
+            if _IS_MACOS:
+                ok, err = launch_vnc_macos(conn)
+                if not ok:
+                    QMessageBox.warning(self, "VNC", err)
+                return
             QMessageBox.warning(self, tr("vnc_missing_title"), tr("vnc_missing_msg"))
             return
         try:

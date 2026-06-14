@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import json
+import platform
 import shutil
+import subprocess
 import uuid
+
+_IS_MACOS = platform.system() == 'Darwin'
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -110,3 +114,17 @@ def build_rdp_args(conn: RdpConnection, password: str, binary: str = "xfreerdp")
         args.append(f"/size:{conn.resolution}")
     args += ["/dynamic-resolution", "/cert:ignore"]
     return args
+
+
+def launch_rdp_macos(conn: RdpConnection) -> tuple[bool, str]:
+    """Open RDP via URL scheme — works with Microsoft Remote Desktop (App Store)."""
+    url = f"rdp://full%20address=s:{conn.host}:{conn.port}"
+    if conn.username:
+        url += f"&username=s:{conn.username}"
+    if conn.domain:
+        url += f"&domain=s:{conn.domain}"
+    try:
+        subprocess.Popen(["open", url], start_new_session=True)
+        return True, ""
+    except Exception as exc:
+        return False, str(exc)
