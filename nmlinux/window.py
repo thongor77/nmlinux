@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QListWidget, QListWidgetItem, QStackedWidget, QFrame, QSizePolicy,
     QStyledItemDelegate, QStyle,
 )
-from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtCore import QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QPainter, QColor, QFont, QShortcut, QKeySequence
 from nmlinux.command_palette import CommandPalette
 
@@ -226,6 +226,17 @@ class _NavHintDelegate(QStyledItemDelegate):
         painter.save()
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
+        # Status dot (left of ? badge) for watchlist alerts
+        status = index.data(Qt.ItemDataRole.UserRole)
+        if status in ("expired", "warning"):
+            dot_color = QColor(239, 83, 80) if status == "expired" else QColor(255, 167, 38)
+            dot_d = 7
+            dot_x = r.right() - 40
+            dot_y = r.top() + (r.height() - dot_d) // 2
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(dot_color)
+            painter.drawEllipse(dot_x, dot_y, dot_d, dot_d)
+
         if selected:
             circle_col = QColor(255, 255, 255, 55)
             text_col   = QColor(255, 255, 255, 200)
@@ -351,6 +362,15 @@ class MainWindow(QMainWindow):
             self._stack.addWidget(page)
             self._pages.append(page)
 
+        # Connect TLS watchlist status to sidebar indicator
+        tls_row = next((i for i, (_, lbl, _, _) in enumerate(_TOOLS) if lbl == "TLS Inspector"), -1)
+        if tls_row >= 0:
+            tls_page = self._pages[tls_row]
+            tls_page.watchlist_status_changed.connect(
+                lambda status, row=tls_row: self._set_nav_status(row, status)
+            )
+            QTimer.singleShot(2000, tls_page.start_watchlist_check)
+
         # Settings page — index = len(_TOOLS)
         self._settings_page = SettingsPage()
         self._settings_page.language_changed.connect(self._on_language_changed)
@@ -433,6 +453,12 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Export Error", error)
         else:
             QMessageBox.information(self, "Export", f"Report saved to:\n{filepath}")
+
+    def _set_nav_status(self, row: int, status: str) -> None:
+        item = self._nav.item(row)
+        if item:
+            item.setData(Qt.ItemDataRole.UserRole, status)
+            self._nav.viewport().update()
 
     def navigate_to(self, index: int) -> None:
         if 0 <= index < len(_TOOLS):

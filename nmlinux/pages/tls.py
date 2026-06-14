@@ -7,14 +7,18 @@ import subprocess
 from datetime import datetime
 
 from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QScrollArea,
+    QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
+    QPushButton, QScrollArea, QSpinBox,
     QVBoxLayout, QWidget,
 )
 
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
+from nmlinux.core.tls_watchlist import (
+    WatchEntry, check_cert_expiry, load_watchlist, save_watchlist,
+)
 
 
 _MONTHS = {
@@ -197,6 +201,21 @@ class _TlsWorker(QThread):
         })
 
 
+class _WatchlistWorker(QThread):
+    entry_done = Signal(str, int, object)  # host, port, days_or_None
+    all_done   = Signal()
+
+    def __init__(self, entries: list[WatchEntry]) -> None:
+        super().__init__()
+        self._entries = entries
+
+    def run(self) -> None:
+        for e in self._entries:
+            days = check_cert_expiry(e.host, e.port)
+            self.entry_done.emit(e.host, e.port, days)
+        self.all_done.emit()
+
+
 class _ChainWorker(QThread):
     done = Signal(list)  # [(depth, cn, org), …] sorted depth 0 → N
 
@@ -270,10 +289,15 @@ def _separator() -> QFrame:
 # ── Main page ─────────────────────────────────────────────────────────────────
 
 class TlsPage(QWidget):
+    watchlist_status_changed = Signal(str)  # "ok" | "warning" | "expired"
+
     def __init__(self) -> None:
         super().__init__()
         self._worker: _TlsWorker | None = None
         self._chain_worker: _ChainWorker | None = None
+        self._wl_worker: _WatchlistWorker | None = None
+        self._wl_entries: list[WatchEntry] = load_watchlist()
+        self._wl_results: dict[tuple[str, int], int | None] = {}
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -304,11 +328,17 @@ class TlsPage(QWidget):
         self._btn_stop.setEnabled(False)
         self._btn_stop.clicked.connect(self._stop)
 
+        self._btn_watch = QPushButton("+ Watch")
+        self._btn_watch.setFixedWidth(70)
+        self._btn_watch.setToolTip("Add current host to TLS watchlist")
+        self._btn_watch.clicked.connect(self._add_current_to_watchlist)
+
         bar.addWidget(self._host_edit, 1)
         bar.addWidget(port_lbl)
         bar.addWidget(self._port_edit)
         bar.addWidget(self._btn_check)
         bar.addWidget(self._btn_stop)
+        bar.addWidget(self._btn_watch)
         root.addLayout(bar)
 
         # ── Scroll area for results ────────────────────────────────────────
@@ -324,6 +354,9 @@ class TlsPage(QWidget):
 
         scroll.setWidget(self._result_widget)
         root.addWidget(scroll, 1)
+
+        # ── Watchlist panel ───────────────────────────────────────────────
+        root.addWidget(self._build_watchlist_panel())
 
     # ── Actions ───────────────────────────────────────────────────────────────
 
@@ -499,3 +532,149 @@ class TlsPage(QWidget):
             lbl = QLabel(label)
             lbl.setStyleSheet("font-size: 12px; font-family: monospace;")
             self._result_layout.insertWidget(self._chain_idx + depth, lbl)
+
+    # ── Watchlist ──────────────────────────────────────────────────────────────
+
+    def _build_watchlist_panel(self) -> QFrame:
+        frame = QFrame()
+        frame.setFrameShape(QFrame.Shape.StyledPanel)
+        frame.setMaximumHeight(165)
+        v = QVBoxLayout(frame)
+        v.setContentsMargins(8, 6, 8, 6)
+        v.setSpacing(4)
+
+        hdr = QHBoxLayout()
+        title = QLabel("TLS Watchlist")
+        title.setStyleSheet("font-weight: bold; font-size: 12px;")
+        hdr.addWidget(title)
+        hdr.addStretch()
+
+        self._wl_recheck_btn = QPushButton("↻ Re-check")
+        self._wl_recheck_btn.setFixedWidth(85)
+        self._wl_recheck_btn.clicked.connect(self.start_watchlist_check)
+        hdr.addWidget(self._wl_recheck_btn)
+
+        self._wl_remove_btn = QPushButton("− Remove")
+        self._wl_remove_btn.setFixedWidth(75)
+        self._wl_remove_btn.clicked.connect(self._remove_from_watchlist)
+        hdr.addWidget(self._wl_remove_btn)
+
+        v.addLayout(hdr)
+
+        self._wl_list = QListWidget()
+        self._wl_list.setFixedHeight(85)
+        self._wl_list.setFrameShape(QFrame.Shape.NoFrame)
+        self._wl_list.setStyleSheet("font-size: 12px; font-family: monospace;")
+        v.addWidget(self._wl_list)
+
+        add_bar = QHBoxLayout()
+        add_bar.setSpacing(4)
+        self._wl_host_edit = QLineEdit()
+        self._wl_host_edit.setPlaceholderText("hostname or IP")
+        self._wl_host_edit.returnPressed.connect(self._add_manual_to_watchlist)
+        self._wl_port_spin = QSpinBox()
+        self._wl_port_spin.setRange(1, 65535)
+        self._wl_port_spin.setValue(443)
+        self._wl_port_spin.setFixedWidth(65)
+        add_btn = QPushButton("+ Add")
+        add_btn.setFixedWidth(60)
+        add_btn.clicked.connect(self._add_manual_to_watchlist)
+        add_bar.addWidget(self._wl_host_edit, 1)
+        add_bar.addWidget(self._wl_port_spin)
+        add_bar.addWidget(add_btn)
+        v.addLayout(add_bar)
+
+        self._refresh_wl_list()
+        return frame
+
+    def _refresh_wl_list(self) -> None:
+        self._wl_list.clear()
+        for e in self._wl_entries:
+            days = self._wl_results.get((e.host, e.port))
+            item = QListWidgetItem(self._wl_entry_text(e.host, e.port, days))
+            item.setForeground(QColor(self._wl_entry_color(days)))
+            self._wl_list.addItem(item)
+
+    @staticmethod
+    def _wl_entry_text(host: str, port: int, days: int | None) -> str:
+        base = f"{host}:{port}"
+        if days is None:
+            return f"{base:<32}  — (not checked)"
+        if days < 0:
+            return f"{base:<32}  EXPIRED {abs(days)} days ago"
+        if days <= 30:
+            return f"{base:<32}  ⚠ {days} days remaining"
+        return f"{base:<32}  ✓ {days} days remaining"
+
+    @staticmethod
+    def _wl_entry_color(days: int | None) -> str:
+        if days is None:
+            return "gray"
+        if days < 0:
+            return "#f38ba8"
+        if days <= 30:
+            return "#fab387"
+        return "#a6e3a1"
+
+    def _add_current_to_watchlist(self) -> None:
+        host = self._host_edit.text().strip()
+        if not host:
+            return
+        try:
+            port = int(self._port_edit.text().strip())
+        except ValueError:
+            port = 443
+        self._add_entry(WatchEntry(host, port))
+
+    def _add_manual_to_watchlist(self) -> None:
+        host = self._wl_host_edit.text().strip()
+        if not host:
+            return
+        self._add_entry(WatchEntry(host, self._wl_port_spin.value()))
+        self._wl_host_edit.clear()
+
+    def _add_entry(self, entry: WatchEntry) -> None:
+        if any(e.host == entry.host and e.port == entry.port for e in self._wl_entries):
+            return
+        self._wl_entries.append(entry)
+        save_watchlist(self._wl_entries)
+        self._refresh_wl_list()
+
+    def _remove_from_watchlist(self) -> None:
+        row = self._wl_list.currentRow()
+        if 0 <= row < len(self._wl_entries):
+            e = self._wl_entries.pop(row)
+            self._wl_results.pop((e.host, e.port), None)
+            save_watchlist(self._wl_entries)
+            self._refresh_wl_list()
+            self._emit_worst_status()
+
+    def start_watchlist_check(self) -> None:
+        if not self._wl_entries:
+            return
+        if self._wl_worker and self._wl_worker.isRunning():
+            return
+        self._wl_recheck_btn.setEnabled(False)
+        self._wl_worker = _WatchlistWorker(list(self._wl_entries))
+        self._wl_worker.entry_done.connect(self._on_wl_entry_done)
+        self._wl_worker.all_done.connect(self._on_wl_all_done)
+        self._wl_worker.start()
+
+    def _on_wl_entry_done(self, host: str, port: int, days) -> None:
+        self._wl_results[(host, port)] = days
+        self._refresh_wl_list()
+
+    def _on_wl_all_done(self) -> None:
+        self._wl_recheck_btn.setEnabled(True)
+        self._emit_worst_status()
+
+    def _emit_worst_status(self) -> None:
+        values = list(self._wl_results.values())
+        if not values:
+            return
+        if any(d is not None and d < 0 for d in values):
+            self.watchlist_status_changed.emit("expired")
+        elif any(d is not None and 0 <= d < 30 for d in values):
+            self.watchlist_status_changed.emit("warning")
+        else:
+            self.watchlist_status_changed.emit("ok")
