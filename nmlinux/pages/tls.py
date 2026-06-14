@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 from nmlinux.core.tls_watchlist import (
-    WatchEntry, check_cert_expiry, load_watchlist, save_watchlist,
+    UNTRUSTED, WatchEntry, check_cert_expiry, load_watchlist, save_watchlist,
 )
 
 
@@ -600,6 +600,8 @@ class TlsPage(QWidget):
         base = f"{host}:{port}"
         if days is None:
             return f"{base:<32}  — (not checked)"
+        if days == UNTRUSTED:
+            return f"{base:<32}  ⚠ Invalid / untrusted cert"
         if days < 0:
             return f"{base:<32}  EXPIRED {abs(days)} days ago"
         if days <= 30:
@@ -610,11 +612,13 @@ class TlsPage(QWidget):
     def _wl_entry_color(days: int | None) -> str:
         if days is None:
             return "gray"
+        if days == UNTRUSTED:
+            return "#fab387"   # orange — invalid but not expired
         if days < 0:
-            return "#f38ba8"
+            return "#f38ba8"   # red — expired
         if days <= 30:
-            return "#fab387"
-        return "#a6e3a1"
+            return "#fab387"   # orange — expiring soon
+        return "#a6e3a1"       # green — ok
 
     def _add_current_to_watchlist(self) -> None:
         host = self._host_edit.text().strip()
@@ -672,9 +676,9 @@ class TlsPage(QWidget):
         values = list(self._wl_results.values())
         if not values:
             return
-        if any(d is not None and d < 0 for d in values):
+        if any(d is not None and d != UNTRUSTED and d < 0 for d in values):
             self.watchlist_status_changed.emit("expired")
-        elif any(d is not None and 0 <= d < 30 for d in values):
+        elif any(d is not None and (d == UNTRUSTED or 0 <= d < 30) for d in values):
             self.watchlist_status_changed.emit("warning")
         else:
             self.watchlist_status_changed.emit("ok")
