@@ -213,8 +213,8 @@ brew install nmap whois net-snmp mtr curl
 
 | Tool | Feature | Linux | macOS |
 |------|---------|-------|-------|
-| `xfreerdp` / `xfreerdp3` | Remote Desktop (RDP) | Arch: `freerdp` · Ubuntu ≤24.04: `freerdp2-x11` · Ubuntu 26.04+: `freerdp3-x11` | `brew install freerdp` |
-| `vncviewer` | VNC | Arch: `tigervnc` · Debian: `tigervnc-viewer` | `brew install tiger-vnc` |
+| `xfreerdp` / `xfreerdp3` | Remote Desktop (RDP) | Arch: `freerdp` · Ubuntu ≤24.04: `freerdp2-x11` · Ubuntu 26.04+: `freerdp3-x11` | optional — falls back to Microsoft Remote Desktop (`open rdp://`) |
+| `vncviewer` | VNC | Arch: `tigervnc` · Debian: `tigervnc-viewer` | optional — falls back to macOS Screen Sharing (`open vnc://`, built-in) |
 | `nm-connection-editor` | Edit connections from Connection Manager | Arch: `nm-connection-editor` | — (System Preferences opens instead) |
 | `traceroute` | Traceroute alternative (tracepath used by default) | Arch: `traceroute` | built-in |
 
@@ -245,7 +245,7 @@ brew install nmap whois net-snmp mtr curl
 
 # 2. Install NMLinux and its Python dependencies
 pip install PySide6 ptyprocess pyte
-pip install nmlinux-1.3.8-py3-none-any.whl   # download from Releases, or use the line below
+pip install nmlinux-1.4.0-py3-none-any.whl   # download from Releases, or use the line below
 
 # Alternative: run directly from source (no install)
 git clone https://github.com/thongor77/nmlinux.git
@@ -259,7 +259,7 @@ git pull && python3 -m nmlinux.main
 
 Download the `.whl` from the [latest release](https://github.com/thongor77/nmlinux/releases/latest).
 
-> **Note:** Most modules work on macOS without modification. 9 modules use native macOS commands (`networksetup`, `scutil`, `ifconfig`, `pfctl`, `system_profiler`…) instead of their Linux equivalents. A small number of modules have reduced functionality (RDP, VNC, IP Scanner, SMB/NFS) — see [Limitations](#limitations).
+> **Note:** Most modules work on macOS without modification. 9 modules use native macOS commands (`networksetup`, `scutil`, `ifconfig`, `pfctl`, `system_profiler`…) instead of their Linux equivalents. RDP falls back to `open rdp://` (Microsoft Remote Desktop), VNC falls back to `open vnc://` (Screen Sharing built-in). Only Connection Manager has reduced functionality on macOS (`nmcli` not available) — see [Limitations](#limitations).
 
 ### Option 3 — Debian / Ubuntu / Linux Mint (install script)
 
@@ -286,7 +286,7 @@ Download the `.whl` from the [latest release](https://github.com/thongor77/nmlin
 
 ```bash
 # Arch / Fedora / macOS — no pip restrictions
-pip install nmlinux-1.3.8-py3-none-any.whl
+pip install nmlinux-1.4.0-py3-none-any.whl
 
 # Debian / Ubuntu / Mint — install system libs first, then use pipx
 # Ubuntu ≤24.04:
@@ -294,7 +294,7 @@ sudo apt install libgl1 libglib2.0-0 libdbus-1-3 freerdp2-x11 tigervnc-viewer
 # Ubuntu 26.04+:
 sudo apt install libgl1 libglib2.0-0 libdbus-1-3 freerdp3-x11 tigervnc-viewer
 
-pipx install nmlinux-1.3.8-py3-none-any.whl
+pipx install nmlinux-1.4.0-py3-none-any.whl
 ```
 
 > **Note for Ubuntu 26.04+:** `pipx` requires system libraries (libGL, etc.) to be installed first — the commands above cover them. If `pipx install` fails due to a PySide6 build error, use **Option 3** (install script) instead, which handles everything automatically.
