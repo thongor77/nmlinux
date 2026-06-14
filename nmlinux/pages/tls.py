@@ -595,11 +595,15 @@ class TlsPage(QWidget):
             item.setForeground(QColor(self._wl_entry_color(days)))
             self._wl_list.addItem(item)
 
+    _PENDING = object()  # sentinel: entry queued but not yet checked
+
     @staticmethod
-    def _wl_entry_text(host: str, port: int, days: int | None) -> str:
+    def _wl_entry_text(host: str, port: int, days) -> str:
         base = f"{host}:{port}"
+        if days is TlsPage._PENDING:
+            return f"{base:<32}  … (checking)"
         if days is None:
-            return f"{base:<32}  — (not checked)"
+            return f"{base:<32}  — (unreachable)"
         if days == UNTRUSTED:
             return f"{base:<32}  ⚠ Invalid / untrusted cert"
         if days < 0:
@@ -609,9 +613,11 @@ class TlsPage(QWidget):
         return f"{base:<32}  ✓ {days} days remaining"
 
     @staticmethod
-    def _wl_entry_color(days: int | None) -> str:
-        if days is None:
+    def _wl_entry_color(days) -> str:
+        if days is TlsPage._PENDING:
             return "gray"
+        if days is None:
+            return "#6c7086"   # dimmer gray — unreachable
         if days == UNTRUSTED:
             return "#fab387"   # orange — invalid but not expired
         if days < 0:
@@ -658,6 +664,10 @@ class TlsPage(QWidget):
             return
         if self._wl_worker and self._wl_worker.isRunning():
             return
+        # Mark all entries as pending before starting
+        for e in self._wl_entries:
+            self._wl_results[(e.host, e.port)] = TlsPage._PENDING
+        self._refresh_wl_list()
         self._wl_recheck_btn.setEnabled(False)
         self._wl_worker = _WatchlistWorker(list(self._wl_entries))
         self._wl_worker.entry_done.connect(self._on_wl_entry_done)

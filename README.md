@@ -1,6 +1,6 @@
-# NMLinux · v1.4.2
+# NMLinux · v1.4.3
 
-[![Version](https://img.shields.io/badge/version-1.4.2-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.4.3-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -49,6 +49,10 @@ Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkM
 ---
 
 ## Changelog
+
+### v1.4.3 — 2026-06-14
+
+- **TLS Watchlist fixes**: self-signed and untrusted certs now correctly shown as "⚠ Invalid / untrusted cert" (orange) instead of green; SSL exception catching widened to cover all `ssl.SSLError` subclasses; entries now show "… (checking)" while the background check runs and "— (unreachable)" when the host cannot be reached
 
 ### v1.4.2 — 2026-06-14
 
@@ -254,7 +258,7 @@ brew install nmap whois net-snmp mtr curl
 
 # 2. Install NMLinux and its Python dependencies
 pip install PySide6 ptyprocess pyte
-pip install nmlinux-1.4.2-py3-none-any.whl   # download from Releases, or use the line below
+pip install nmlinux-1.4.3-py3-none-any.whl   # download from Releases, or use the line below
 
 # Alternative: run directly from source (no install)
 git clone https://github.com/thongor77/nmlinux.git
@@ -295,7 +299,7 @@ Download the `.whl` from the [latest release](https://github.com/thongor77/nmlin
 
 ```bash
 # Arch / Fedora / macOS — no pip restrictions
-pip install nmlinux-1.4.2-py3-none-any.whl
+pip install nmlinux-1.4.3-py3-none-any.whl
 
 # Debian / Ubuntu / Mint — install system libs first, then use pipx
 # Ubuntu ≤24.04:
@@ -303,7 +307,7 @@ sudo apt install libgl1 libglib2.0-0 libdbus-1-3 freerdp2-x11 tigervnc-viewer
 # Ubuntu 26.04+:
 sudo apt install libgl1 libglib2.0-0 libdbus-1-3 freerdp3-x11 tigervnc-viewer
 
-pipx install nmlinux-1.4.2-py3-none-any.whl
+pipx install nmlinux-1.4.3-py3-none-any.whl
 ```
 
 > **Note for Ubuntu 26.04+:** `pipx` requires system libraries (libGL, etc.) to be installed first — the commands above cover them. If `pipx install` fails due to a PySide6 build error, use **Option 3** (install script) instead, which handles everything automatically.

@@ -78,17 +78,18 @@ def check_cert_expiry(host: str, port: int, timeout: int = 5) -> int | None:
     except Exception:
         pass
 
-    # Step 3: check chain trust (quick — reuses existing TCP connection)
+    # Step 3: check chain trust
     trusted = True
     try:
         ctx_v = ssl.create_default_context()
         with socket.create_connection((host, port), timeout=timeout) as raw:
             with ctx_v.wrap_socket(raw, server_hostname=host):
                 pass
-    except ssl.SSLCertVerificationError:
+    except ssl.SSLError:
+        # Catches SSLCertVerificationError and any other SSL handshake failure
         trusted = False
     except Exception:
-        pass  # network hiccup on second connect — don't change trusted status
+        pass  # network hiccup — don't change trusted status
 
     if days is None:
         # openssl not available — fall back to verified connection for days
