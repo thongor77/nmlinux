@@ -2,7 +2,7 @@
 pkgname=nmlinux
 pkgver=1.5.0
 pkgrel=1
-pkgdesc="Unified network toolkit for Linux — 28 modules, SSH terminal, topology, TFTP/HTTP server"
+pkgdesc="Unified network toolkit for Linux — 27 modules, SSH terminal, topology, export"
 arch=('any')
 url="https://github.com/thongor77/nmlinux"
 license=('GPL2')
