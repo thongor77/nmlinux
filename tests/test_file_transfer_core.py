@@ -106,3 +106,98 @@ def test_tftp_forwarder_upload(capsys):
     assert "firmware.bin" in captured.out
     assert "10.0.0.5" in captured.out
     assert "2048" in captured.out
+
+
+# ── http_server ───────────────────────────────────────────────────────────────
+
+import threading
+import http.client
+from nmlinux.core.http_server import make_handler, get_local_ips
+from http.server import HTTPServer
+
+
+def _start_test_server(tmp_path):
+    """Start an HTTPServer on a free port, return (server, port)."""
+    log_events = []
+
+    def on_log(direction, filename, client_ip, nbytes, status):
+        log_events.append((direction, filename, nbytes, status))
+
+    handler_cls = make_handler(tmp_path, on_log)
+    server = HTTPServer(("127.0.0.1", 0), handler_cls)
+    port = server.server_address[1]
+    t = threading.Thread(target=server.serve_forever, daemon=True)
+    t.start()
+    return server, port, log_events
+
+
+def test_http_get_existing_file(tmp_path):
+    (tmp_path / "startup-config.cfg").write_bytes(b"hostname router1\n")
+    server, port, log_events = _start_test_server(tmp_path)
+
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+    conn.request("GET", "/startup-config.cfg")
+    resp = conn.getresponse()
+    body = resp.read()
+    server.shutdown()
+
+    assert resp.status == 200
+    assert body == b"hostname router1\n"
+    assert len(log_events) == 1
+    assert log_events[0][0] == "↓"
+    assert log_events[0][3] == "OK"
+
+
+def test_http_get_missing_file(tmp_path):
+    server, port, log_events = _start_test_server(tmp_path)
+
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+    conn.request("GET", "/nothere.cfg")
+    resp = conn.getresponse()
+    resp.read()
+    server.shutdown()
+
+    assert resp.status == 404
+
+
+def test_http_post_saves_file(tmp_path):
+    server, port, log_events = _start_test_server(tmp_path)
+
+    body = b"interface eth0\n  ip address 10.0.0.1/24\n"
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+    conn.request("POST", "/backup.cfg",
+                 body=body,
+                 headers={"Content-Length": str(len(body))})
+    resp = conn.getresponse()
+    resp.read()
+    server.shutdown()
+
+    assert resp.status == 200
+    assert (tmp_path / "backup.cfg").read_bytes() == body
+    assert log_events[0][0] == "↑"
+
+
+def test_http_put_saves_file(tmp_path):
+    server, port, log_events = _start_test_server(tmp_path)
+
+    body = b"config data"
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+    conn.request("PUT", "/config.txt",
+                 body=body,
+                 headers={"Content-Length": str(len(body))})
+    resp = conn.getresponse()
+    resp.read()
+    server.shutdown()
+
+    assert resp.status == 200
+    assert (tmp_path / "config.txt").read_bytes() == body
+
+
+def test_get_local_ips_returns_list():
+    ips = get_local_ips()
+    assert isinstance(ips, list)
+    assert len(ips) >= 1
+    for ip in ips:
+        assert isinstance(ip, str)
+        parts = ip.split(".")
+        assert len(parts) == 4
