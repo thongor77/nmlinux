@@ -20,6 +20,7 @@ classifiers = [
 dependencies = [
     "PySide6>=6.6",
     "ptyprocess>=0.7",
+    "tftpy>=0.8",
 ]
 
 [project.urls]
