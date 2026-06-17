@@ -1,8 +1,8 @@
 # Maintainer: thongor77 <magetriste@proton.me>
 pkgname=nmlinux
-pkgver=1.4.3
+pkgver=1.5.0
 pkgrel=1
-pkgdesc="Unified network toolkit for Linux — 27 modules, SSH terminal, topology, export"
+pkgdesc="Unified network toolkit for Linux — 28 modules, SSH terminal, topology, TFTP/HTTP server"
 arch=('any')
 url="https://github.com/thongor77/nmlinux"
 license=('GPL2')
@@ -11,6 +11,7 @@ depends=(
     'pyside6'
     'python-ptyprocess'
     'python-pyte'
+    'python-tftpy'
     'networkmanager'
     'iproute2'
     'iputils'

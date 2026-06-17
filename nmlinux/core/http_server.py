@@ -32,12 +32,20 @@ def make_handler(root: Path, on_log: LogCallback) -> type:
                 return None
 
         def do_GET(self) -> None:
-            filename = self.path.lstrip("/") or "index"
-            target = self._safe_target(filename)
-            if target is None:
-                self.send_error(403)
-                on_log("↓", filename, self.client_address[0], 0, "403")
+            filename = self.path.lstrip("/")
+            if filename == "":
+                target = root.resolve()
+            else:
+                target = self._safe_target(filename)
+                if target is None:
+                    self.send_error(403)
+                    on_log("↓", filename, self.client_address[0], 0, "403")
+                    return
+
+            if target.is_dir():
+                self._serve_listing(target)
                 return
+
             if not target.exists() or not target.is_file():
                 self.send_error(404)
                 on_log("↓", filename, self.client_address[0], 0, "404")
@@ -49,10 +57,54 @@ def make_handler(root: Path, on_log: LogCallback) -> type:
                 on_log("↓", filename, self.client_address[0], 0, f"ERROR: {exc.__class__.__name__}")
                 return
             self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)
-            on_log("↓", filename, self.client_address[0], len(data), "OK")
+            on_log("↓", filename or "/", self.client_address[0], len(data), "OK")
+
+        def _serve_listing(self, directory: Path) -> None:
+            url = self.path.rstrip("/") or "/"
+            try:
+                entries = sorted(directory.iterdir(),
+                                 key=lambda p: (not p.is_dir(), p.name.lower()))
+            except OSError:
+                self.send_error(500)
+                return
+
+            rows = []
+            if url != "/":
+                parent = str(Path(url).parent)
+                rows.append(f'<tr><td colspan="2"><a href="{parent}">📁 ..</a></td></tr>')
+            for entry in entries:
+                icon  = "📁" if entry.is_dir() else "📄"
+                href  = (url + "/" + entry.name).replace("//", "/")
+                try:
+                    size = "—" if entry.is_dir() else f"{entry.stat().st_size:,} B"
+                except OSError:
+                    size = "?"
+                rows.append(
+                    f'<tr><td><a href="{href}">{icon} {entry.name}</a></td>'
+                    f'<td style="color:#888;padding-left:24px">{size}</td></tr>'
+                )
+
+            body = (
+                "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                f"<title>NMLinux — {url}</title>"
+                "<style>body{font-family:monospace;padding:20px;max-width:800px}"
+                "h2{margin-bottom:8px}table{border-collapse:collapse;width:100%}"
+                "td{padding:5px 8px;border-bottom:1px solid #e0e0e0}"
+                "a{text-decoration:none;color:#1a73e8}a:hover{text-decoration:underline}"
+                "</style></head><body>"
+                f"<h2>📂 {url}</h2><table>{''.join(rows)}</table></body></html>"
+            ).encode("utf-8")
+
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            on_log("↓", url, self.client_address[0], len(body), "OK")
 
         def do_POST(self) -> None:
             self._receive()

@@ -1,6 +1,6 @@
-# NMLinux · v1.4.3
+# NMLinux · v1.5.0
 
-[![Version](https://img.shields.io/badge/version-1.4.3-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.5.0-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -9,9 +9,9 @@
 
 **A unified network toolkit for Linux and macOS — inspect, connect, diagnose.**
 
-NMLinux is a single, unified GUI that brings together 27 network modules in one window: interface monitoring, Wi-Fi, DNS, SSH terminal, firewall viewer, topology map, traceroute, and more. Built from scratch in Python and PySide6 (Qt 6), with 8 interface languages and no external dependencies beyond standard system tools.
+NMLinux is a single, unified GUI that brings together 28 network modules in one window: interface monitoring, Wi-Fi, DNS, SSH terminal, firewall viewer, topology map, traceroute, and more. Built from scratch in Python and PySide6 (Qt 6), with 8 interface languages and no external dependencies beyond standard system tools.
 
-Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkManager) by BornToBeRoot (a Windows-only tool), NMLinux has since grown well beyond that starting point — adding a PTY-embedded SSH terminal, interactive topology map, macOS support, TLS inspector, and now a command palette and multi-format export engine.
+Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkManager) by BornToBeRoot (a Windows-only tool), NMLinux has since grown well beyond that starting point — adding a PTY-embedded SSH terminal, interactive topology map, macOS support, TLS inspector, command palette, multi-format export engine, and now an on-demand TFTP/HTTP file transfer server.
 
 > [!NOTE]
 > **NMLinux is not related to the Linux system daemon `/usr/bin/NetworkManager` (NetworkManager by Red Hat/GNOME).** The name refers to [NETworkManager](https://github.com/BornToBeRoot/NETworkManager) by BornToBeRoot, the Windows tool that originally inspired this project.
@@ -49,6 +49,10 @@ Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkM
 ---
 
 ## Changelog
+
+### v1.5.0 — 2026-06-17
+
+- **File Transfer Server** — new module to start/stop a lightweight TFTP or HTTP server directly from the app; classic use case: backup and restore router, switch or printer configs; one server active at a time (TFTP or HTTP), configurable port and root directory, local IPs displayed as copy-to-clipboard buttons; HTTP includes directory listing (browse from any browser on the LAN), GET (download) and POST/PUT (upload); TFTP supports GET and PUT (bidirectional), port 69 requires root — the app shows a "Start as root (pkexec)" button on permission error; live transfer log table (timestamp, filename, client IP, direction ↑/↓, size); port traversal protection; 8 interface languages; new dependency: `tftpy`
 
 ### v1.4.3 — 2026-06-14
 
