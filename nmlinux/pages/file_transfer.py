@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import datetime
+import threading
 from http.server import HTTPServer
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QProcess, QThread, Signal
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QButtonGroup, QFileDialog, QFormLayout, QFrame, QHBoxLayout,
     QLabel, QLineEdit, QPushButton, QRadioButton,
@@ -30,6 +32,7 @@ class _HttpThread(QThread):
         self._root   = root
         self._port   = port
         self._server: HTTPServer | None = None
+        self._ready  = threading.Event()
 
     def run(self) -> None:
         def on_log(direction, filename, client_ip, nbytes, status):
@@ -38,9 +41,11 @@ class _HttpThread(QThread):
 
         handler_cls  = make_handler(self._root, on_log)
         self._server = HTTPServer(("0.0.0.0", self._port), handler_cls)
+        self._ready.set()
         self._server.serve_forever()
 
     def stop(self) -> None:
+        self._ready.wait(timeout=5.0)
         if self._server:
             self._server.shutdown()
             self._server = None
@@ -222,6 +227,11 @@ class FileTransferPage(QWidget):
             item = QTableWidgetItem(str(val))
             item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self._log_table.setItem(row, col, item)
+        if status not in ("OK",):
+            for col in range(5):
+                item = self._log_table.item(row, col)
+                if item:
+                    item.setForeground(QColor(color_err()))
         self._log_table.scrollToBottom()
 
     # ── Start / Stop ──────────────────────────────────────────────────────────
@@ -238,10 +248,16 @@ class FileTransferPage(QWidget):
         self._start_tftp(as_root=True)
 
     def _start_tftp(self, *, as_root: bool) -> None:
-        port = self._f_port.text().strip() or "69"
+        port_str = self._f_port.text().strip() or "69"
+        try:
+            port = int(port_str)
+        except ValueError:
+            self._lbl_status.setStyleSheet(f"color: {color_err()};")
+            self._lbl_status.setText(f"Invalid port: {port_str!r}")
+            return
         rdir = self._f_root.text().strip() or str(Path.home())
 
-        helper_args = [str(_HELPER), "--port", port, "--root", rdir]
+        helper_args = [str(_HELPER), "--port", str(port), "--root", rdir]
         if as_root:
             prog = "pkexec"
             args = ["python3"] + helper_args
@@ -294,11 +310,14 @@ class FileTransferPage(QWidget):
     def _on_stop(self) -> None:
         if self._tftp_process:
             self._tftp_process.terminate()
-            self._tftp_process.waitForFinished(2000)
+            if not self._tftp_process.waitForFinished(2000):
+                self._tftp_process.kill()
+                self._tftp_process.waitForFinished(500)
             self._tftp_process = None
         if self._http_thread:
             self._http_thread.stop()
-            self._http_thread.wait(3000)
+            if not self._http_thread.wait(3000):
+                self._http_thread.terminate()
             self._http_thread = None
         self._set_running(False)
 
@@ -310,3 +329,8 @@ class FileTransferPage(QWidget):
         if self._running:
             self._on_stop()
         super().hideEvent(event)
+
+    def closeEvent(self, event) -> None:  # noqa: N802
+        if self._running:
+            self._on_stop()
+        super().closeEvent(event)
