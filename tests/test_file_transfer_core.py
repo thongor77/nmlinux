@@ -47,3 +47,62 @@ def test_format_log_line_upload():
     line = helper.format_log_line("↑", "firmware.bin", "10.0.0.1", 1024, "OK")
     assert "↑" in line
     assert "firmware.bin" in line
+
+
+def test_format_log_line_injectable_ts():
+    helper = _import_helper()
+    line = helper.format_log_line("↓", "startup-config", "192.168.1.1", 4096, "OK", ts="12:34:56")
+    assert line.startswith("TFTP|12:34:56|")
+
+
+def test_tftp_forwarder_download(capsys):
+    from nmlinux.core.tftp_helper import _TftpForwarder
+    import logging
+
+    handler = _TftpForwarder()
+
+    # Simulate tftpy logs in order: filename, direction, then transfer complete
+    for msg in [
+        "Requested filename is startup-config",
+        "Opening file /root/startup-config for reading",
+        "192.168.1.1:12345 Transferred 4096 bytes in 0.01 seconds",
+    ]:
+        record = logging.LogRecord(
+            name="tftpy", level=logging.DEBUG,
+            pathname="", lineno=0, msg=msg,
+            args=(), exc_info=None,
+        )
+        handler.emit(record)
+
+    captured = capsys.readouterr()
+    assert "TFTP|" in captured.out
+    assert "↓" in captured.out
+    assert "startup-config" in captured.out
+    assert "4096" in captured.out
+
+
+def test_tftp_forwarder_upload(capsys):
+    from nmlinux.core.tftp_helper import _TftpForwarder
+    import logging
+
+    handler = _TftpForwarder()
+
+    for msg in [
+        "    filename -> firmware.bin",
+        "Opening file /srv/tftp/firmware.bin for writing",
+        "Session 10.0.0.5:54321 complete",
+        "Transferred 2048 bytes in 0.05 seconds",
+    ]:
+        record = logging.LogRecord(
+            name="tftpy", level=logging.DEBUG,
+            pathname="", lineno=0, msg=msg,
+            args=(), exc_info=None,
+        )
+        handler.emit(record)
+
+    captured = capsys.readouterr()
+    assert "TFTP|" in captured.out
+    assert "↑" in captured.out
+    assert "firmware.bin" in captured.out
+    assert "10.0.0.5" in captured.out
+    assert "2048" in captured.out

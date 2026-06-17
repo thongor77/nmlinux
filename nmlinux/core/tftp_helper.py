@@ -26,24 +26,36 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def format_log_line(direction: str, filename: str, client_ip: str,
-                    nbytes: int, status: str) -> str:
-    ts = datetime.datetime.now().strftime("%H:%M:%S")
+                    nbytes: int, status: str,
+                    ts: str | None = None) -> str:
+    if ts is None:
+        ts = datetime.datetime.now().strftime("%H:%M:%S")
     return f"TFTP|{ts}|{direction}|{filename}|{client_ip}|{nbytes}|{status}"
 
 
 # ── tftpy log forwarding ──────────────────────────────────────────────────────
 
-_RE_DOWNLOAD  = re.compile(r"completed download of (\d+) bytes", re.I)
-_RE_UPLOAD    = re.compile(r"completed upload of (\d+) bytes", re.I)
-_RE_FILENAME  = re.compile(r"filename\s*=\s*(\S+)", re.I)
-_RE_PEER      = re.compile(r"peer\s*=\s*([\d.]+)", re.I)
+# Matches: "Transferred 4096 bytes in 0.01 seconds"
+_RE_TRANSFERRED   = re.compile(r"Transferred (\d+) bytes in", re.I)
+# Matches: "Requested filename is startup-config"
+# Matches: "    filename -> startup-config"
+_RE_FILENAME      = re.compile(
+    r"(?:Requested filename is|filename\s*->)\s*(\S+)", re.I
+)
+# Matches: "Opening file /root/startup-config for reading"  (client GET → server reads)
+_RE_OPENING_READ  = re.compile(r"Opening file .+ for reading", re.I)
+# Matches: "Opening file /root/startup-config for writing"  (client PUT → server writes)
+_RE_OPENING_WRITE = re.compile(r"Opening file .+ for writing", re.I)
+# Matches session completion line: "Session 192.168.1.1:12345 complete"
+_RE_SESSION       = re.compile(r"Session ([\d.]+):\d+ complete", re.I)
 
 
 class _TftpForwarder(logging.Handler):
     def __init__(self) -> None:
         super().__init__()
-        self._filename = "unknown"
-        self._client   = "unknown"
+        self._filename  = "unknown"
+        self._client    = "unknown"
+        self._direction = "↓"   # default: client download (server reads file)
 
     def emit(self, record: logging.LogRecord) -> None:
         msg = record.getMessage()
@@ -51,21 +63,26 @@ class _TftpForwarder(logging.Handler):
         m = _RE_FILENAME.search(msg)
         if m:
             self._filename = m.group(1)
-
-        m = _RE_PEER.search(msg)
-        if m:
-            self._client = m.group(1)
-
-        m = _RE_DOWNLOAD.search(msg)
-        if m:
-            print(format_log_line("↓", self._filename, self._client,
-                                  int(m.group(1)), "OK"), flush=True)
             return
 
-        m = _RE_UPLOAD.search(msg)
+        if _RE_OPENING_READ.search(msg):
+            self._direction = "↓"   # server opens for reading → client downloads
+            return
+
+        if _RE_OPENING_WRITE.search(msg):
+            self._direction = "↑"   # server opens for writing → client uploads
+            return
+
+        m = _RE_SESSION.search(msg)
         if m:
-            print(format_log_line("↑", self._filename, self._client,
-                                  int(m.group(1)), "OK"), flush=True)
+            self._client = m.group(1)
+            return
+
+        m = _RE_TRANSFERRED.search(msg)
+        if m:
+            print(format_log_line(self._direction, self._filename,
+                                  self._client, int(m.group(1)), "OK"),
+                  flush=True)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
@@ -85,15 +102,17 @@ def main() -> None:
     tftpy_log.setLevel(logging.DEBUG)
     tftpy_log.addHandler(handler)
 
-    server = tftpy.TftpServer(args.root)
-
     try:
+        server = tftpy.TftpServer(args.root)
         print("READY", flush=True)
         server.listen("0.0.0.0", args.port)
     except PermissionError:
         print("EPERM", flush=True)
         sys.exit(1)
     except OSError as exc:
+        print(f"ERROR|{exc}", flush=True)
+        sys.exit(2)
+    except Exception as exc:
         print(f"ERROR|{exc}", flush=True)
         sys.exit(2)
 
