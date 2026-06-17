@@ -224,3 +224,37 @@ def test_http_post_path_traversal_blocked(tmp_path):
     server.shutdown()
     assert resp.status == 403
     assert not (tmp_path.parent / "evil.txt").exists()
+
+
+# ── i18n ──────────────────────────────────────────────────────────────────────
+
+_FT_KEYS = [
+    "ft_proto_tftp", "ft_proto_http",
+    "ft_lbl_port", "ft_lbl_root", "ft_lbl_local_ips",
+    "ft_btn_start", "ft_btn_stop", "ft_btn_browse", "ft_btn_clear_log",
+    "ft_btn_start_root",
+    "ft_status_running_tftp", "ft_status_running_http", "ft_status_stopped",
+    "ft_err_perm_denied",
+    "ft_log_col_time", "ft_log_col_file", "ft_log_col_client",
+    "ft_log_col_dir", "ft_log_col_size",
+    "ft_nav_hint",
+]
+
+_LANGUAGES = ["fr", "en", "es", "de", "it", "pt", "ja", "zh"]
+
+
+def test_ft_i18n_keys_all_languages():
+    from nmlinux.core.i18n import _T
+    missing = []
+    for lang in _LANGUAGES:
+        for key in _FT_KEYS:
+            if key not in _T.get(lang, {}):
+                missing.append(f"{lang}/{key}")
+    assert missing == [], f"Missing i18n keys: {missing}"
+
+
+def test_ft_status_running_supports_format():
+    from nmlinux.core.i18n import _T
+    val = _T["en"]["ft_status_running_tftp"]
+    assert "{port}" in val
+    assert "{root}" in val
