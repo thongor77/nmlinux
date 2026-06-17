@@ -201,3 +201,26 @@ def test_get_local_ips_returns_list():
         assert isinstance(ip, str)
         parts = ip.split(".")
         assert len(parts) == 4
+
+
+def test_http_path_traversal_blocked(tmp_path):
+    server, port, _ = _start_test_server(tmp_path)
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+    conn.request("GET", "/../../../etc/passwd")
+    resp = conn.getresponse()
+    resp.read()
+    server.shutdown()
+    assert resp.status == 403
+
+
+def test_http_post_path_traversal_blocked(tmp_path):
+    server, port, _ = _start_test_server(tmp_path)
+    body = b"evil content"
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+    conn.request("POST", "/../evil.txt", body=body,
+                 headers={"Content-Length": str(len(body))})
+    resp = conn.getresponse()
+    resp.read()
+    server.shutdown()
+    assert resp.status == 403
+    assert not (tmp_path.parent / "evil.txt").exists()

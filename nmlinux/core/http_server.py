@@ -22,14 +22,32 @@ def make_handler(root: Path, on_log: LogCallback) -> type:
         def log_message(self, fmt, *args) -> None:  # suppress default stderr output
             pass
 
+        def _safe_target(self, filename: str) -> "Path | None":
+            """Return resolved path if it is safely within root, else None."""
+            try:
+                target = (root / filename).resolve()
+                target.relative_to(root.resolve())  # raises ValueError if outside
+                return target
+            except ValueError:
+                return None
+
         def do_GET(self) -> None:
             filename = self.path.lstrip("/") or "index"
-            target = root / filename
+            target = self._safe_target(filename)
+            if target is None:
+                self.send_error(403)
+                on_log("↓", filename, self.client_address[0], 0, "403")
+                return
             if not target.exists() or not target.is_file():
                 self.send_error(404)
                 on_log("↓", filename, self.client_address[0], 0, "404")
                 return
-            data = target.read_bytes()
+            try:
+                data = target.read_bytes()
+            except OSError as exc:
+                self.send_error(500)
+                on_log("↓", filename, self.client_address[0], 0, f"ERROR: {exc.__class__.__name__}")
+                return
             self.send_response(200)
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
@@ -44,11 +62,25 @@ def make_handler(root: Path, on_log: LogCallback) -> type:
 
         def _receive(self) -> None:
             filename = self.path.lstrip("/") or "upload"
+            target = self._safe_target(filename)
+            if target is None:
+                self.send_error(403)
+                on_log("↑", filename, self.client_address[0], 0, "403")
+                return
             length = int(self.headers.get("Content-Length", 0))
-            data = self.rfile.read(length) if length > 0 else b""
-            target = root / filename
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(data)
+            try:
+                data = self.rfile.read(length) if length > 0 else b""
+            except OSError as exc:
+                self.send_error(500)
+                on_log("↑", filename, self.client_address[0], 0, f"ERROR: {exc.__class__.__name__}")
+                return
+            try:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(data)
+            except OSError as exc:
+                self.send_error(500)
+                on_log("↑", filename, self.client_address[0], 0, f"ERROR: {exc.__class__.__name__}")
+                return
             self.send_response(200)
             self.send_header("Content-Length", "0")
             self.end_headers()
