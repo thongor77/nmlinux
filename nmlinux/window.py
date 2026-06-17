@@ -38,6 +38,7 @@ from nmlinux.pages.firewall import FirewallPage
 from nmlinux.pages.speedtest import SpeedTestPage
 from nmlinux.pages.bandwidth import BandwidthPage
 from nmlinux.pages.wol import WolPage
+from nmlinux.pages.file_transfer import FileTransferPage
 from nmlinux.pages.connection_manager import ConnectionManagerPage
 from nmlinux.pages.topology import TopologyPage
 from nmlinux.pages.settings import SettingsPage
@@ -176,6 +177,11 @@ _TOOLS = [
         ("system-shutdown", "system-reboot", "media-playback-start"),
         "Wake on LAN", WolPage,
         tr("nav_hint_wol"),
+    ),
+    (
+        ("folder-remote", "document-send", "network-server", "folder-upload"),
+        "File Transfer", FileTransferPage,
+        tr("ft_nav_hint"),
     ),
     (
         ("network-workgroup", "computer", "network-wired"),
