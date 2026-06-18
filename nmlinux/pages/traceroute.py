@@ -339,20 +339,14 @@ class _MapWidget(QWidget):
     # ── Rendering ────────────────────────────────────────────────────────────
 
     def changeEvent(self, event) -> None:  # noqa: N802
-        from PySide6.QtCore import QEvent
-        if event.type() == QEvent.Type.ApplicationPaletteChange:
-            self.update()
         super().changeEvent(event)
 
     def paintEvent(self, _event) -> None:                   # noqa: N802
-        from PySide6.QtGui import QPalette as _P
-        pal       = self.palette()
-        c_bg      = pal.color(_P.ColorRole.Window)
-        c_surface = pal.color(_P.ColorRole.Base)
-        c_border  = pal.color(_P.ColorRole.Mid)
-        c_country = pal.color(_P.ColorRole.AlternateBase)
-        c_overlay = pal.color(_P.ColorRole.PlaceholderText)
-        c_text    = pal.color(_P.ColorRole.Text)
+        c_bg      = QColor('#1e3a5f')   # ocean
+        c_country = QColor('#3d6b4f')   # land
+        c_border  = QColor('#2a4d38')   # country borders
+        c_overlay = QColor('#607d8b')   # hint text
+        c_text    = QColor('#e0e8f0')   # hop labels
 
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
