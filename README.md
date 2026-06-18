@@ -34,7 +34,7 @@ Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkM
 
 | Dashboard | Topology |
 |-----------|----------|
-| ![Dashboard](screenshots/main_v1.2.7.png) | ![Topology](screenshots/topology_v1.2.7.png) |
+| ![Dashboard](screenshots/main_v1.2.7.png) | ![Topology](screenshots/topology_v1.5.0.png) |
 
 | Traceroute | Wi-Fi |
 |------------|-------|
