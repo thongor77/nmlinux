@@ -38,7 +38,7 @@ Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkM
 
 | Traceroute | Wi-Fi |
 |------------|-------|
-| ![Traceroute](screenshots/traceroute_v1.2.7.png) | ![Wi-Fi](screenshots/Wi-Fi_v1.2.7.png) |
+| ![Traceroute](screenshots/KDE_Traceroute.png) | ![Wi-Fi](screenshots/Wi-Fi_v1.2.7.png) |
 
 **macOS**
 
