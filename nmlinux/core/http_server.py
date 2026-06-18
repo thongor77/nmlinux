@@ -9,6 +9,7 @@ import socket
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Callable
+from urllib.parse import quote, unquote
 
 LogCallback = Callable[[str, str, str, int, str], None]
 # args: direction("↓"/"↑"), filename, client_ip, nbytes, status
@@ -32,7 +33,7 @@ def make_handler(root: Path, on_log: LogCallback) -> type:
                 return None
 
         def do_GET(self) -> None:
-            filename = self.path.lstrip("/")
+            filename = unquote(self.path.lstrip("/"))
             if filename == "":
                 target = root.resolve()
             else:
@@ -59,6 +60,8 @@ def make_handler(root: Path, on_log: LogCallback) -> type:
             self.send_response(200)
             self.send_header("Content-Type", "application/octet-stream")
             self.send_header("Content-Length", str(len(data)))
+            self.send_header("Content-Disposition",
+                             f'attachment; filename="{target.name}"')
             self.end_headers()
             self.wfile.write(data)
             on_log("↓", filename or "/", self.client_address[0], len(data), "OK")
@@ -78,7 +81,7 @@ def make_handler(root: Path, on_log: LogCallback) -> type:
                 rows.append(f'<tr><td colspan="2"><a href="{parent}">📁 ..</a></td></tr>')
             for entry in entries:
                 icon  = "📁" if entry.is_dir() else "📄"
-                href  = (url + "/" + entry.name).replace("//", "/")
+                href  = quote((url + "/" + entry.name).replace("//", "/"))
                 try:
                     size = "—" if entry.is_dir() else f"{entry.stat().st_size:,} B"
                 except OSError:
@@ -113,7 +116,7 @@ def make_handler(root: Path, on_log: LogCallback) -> type:
             self._receive()
 
         def _receive(self) -> None:
-            filename = self.path.lstrip("/") or "upload"
+            filename = unquote(self.path.lstrip("/")) or "upload"
             target = self._safe_target(filename)
             if target is None:
                 self.send_error(403)
