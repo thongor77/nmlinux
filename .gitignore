@@ -6,3 +6,8 @@ build/
 .venv/
 *.swp
 export/
+packaging/.venv-build/
+packaging/build/
+packaging/dist/
+packaging/AppDir/
+packaging/appimagetool-x86_64.AppImage

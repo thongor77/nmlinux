@@ -28,7 +28,7 @@ Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkM
 
 ## Screenshots
 
-> Linux screenshots from v1.2.7 — macOS screenshots from v1.3.5. The app has 27 modules and 8 interface languages (FR/EN/ES/DE/IT/PT/JA/ZH).
+> Linux screenshots from v1.2.7 — macOS screenshots from v1.3.5. The app now has 28 modules and 8 interface languages (FR/EN/ES/DE/IT/PT/JA/ZH).
 
 **Linux (KDE)**
 
@@ -185,7 +185,8 @@ Initial public release — 13 modules: Dashboard, Interfaces, Wi-Fi, Subnet Calc
 | **SSH** | Embedded PTY terminal (pyte/VT100), saved connections (JSON), key auth, scrollback |
 | **Remote Desktop** | RDP connection profiles (groups/subgroups); launches `xfreerdp`; password never stored |
 | **VNC** | VNC connection profiles (groups/subgroups); launches `vncviewer` (TigerVNC); macOS ARD compatible; password never stored |
-| **TLS Inspector** | Certificate details: CN, SANs, issuer, validity + expiry countdown, serial, protocol, cipher, chain |
+| **SSH Key Manager** | List `~/.ssh/` key pairs (type, bits, fingerprint); generate Ed25519/RSA 4096; copy public key; deploy to server via `ssh-copy-id`; delete pairs with confirmation |
+| **TLS Inspector** | Certificate details: CN, SANs, issuer, validity + expiry countdown, serial, protocol, cipher, chain; **Watchlist** with background expiry monitor and sidebar color dot |
 | **SMB / NFS** | List SMB shares (`smbclient`) and NFS exports (`showmount`) from any server or NAS; optional credentials for SMB |
 | **Hosts File** | View/edit `/etc/hosts`: add, delete, toggle entries; filter; save via pkexec |
 | **Visual Traceroute** | Hop-by-hop route on a world map, live geolocation (ip-api.com), zoom & pan, CSV + TXT export |
@@ -196,7 +197,8 @@ Initial public release — 13 modules: Dashboard, Interfaces, Wi-Fi, Subnet Calc
 | **Wake on LAN** | Pure Python magic packet (UDP broadcast), persistent host book, no external tool required |
 | **Topology Map** | Auto-discovers LAN devices via `nmap -sn`; interactive graph with draggable nodes, zoom/pan, detail panel |
 | **Settings** | Language selection (FR / EN / ES / DE / IT / PT / JA / ZH), persisted; restart required after change |
-| **Command Palette** | Ctrl+P overlay: fuzzy search across all 27 modules by name or keyword |
+| **Command Palette** | Ctrl+P overlay: fuzzy search across all 28 modules by name or keyword |
+| **File Transfer** | On-demand TFTP or HTTP server; configurable port and root dir; local IPs as copy buttons; live log table (filename, client IP, direction ↑/↓, size); HTTP directory listing + GET/POST/PUT; TFTP GET + PUT; port 69 prompts pkexec |
 | **Export** | File → Export Network Report (JSON/Markdown/Text/PDF); per-module export on Interfaces, DNS, Firewall, SSH, Connections |
 
 ---
@@ -241,6 +243,7 @@ brew install nmap whois net-snmp mtr curl
 - PySide6 6.6+
 - ptyprocess 0.7+
 - pyte 0.8+ (`pip install pyte` or `sudo pacman -S python-pyte`)
+- tftpy 0.8+ (`pip install tftpy` or `sudo pacman -S python-tftpy`) — File Transfer module
 
 ---
 
@@ -254,20 +257,34 @@ yay -S nmlinux
 
 All dependencies (PySide6, ptyprocess, pyte, nmcli, …) are handled automatically.
 
-### Option 2 — macOS
+### Option 2 — AppImage (any Linux distro, no install)
+
+Download `NMLinux-x.y.z-x86_64.AppImage` from the [latest release](https://github.com/thongor77/nmlinux/releases/latest):
+
+```bash
+chmod +x NMLinux-*.AppImage
+./NMLinux-*.AppImage
+```
+
+No installation required — Python, Qt and all NMLinux modules are bundled in a single file.  
+Works on any x86_64 Linux with glibc 2.17+ (Ubuntu 16.04+, Fedora 26+, Arch, Mint, etc.).
+
+> System network tools (`nmap`, `whois`, `mtr`…) are **not** bundled — install them via your package manager for the corresponding modules to work. See [Requirements](#requirements) below.
+
+### Option 3 — macOS
 
 ```bash
 # 1. Install system tools (if not already present)
 brew install nmap whois net-snmp mtr curl
 
 # 2. Install NMLinux and its Python dependencies
-pip install PySide6 ptyprocess pyte
-pip install nmlinux-1.4.3-py3-none-any.whl   # download from Releases, or use the line below
+pip install PySide6 ptyprocess pyte tftpy
+pip install nmlinux-1.5.0-py3-none-any.whl   # download from Releases, or use the line below
 
 # Alternative: run directly from source (no install)
 git clone https://github.com/thongor77/nmlinux.git
 cd nmlinux
-pip install PySide6 ptyprocess pyte
+pip install PySide6 ptyprocess pyte tftpy
 python3 -m nmlinux.main
 
 # Update an existing clone
@@ -278,7 +295,7 @@ Download the `.whl` from the [latest release](https://github.com/thongor77/nmlin
 
 > **Note:** Most modules work on macOS without modification. 9 modules use native macOS commands (`networksetup`, `scutil`, `ifconfig`, `pfctl`, `system_profiler`…) instead of their Linux equivalents. RDP falls back to `open rdp://` (Microsoft Remote Desktop), VNC falls back to `open vnc://` (Screen Sharing built-in). Only Connection Manager has reduced functionality on macOS (`nmcli` not available) — see [Limitations](#limitations).
 
-### Option 3 — Debian / Ubuntu / Linux Mint (install script)
+### Option 4 — Debian / Ubuntu / Linux Mint (install script)
 
 > **Note for Linux Mint / Ubuntu users:** `pip install` is blocked system-wide on Python 3.12+ (PEP 668 — `externally-managed-environment`). Use the provided install script — it creates a virtual environment automatically and installs a `.desktop` entry.
 
@@ -297,13 +314,13 @@ The script will:
 
 After install, run `nmlinux` from a terminal or launch it from the application menu.
 
-### Option 4 — Wheel (all distros / macOS)
+### Option 5 — Wheel (all distros / macOS)
 
 Download the `.whl` from the [latest release](https://github.com/thongor77/nmlinux/releases/latest) and install it:
 
 ```bash
 # Arch / Fedora / macOS — no pip restrictions
-pip install nmlinux-1.4.3-py3-none-any.whl
+pip install nmlinux-1.5.0-py3-none-any.whl
 
 # Debian / Ubuntu / Mint — install system libs first, then use pipx
 # Ubuntu ≤24.04:
@@ -311,21 +328,21 @@ sudo apt install libgl1 libglib2.0-0 libdbus-1-3 freerdp2-x11 tigervnc-viewer
 # Ubuntu 26.04+:
 sudo apt install libgl1 libglib2.0-0 libdbus-1-3 freerdp3-x11 tigervnc-viewer
 
-pipx install nmlinux-1.4.3-py3-none-any.whl
+pipx install nmlinux-1.5.0-py3-none-any.whl
 ```
 
-> **Note for Ubuntu 26.04+:** `pipx` requires system libraries (libGL, etc.) to be installed first — the commands above cover them. If `pipx install` fails due to a PySide6 build error, use **Option 3** (install script) instead, which handles everything automatically.
+> **Note for Ubuntu 26.04+:** `pipx` requires system libraries (libGL, etc.) to be installed first — the commands above cover them. If `pipx install` fails due to a PySide6 build error, use **Option 4** (install script) instead, which handles everything automatically.
 
-### Option 5 — From source (Arch / Fedora / macOS)
+### Option 6 — From source (Arch / Fedora / macOS)
 
 ```bash
 git clone https://github.com/thongor77/nmlinux.git
 cd nmlinux
-pip install PySide6 ptyprocess pyte
+pip install PySide6 ptyprocess pyte tftpy
 python3 -m nmlinux.main
 ```
 
-### Option 6 — Desktop entry (KDE / GNOME / etc.)
+### Option 7 — Desktop entry (KDE / GNOME / etc.)
 
 Copy the `.desktop` file to make NMLinux appear in your application launcher:
 
@@ -357,14 +374,19 @@ nmlinux/
   core/
     i18n.py         — Translation system (8 languages: fr/en/es/de/it/pt/ja/zh), tr(key) function
     icons.py        — themed_icon(): 21 bundled Lucide SVG icons via QSvgRenderer
+    theme.py        — is_dark(), color_ok(), color_err(): runtime light/dark helpers
     settings.py     — AppSettings dataclass, JSON persistence
     ssh.py          — SshConnection dataclass, SshStore
     rdp.py          — RdpConnection dataclass, RdpStore, find_xfreerdp()
     vnc.py          — VncConnection dataclass, VncStore, find_vncviewer()
     terminal.py     — SshWorker (QThread) + PTY via ptyprocess, emits raw bytes
+    tls_watchlist.py — TlsWatchlist: background cert expiry checker, JSON persistence
+    http_server.py  — ThreadedHTTPServer: directory listing, GET/PUT/POST, port binding
+    tftp_helper.py  — TftpServerThread: tftpy wrapper, configurable port and root
+    help_content.py — Module contextual help strings (all 8 languages)
     cli_bar.py      — CliBar singleton: pedagogical CLI equivalent bar
     export_dialog.py — open_export_dialog(): QFileDialog with live extension update
-  command_palette.py — CommandPalette (Ctrl+P): fuzzy search across 27 modules
+  command_palette.py — CommandPalette (Ctrl+P): fuzzy search across 28 modules
   export_manager.py  — collect_snapshot(), to_json/text/markdown/pdf, save_export()
   pages/
     about.py        — About page (credits, tools & services)
@@ -372,7 +394,10 @@ nmlinux/
     connection_manager.py — Connection Manager: nmcli profiles, connect/disconnect/edit
     dashboard.py    — Dashboard
     dns.py          — DNS Lookup
+    file_transfer.py — File Transfer: TFTP + HTTP server, live log, pkexec for port 69
     firewall.py     — Firewall Viewer: nftables + iptables parser, live via pkexec
+    help_page.py    — Contextual help overlay
+    hosts.py        — Hosts File: view/edit /etc/hosts, toggle entries, save via pkexec
     interfaces.py   — Network Interfaces
     ip_scanner.py   — IP Scanner
     mtr.py          — MTR: mtr --report parser, live hop stats table, export
@@ -381,12 +406,15 @@ nmlinux/
     port_scanner.py — Port Scanner
     rdp.py          — Remote Desktop: RDP profiles, launches xfreerdp
     settings.py     — Settings page
+    smb_nfs.py      — SMB/NFS Browser: smbclient + showmount
     snmp.py         — SNMP
     sntp.py         — SNTP / NTP
     speedtest.py    — Speed Test: curl + Cloudflare, history graph
     ssh.py          — SSH page (connection manager + terminal)
+    ssh_keys.py     — SSH Key Manager: list/generate/deploy/delete key pairs
     subnet.py       — Subnet Calculator
     terminal_view.py — TerminalView: pyte VT100 emulator + QPainter renderer
+    tls.py          — TLS Inspector + TLS Watchlist: cert details, background expiry monitor
     topology.py     — Topology Map: nmap -sn, interactive graph, zoom/pan
     traceroute.py   — Visual Traceroute: world map, geolocation, zoom/pan
     vnc.py          — VNC: connection profiles, launches vncviewer
@@ -411,7 +439,7 @@ Since v1.2.7, NMLinux uses 21 bundled [Lucide](https://lucide.dev) SVG icons ren
 ## Limitations
 
 ### Linux
-Full support — all 27 modules available.
+Full support — all 28 modules available.
 
 ### macOS
 Most modules work out of the box since they rely on tools available on both platforms (`ssh`, `dig`, `ping`, `curl`, `nmap`, `openssl`…).
