@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f2744"/>
+      <stop offset="100%" stop-color="#1a3a6b"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded rect -->
+  <rect width="1024" height="1024" rx="220" ry="220" fill="url(#bg)"/>
+
+  <!-- Network icon scaled to ~560×560, centered at 512,512 -->
+  <!-- Original viewBox 0 0 24 24 → scale factor = 560/24 ≈ 23.33, offset = (1024-560)/2 = 232 -->
+  <g transform="translate(232, 210) scale(23.33)"
+     fill="none" stroke="white" stroke-width="1.4"
+     stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Top node -->
+    <rect x="9" y="2" width="6" height="6" rx="1"/>
+    <!-- Bottom-left node -->
+    <rect x="2" y="16" width="6" height="6" rx="1"/>
+    <!-- Bottom-right node -->
+    <rect x="16" y="16" width="6" height="6" rx="1"/>
+    <!-- Horizontal bus -->
+    <path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/>
+    <!-- Vertical stem -->
+    <path d="M12 12V8"/>
+  </g>
+</svg>
