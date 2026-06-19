@@ -313,6 +313,8 @@ bash packaging/install_macos_app.sh --system
 
 To update later: `git pull && bash packaging/install_macos_app.sh`
 
+To uninstall: `bash packaging/uninstall_macos.sh`
+
 The `.app` is a lightweight wrapper around a venv in `~/.local/share/nmlinux/venv` — no bundling or file copying.
 
 ### Option 4 — Debian / Ubuntu / Linux Mint (install script)
