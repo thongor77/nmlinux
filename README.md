@@ -295,6 +295,23 @@ Download the `.whl` from the [latest release](https://github.com/thongor77/nmlin
 
 > **Note:** Most modules work on macOS without modification. 9 modules use native macOS commands (`networksetup`, `scutil`, `ifconfig`, `pfctl`, `system_profiler`…) instead of their Linux equivalents. RDP falls back to `open rdp://` (Microsoft Remote Desktop), VNC falls back to `open vnc://` (Screen Sharing built-in). Only Connection Manager has reduced functionality on macOS (`nmcli` not available) — see [Limitations](#limitations).
 
+**Add a Finder icon (optional)**
+
+After installing NMLinux, run the bundled script to create a `NMLinux.app` in `~/Applications`:
+
+```bash
+git clone https://github.com/thongor77/nmlinux.git   # skip if already cloned
+bash nmlinux/packaging/install_macos_app.sh
+```
+
+Use `--system` to install to `/Applications` instead:
+
+```bash
+bash nmlinux/packaging/install_macos_app.sh --system
+```
+
+The `.app` is a lightweight wrapper — it launches the Python install you already have, with no bundling or copying of files. Update NMLinux normally (`pip install --upgrade` or `git pull`) and the icon keeps working.
+
 ### Option 4 — Debian / Ubuntu / Linux Mint (install script)
 
 > **Note for Linux Mint / Ubuntu users:** `pip install` is blocked system-wide on Python 3.12+ (PEP 668 — `externally-managed-environment`). Use the provided install script — it creates a virtual environment automatically and installs a `.desktop` entry.
