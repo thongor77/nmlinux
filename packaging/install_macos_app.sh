@@ -25,36 +25,23 @@ if ! command -v python3 &>/dev/null; then
     exit 1
 fi
 
-# --- install nmlinux into a venv if not already importable ---
-if ! python3 -c "import nmlinux" 2>/dev/null; then
-    echo "NMLinux not found — installing into ${VENV_DIR} ..."
-    python3 -m venv "${VENV_DIR}"
-    "${VENV_DIR}/bin/pip" install --quiet PySide6 ptyprocess pyte tftpy
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-    # Install from local source if we are inside the repo, otherwise from PyPI wheel
-    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-    REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-    if [[ -f "${REPO_ROOT}/pyproject.toml" ]]; then
-        "${VENV_DIR}/bin/pip" install --quiet "${REPO_ROOT}"
-    else
-        echo "Error: run this script from the nmlinux repo root (pyproject.toml not found)."
-        exit 1
-    fi
-    echo "NMLinux installed."
-    PYTHON="${VENV_DIR}/bin/python3"
-else
-    # Already installed — find which interpreter has it
-    if command -v nmlinux &>/dev/null; then
-        PYTHON="$(head -1 "$(command -v nmlinux)" | sed 's|#!||')"
-    else
-        PYTHON="$(command -v python3)"
-    fi
+if [[ ! -f "${REPO_ROOT}/pyproject.toml" ]]; then
+    echo "Error: run this script from the nmlinux repo root (pyproject.toml not found)."
+    exit 1
 fi
 
-# Prefer the venv python when it exists
-if [[ -x "${VENV_DIR}/bin/python3" ]]; then
-    PYTHON="${VENV_DIR}/bin/python3"
-fi
+# Always use the venv python as the authoritative interpreter.
+python3 -m venv "${VENV_DIR}"
+PYTHON="${VENV_DIR}/bin/python3"
+
+# Install/upgrade nmlinux and its dependencies into the venv unconditionally.
+echo "Installing NMLinux into ${VENV_DIR} ..."
+"${VENV_DIR}/bin/pip" install --quiet --upgrade PySide6 ptyprocess pyte tftpy
+"${VENV_DIR}/bin/pip" install --quiet --upgrade "${REPO_ROOT}"
+echo "NMLinux installed."
 
 echo "Using Python : ${PYTHON}"
 echo "Installing to: ${APP}"
@@ -62,12 +49,9 @@ echo "Installing to: ${APP}"
 # --- build bundle structure ---
 mkdir -p "${MACOS_DIR}" "${RES_DIR}"
 
-# Launcher script — sources the venv if present so Qt libs are found
+# Launcher script — calls the venv python directly (no activate needed)
 cat > "${MACOS_DIR}/${APP_NAME}" << LAUNCHER
 #!/usr/bin/env bash
-if [[ -f "${VENV_DIR}/bin/activate" ]]; then
-    source "${VENV_DIR}/bin/activate"
-fi
 exec "${PYTHON}" -m nmlinux.main "\$@"
 LAUNCHER
 chmod +x "${MACOS_DIR}/${APP_NAME}"
