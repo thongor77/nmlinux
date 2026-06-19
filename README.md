@@ -297,20 +297,23 @@ Download the `.whl` from the [latest release](https://github.com/thongor77/nmlin
 
 **Add a Finder icon (optional)**
 
-After installing NMLinux, run the bundled script to create a `NMLinux.app` in `~/Applications`:
+Run the bundled script — it creates a dedicated venv, installs NMLinux and its Python dependencies automatically, then creates `NMLinux.app` in `~/Applications`. No `pip` or manual dependency management required.
 
 ```bash
-git clone https://github.com/thongor77/nmlinux.git   # skip if already cloned
-bash nmlinux/packaging/install_macos_app.sh
+git clone https://github.com/thongor77/nmlinux.git
+cd nmlinux
+bash packaging/install_macos_app.sh
 ```
 
 Use `--system` to install to `/Applications` instead:
 
 ```bash
-bash nmlinux/packaging/install_macos_app.sh --system
+bash packaging/install_macos_app.sh --system
 ```
 
-The `.app` is a lightweight wrapper — it launches the Python install you already have, with no bundling or copying of files. Update NMLinux normally (`pip install --upgrade` or `git pull`) and the icon keeps working.
+To update later: `git pull && bash packaging/install_macos_app.sh`
+
+The `.app` is a lightweight wrapper around a venv in `~/.local/share/nmlinux/venv` — no bundling or file copying.
 
 ### Option 4 — Debian / Ubuntu / Linux Mint (install script)
 
