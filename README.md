@@ -257,7 +257,26 @@ yay -S nmlinux
 
 All dependencies (PySide6, ptyprocess, pyte, nmcli, …) are handled automatically.
 
-### Option 2 — AppImage (any Linux distro, no install)
+### Option 2 — NixOS / Nix
+
+Run directly with the bundled `flake.nix` — no system-wide install needed:
+
+```bash
+git clone https://github.com/thongor77/nmlinux.git
+cd nmlinux
+nix run .
+```
+
+Or enter a development shell:
+
+```bash
+nix develop
+python3 -m nmlinux.main
+```
+
+All Python dependencies (PySide6, ptyprocess, pyte, tftpy) and system tools (nmcli, nmap, freerdp, vncviewer, mtr, avahi-browse…) are provided automatically via the Nix wrapper.
+
+### Option 4 — AppImage (any Linux distro, no install)
 
 Download `NMLinux-x.y.z-x86_64.AppImage` from the [latest release](https://github.com/thongor77/nmlinux/releases/latest):
 
@@ -271,7 +290,7 @@ Works on any x86_64 Linux with glibc 2.17+ (Ubuntu 16.04+, Fedora 26+, Arch, Min
 
 > System network tools (`nmap`, `whois`, `mtr`…) are **not** bundled — install them via your package manager for the corresponding modules to work. See [Requirements](#requirements) below.
 
-### Option 3 — macOS
+### Option 5 — macOS
 
 ```bash
 # 1. Install system tools (if not already present)
@@ -317,7 +336,7 @@ To uninstall: `bash packaging/uninstall_macos.sh`
 
 The `.app` is a lightweight wrapper around a venv in `~/.local/share/nmlinux/venv` — no bundling or file copying.
 
-### Option 4 — Debian / Ubuntu / Linux Mint (install script)
+### Option 6 — Debian / Ubuntu / Linux Mint (install script)
 
 > **Note for Linux Mint / Ubuntu users:** `pip install` is blocked system-wide on Python 3.12+ (PEP 668 — `externally-managed-environment`). Use the provided install script — it creates a virtual environment automatically and installs a `.desktop` entry.
 
@@ -336,7 +355,7 @@ The script will:
 
 After install, run `nmlinux` from a terminal or launch it from the application menu.
 
-### Option 5 — Wheel (all distros / macOS)
+### Option 7 — Wheel (all distros / macOS)
 
 Download the `.whl` from the [latest release](https://github.com/thongor77/nmlinux/releases/latest) and install it:
 
@@ -355,7 +374,7 @@ pipx install nmlinux-1.5.0-py3-none-any.whl
 
 > **Note for Ubuntu 26.04+:** `pipx` requires system libraries (libGL, etc.) to be installed first — the commands above cover them. If `pipx install` fails due to a PySide6 build error, use **Option 4** (install script) instead, which handles everything automatically.
 
-### Option 6 — From source (Arch / Fedora / macOS)
+### Option 8 — From source (Arch / Fedora / macOS)
 
 ```bash
 git clone https://github.com/thongor77/nmlinux.git
@@ -364,7 +383,7 @@ pip install PySide6 ptyprocess pyte tftpy
 python3 -m nmlinux.main
 ```
 
-### Option 7 — Desktop entry (KDE / GNOME / etc.)
+### Option 9 — Desktop entry (KDE / GNOME / etc.)
 
 Copy the `.desktop` file to make NMLinux appear in your application launcher:
 

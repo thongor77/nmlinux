@@ -23,13 +23,16 @@
           traceroute
           mtr
           curl
+          freerdp3         # RDP module (xfreerdp3)
+          tigervnc         # VNC module (vncviewer)
+          avahi            # Topology — mDNS device detection
           kdePackages.breeze-icons
           hicolor-icon-theme
         ];
 
         nmlinux = python.pkgs.buildPythonApplication {
           pname   = "nmlinux";
-          version = "1.2.6";
+          version = "1.5.0";
           src     = ./.;
           format  = "pyproject";
 
@@ -39,6 +42,7 @@
             pyside6
             ptyprocess
             pyte
+            tftpy
           ];
 
           makeWrapperArgs = [
@@ -71,6 +75,7 @@
               pyside6
               ptyprocess
               pyte
+              tftpy
             ]))
           ] ++ systemTools;
         };
