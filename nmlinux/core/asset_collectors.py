@@ -194,8 +194,10 @@ def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
             operation_timeout_sec=timeout,
         )
 
+        _PS = r'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+
         def ps(script: str) -> str:
-            r = sess.run_ps(script)
+            r = sess.run_cmd(_PS, ['-NonInteractive', '-NoProfile', '-Command', script])
             out = r.std_out.decode(errors='replace').strip()
             return '' if 'help' in out.lower() else out
 
@@ -230,41 +232,48 @@ def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
         cpu_cores = ps('(Get-CimInstance Win32_Processor | Select-Object -First 1).NumberOfLogicalProcessors')
         data['cpu'] = f'{cpu_name[:40]} ({cpu_cores}c)' if cpu_name else cpu_name[:60]
 
-        # RAM: PowerShell → wmic (bytes)
+        # RAM: PowerShell → fsutil (locale-safe bytes parsing)
         ram_b = ps('(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory')
         if not ram_b or not ram_b.isdigit():
-            ram_b = cmd('wmic', 'computersystem', 'get', 'TotalPhysicalMemory', '/value')
-            ram_b = next((l.split('=')[1].strip() for l in ram_b.splitlines() if 'TotalPhysicalMemory=' in l), '')
-        data['ram'] = f'{int(ram_b) // (1024**3)} GB' if ram_b.isdigit() else ''
+            # Parse systeminfo: look for the MB line with the largest value (= total RAM)
+            si = cmd('systeminfo')
+            import re as _re
+            mb_vals = [int(m.replace(',', '').replace(' ', '').replace('\xa0', ''))
+                       for m in _re.findall(r'[\d\s,\xa0]{3,}\s*MB', si, _re.IGNORECASE)
+                       if m.strip().split()[0].replace(',', '').replace(' ', '').replace('\xa0', '').isdigit()]
+            if mb_vals:
+                ram_b = str(max(mb_vals) * 1024 * 1024)
+        data['ram'] = f'{int(ram_b) // (1024**3)} GB' if ram_b and ram_b.isdigit() else ''
 
-        # Disk: PowerShell → wmic
+        # Disk: PowerShell → fsutil volume diskfree (bytes, locale-safe number extraction)
         disk_raw = ps(
             'Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | '
             'Select-Object -First 1 | '
             'ForEach-Object { "{0:.0f} GB total, {1:.0f} GB free" -f ($_.Size/1GB),($_.FreeSpace/1GB) }'
         )
         if not disk_raw:
-            raw = cmd('wmic', 'logicaldisk', 'where', 'DriveType=3', 'get', 'Size,FreeSpace', '/value')
-            kv = {l.split('=')[0]: l.split('=')[1].strip()
-                  for l in raw.splitlines() if '=' in l and l.split('=')[1].strip().isdigit()}
-            if 'Size' in kv and 'FreeSpace' in kv:
-                total = int(kv['Size']) // (1024**3)
-                free  = int(kv['FreeSpace']) // (1024**3)
-                disk_raw = f'{total} GB total, {free} GB free'
+            fsutil = cmd('fsutil', 'volume', 'diskfree', 'C:')
+            nums = [int(''.join(filter(str.isdigit, p)))
+                    for p in fsutil.splitlines()
+                    if ':' in p and any(c.isdigit() for c in p)]
+            nums = sorted(set(nums), reverse=True)
+            if len(nums) >= 2:
+                total_gb = nums[0] // (1024**3)
+                free_gb  = nums[1] // (1024**3)
+                disk_raw = f'{total_gb} GB total, {free_gb} GB free'
         data['disk'] = disk_raw[:40] if disk_raw else ''
 
-        # Uptime: PowerShell → net stats (locale-dependent but best effort)
+        # Uptime: PowerShell → net statistics workstation (extract date digits)
         uptime = ps(
             '(Get-CimInstance Win32_OperatingSystem).LastBootUpTime | '
             'ForEach-Object { "up since " + $_.ToString("yyyy-MM-dd HH:mm") }'
         )
         if not uptime:
-            boot_raw = cmd('wmic', 'os', 'get', 'LastBootUpTime', '/value')
-            for line in boot_raw.splitlines():
-                if 'LastBootUpTime=' in line:
-                    t = line.split('=')[1].strip()  # "20250623102345.000000+060"
-                    if len(t) >= 12:
-                        uptime = f'up since {t[:4]}-{t[4:6]}-{t[6:8]} {t[8:10]}:{t[10:12]}'
+            net_s = cmd('net', 'statistics', 'workstation')
+            import re as _re
+            m = _re.search(r'(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})\s+(\d{1,2}:\d{2})', net_s)
+            if m:
+                uptime = f'up since {m.group(3)}-{m.group(2).zfill(2)}-{m.group(1).zfill(2)} {m.group(4)}'
         data['uptime'] = uptime[:60] if uptime else ''
 
         return {k: v for k, v in data.items() if v}
