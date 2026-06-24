@@ -53,9 +53,9 @@ Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkM
 
 ### v1.6.0 — 2026-06-24
 
-- **Asset Inventory — WinRM Windows (complet)** : détection via TCP port probe si ICMP bloqué par le pare-feu Windows ; PowerShell utilise désormais le chemin absolu + **EncodedCommand base64** pour éviter que cmd.exe n'interprète les pipes `|` ; fallbacks complets sans droits admin : OS via `ver`, CPU via registre, RAM via `systeminfo`, disque via `wmic` → `fsutil` (locale EN/FR) → `dir /-C`
-- **Asset Inventory — multi-credentials SSH** : plusieurs jeux d'identifiants SSH supportés ; corrections disk macOS (`/System/Volumes/Data`), Apple Silicon (fallback `hw.model`), Synology (`/volume1`), Unraid (`/mnt/user`)
-- **Corrections** : WinRM ne masque plus les erreurs (affiché dans la table), détection hôtes WinRM/SNMP indépendante des credentials SSH, timeout pywinrm corrigé
+- **Asset Inventory — WinRM Windows (complete)**: host detection via TCP port probe when ICMP is blocked by Windows Firewall; PowerShell now uses full absolute path + **EncodedCommand (base64)** to prevent cmd.exe from interpreting pipes `|`; full fallback chain without admin rights: OS via `ver`, CPU via registry, RAM via `systeminfo`, disk via `wmic` → `fsutil` (locale-aware EN comma / FR space) → `dir /-C`
+- **Asset Inventory — multi-credentials SSH**: multiple SSH credential sets supported; macOS disk fixed (`/System/Volumes/Data`), Apple Silicon CPU fallback (`hw.model`), Synology (`/volume1`), Unraid (`/mnt/user`)
+- **Bug fixes**: WinRM errors now shown in table instead of silent fallback; WinRM/SNMP host detection no longer blocked by SSH credentials presence; pywinrm timeout corrected
 
 ### v1.5.3 — 2026-06-24
 
