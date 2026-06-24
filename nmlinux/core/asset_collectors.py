@@ -294,6 +294,15 @@ def _ping(ip: str, timeout: int = 1) -> bool:
         return False
 
 
+# Common ports for hosts that block ICMP (Windows Firewall default)
+_ALIVE_PORTS = (22, 80, 443, 135, 445, 3389, 5985)
+
+def _is_alive(ip: str, timeout: int = 1) -> bool:
+    if _ping(ip, timeout=timeout):
+        return True
+    return any(_port_open(ip, p, timeout=1.0) for p in _ALIVE_PORTS)
+
+
 # ── Per-host orchestration ────────────────────────────────────────────────────
 
 def collect_host(
@@ -303,7 +312,7 @@ def collect_host(
     snmp_creds: dict,
     timeout: int = 5,
 ) -> dict | None:
-    if not _ping(ip, timeout=1):
+    if not _is_alive(ip, timeout=1):
         return None
 
     base = _nmap_detect(ip, timeout=timeout)
