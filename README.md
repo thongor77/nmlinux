@@ -1,6 +1,6 @@
-# NMLinux · v1.5.2
+# NMLinux · v1.5.3
 
-[![Version](https://img.shields.io/badge/version-1.5.2-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.5.3-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -51,10 +51,15 @@ Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkM
 
 ## Changelog
 
+### v1.5.3 — 2026-06-24
+
+- **macOS .app — Homebrew tool detection**: `sshpass`, `nmap` and `snmpget` installed via Homebrew are now found and called using their absolute path; `.app` bundles on macOS do not inherit the Homebrew PATH (`/opt/homebrew/bin`, `/usr/local/bin`), so previously installed tools were silently ignored
+- **macOS update path**: running `git pull && bash packaging/install_macos_app.sh` from the repo root is now the documented upgrade method; the script manages its own venv (`~/.local/share/nmlinux/venv`) and requires no system-level `pip` or `pipx`
+
 ### v1.5.2 — 2026-06-24
 
 - **Asset Inventory** — new module (29th); scans a CIDR range and collects OS, CPU, RAM, disk and uptime from each host via SSH, WinRM, SNMP or Nmap; supports multiple credential sets per protocol (try each in order); zero-retention policy: credentials never written to disk, cleared from memory after scan; export results as JSON, CSV or Markdown; animated geo map added to Dashboard IP Geolocation section
-- **SSH collection fixes**: disk command awk quoting error fixed; `free -h` replaced with BusyBox-compatible `free`; macOS now uses a dedicated code path (`sw_vers`, `hw.model` for Apple Silicon, `/System/Volumes/Data` for APFS); Synology/Unraid volumes (`/volume1`, `/mnt/user`) detected before root; `df | tail -1 || …` false-success pattern fixed with `test -d` guards
+- **SSH collection fixes**: disk command awk quoting error fixed; `free -h` replaced with BusyBox-compatible `free`; macOS code path now uses `sw_vers` for OS name, `hw.model` fallback for Apple Silicon CPU, `/System/Volumes/Data` for the APFS user-data volume; Synology/Unraid volumes (`/volume1`, `/mnt/user`) detected before root; `df | tail -1 || …` false-success pattern fixed with `test -d` guards; `lsb_release` output stripped of surrounding quotes; multiple SSH/WinRM credential sets supported (tries each in order per host)
 
 ### v1.5.0 — 2026-06-17
 
@@ -304,7 +309,7 @@ brew install nmap whois net-snmp mtr curl
 
 # 2. Install NMLinux and its Python dependencies
 pip install PySide6 ptyprocess pyte tftpy
-pip install nmlinux-1.5.2-py3-none-any.whl   # download from Releases, or use the line below
+pip install nmlinux-1.5.3-py3-none-any.whl   # download from Releases, or use the line below
 
 # Alternative: run directly from source (no install)
 git clone https://github.com/thongor77/nmlinux.git
@@ -367,7 +372,7 @@ Download the `.whl` from the [latest release](https://github.com/thongor77/nmlin
 
 ```bash
 # Arch / Fedora / macOS — no pip restrictions
-pip install nmlinux-1.5.2-py3-none-any.whl
+pip install nmlinux-1.5.3-py3-none-any.whl
 
 # Debian / Ubuntu / Mint — install system libs first, then use pipx
 # Ubuntu ≤24.04:
@@ -375,7 +380,7 @@ sudo apt install libgl1 libglib2.0-0 libdbus-1-3 freerdp2-x11 tigervnc-viewer
 # Ubuntu 26.04+:
 sudo apt install libgl1 libglib2.0-0 libdbus-1-3 freerdp3-x11 tigervnc-viewer
 
-pipx install nmlinux-1.5.2-py3-none-any.whl
+pipx install nmlinux-1.5.3-py3-none-any.whl
 ```
 
 > **Note for Ubuntu 26.04+:** `pipx` requires system libraries (libGL, etc.) to be installed first — the commands above cover them. If `pipx install` fails due to a PySide6 build error, use **Option 4** (install script) instead, which handles everything automatically.
