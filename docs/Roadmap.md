@@ -10,6 +10,88 @@
 
 Ces idées ont été discutées et validées — elles ne sont pas encore implémentées.
 
+### Asset Inventory (v1.6.x)
+
+Inspiré de LanSweeper mais volontairement léger — pas de base de données, pas d'agents, pas de collecte continue.
+
+**Principe** : scan réseau → pour chaque hôte découvert, collecte d'infos selon la méthode disponible (sans credentials ou avec). Toutes les données sont **purement éphémères** : rien n'est écrit sur disque, tout est effacé à la fermeture de l'application.
+
+---
+
+#### Détection sans credentials
+
+- Scan CIDR (moteur IP Scanner existant)
+- OS fingerprint via Nmap `-O`
+- Ports ouverts, services détectés (`-sV`)
+- Hostname (DNS/mDNS/NetBIOS), MAC address, vendor OUI
+- Plateforme probable déduite (Linux/Windows/macOS/Network device) à partir des ports ouverts et bannières
+
+---
+
+#### Collecte avec credentials
+
+##### Linux / macOS — via SSH
+
+- Credentials : username + password ou clé privée (champ echoMode=Password, jamais stocké)
+- Commandes exécutées à distance : `uname -a`, `lsb_release -a`, `/proc/cpuinfo`, `free -h`, `df -h`, `uptime`
+- Collecte : OS exact, distribution, version kernel, CPU (modèle, cœurs), RAM totale/libre, disques (point de montage, taille, usage %), uptime
+
+##### Windows — via WinRM
+
+- Dépendance : `pywinrm` (`pip install pywinrm`)
+- Credentials : username + password (domaine optionnel), jamais stockés
+- Transport : HTTP (port 5985) ou HTTPS (port 5986)
+- Données collectées via PowerShell distant :
+  - OS : `Get-WmiObject Win32_OperatingSystem` → Caption, Version, BuildNumber
+  - CPU : `Get-WmiObject Win32_Processor` → Name, NumberOfCores
+  - RAM : `Win32_PhysicalMemory` → capacité totale
+  - Disques : `Get-WmiObject Win32_LogicalDisk` → DriveType=3, Size, FreeSpace
+  - Uptime : `LastBootUpTime`
+- Prérequis côté Windows : WinRM activé (`winrm quickconfig`)
+
+##### Équipements réseau — via SNMP
+
+- SNMP v1/v2c : adresse + communauté (champ texte, jamais stocké)
+- SNMP v3 : adresse + username + authPassword + privPassword, protocoles authProtocol (MD5/SHA) et privProtocol (DES/AES) — champs echoMode=Password, jamais stockés
+- OIDs collectés : sysDescr (1.3.6.1.2.1.1.1.0), sysName (1.3.6.1.2.1.1.5.0), sysUpTime (1.3.6.1.2.1.1.3.0), sysContact, sysLocation
+- Cibles typiques : switches, routeurs, NAS, imprimantes, UPS
+
+---
+
+#### Interface
+
+- **Tableau assets** : IP / Hostname / Plateforme / OS / CPU / RAM / Disques / Uptime / Méthode (`—` / SSH / WinRM / SNMP)
+- **Panneau credentials** : saisie par protocole (SSH / WinRM / SNMP), appliqués à tous les hôtes du scan ou par hôte individuel
+- **Scan progressif** : barre de progression, résultats qui s'affichent au fur et à mesure
+- **Export** : JSON / CSV / Markdown — déclenché manuellement par l'utilisateur
+
+---
+
+#### Politique de rétention — zéro persistance
+
+**Exigence explicite (session 2026-06-24) : aucune donnée ne doit survivre à la fermeture de l'application.**
+
+- Aucun fichier écrit automatiquement sur disque (ni assets, ni credentials, ni cache)
+- Toutes les données résident uniquement en RAM (structures Python in-process)
+- Credentials : jamais sérialisés, jamais logués, effacés (`del`) immédiatement après usage
+- `closeEvent` de MainWindow → `clear()` explicite de toutes les structures de données du module
+- Export JSON/CSV/Markdown : uniquement à la demande explicite de l'utilisateur — c'est son choix, pas un comportement automatique
+- Aucun fichier temporaire laissé dans `/tmp` ou ailleurs
+
+---
+
+#### Ce que ce n'est pas
+
+Pas de scheduler, pas de base SQL, pas de CMDB, pas d'inventaire logiciel complet, pas d'alerting. C'est un outil de reconnaissance réseau enrichi à la demande.
+
+---
+
+**Cohérence avec nmlinux :** réutilise IP Scanner, SNMP, SSH existants. S'intègre naturellement dans la sidebar.
+
+**Priorité :** validé par l'utilisateur en session 2026-06-24 — à planifier après stabilisation v1.5.x.
+
+---
+
 ### Générateur de mots de passe
 
 - Module standalone (pas de page réseau)
