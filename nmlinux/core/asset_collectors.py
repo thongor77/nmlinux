@@ -194,10 +194,13 @@ def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
             operation_timeout_sec=timeout,
         )
 
+        import base64 as _b64
         _PS = r'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
 
         def ps(script: str) -> str:
-            r = sess.run_cmd(_PS, ['-NonInteractive', '-NoProfile', '-Command', script])
+            # Use EncodedCommand (base64) so pipes/braces are not interpreted by cmd.exe
+            enc = _b64.b64encode(script.encode('utf-16-le')).decode('ascii')
+            r = sess.run_cmd(_PS, ['-NonInteractive', '-NoProfile', '-EncodedCommand', enc])
             out = r.std_out.decode(errors='replace').strip()
             return '' if 'help' in out.lower() else out
 
@@ -263,7 +266,7 @@ def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
 
         if not disk_raw:
             # fsutil: locale-aware regex handles comma (EN) and space (FR) separators
-            def _locale_bytes(text: str) -> list[int]:
+            def _locale_nums(text: str) -> list[int]:
                 clean = _re.sub(
                     r'(\d)([, ]\d{3})+',
                     lambda m: ''.join(c for c in m.group(0) if c.isdigit()),
@@ -274,12 +277,24 @@ def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
             byte_vals: list[int] = []
             for line in cmd('fsutil', 'volume', 'diskfree', 'C:').splitlines():
                 if ':' in line:
-                    byte_vals.extend(_locale_bytes(line.rsplit(':', 1)[-1]))
+                    byte_vals.extend(_locale_nums(line.rsplit(':', 1)[-1]))
             if len(byte_vals) >= 2:
                 total_b, free_b = max(byte_vals), min(byte_vals)
                 if total_b < 100 * (1024**4) and free_b < total_b:
                     disk_raw = (f'{round(total_b/(1024**3))} GB total, '
                                 f'{round(free_b/(1024**3))} GB free')
+
+        if not disk_raw:
+            # dir /-C fallback: last line shows free bytes (no admin needed)
+            for line in reversed(cmd('dir', 'C:\\', '/-C').splitlines()):
+                if not line.strip():
+                    continue
+                clean = _re.sub(r'(\d)([, ]\d{3})+',
+                                 lambda m: ''.join(c for c in m.group(0) if c.isdigit()), line)
+                nums = [int(m) for m in _re.findall(r'\d+', clean) if len(m) >= 9]
+                if nums:
+                    disk_raw = f'? GB total, {round(min(nums)/(1024**3))} GB free'
+                    break
 
         data['disk'] = disk_raw[:40] if disk_raw else ''
 
