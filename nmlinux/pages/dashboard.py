@@ -8,19 +8,187 @@ import subprocess
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, wait as _wait
 from ipaddress import IPv4Address, IPv4Network
+from pathlib import Path
 
 _IS_MACOS = platform.system() == 'Darwin'
 
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QBrush, QColor, QPainter, QPainterPath, QPen, QTransform
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QGroupBox, QFormLayout,
     QScrollArea,
 )
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt, QPointF, QThread, Signal, QTimer
 
 from nmlinux.core.i18n import tr
 from nmlinux.core.theme import color_ok, color_err
+
+
+_GEOJSON    = Path(__file__).parent.parent / "assets" / "world.geojson"
+_MAP_ACCENT = QColor('#60a5fa')
+
+
+# ── Geo map widget ────────────────────────────────────────────────────────────
+
+class GeoMapWidget(QWidget):
+    _ZOOM_FRAMES     = 40
+    _RIPPLE_MAX      = 3
+    _RIPPLE_PERIOD   = 20
+    _RIPPLE_DURATION = 45
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setMinimumHeight(240)
+        self._country_paths: list[QPainterPath] = []
+        self._lat: float | None = None
+        self._lon: float | None = None
+        self._zoom      = 1.0
+        self._cx        = 0.5
+        self._cy        = 0.5
+        self._target_zoom = 4.5
+        self._target_cx   = 0.5
+        self._target_cy   = 0.5
+        self._step        = 0
+        self._ripples: list[int] = []
+        self._ripple_count = 0
+        self._pulse      = 0.0
+        self._pulse_dir  = 1.0
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._tick)
+        self._load_geo()
+
+    def _load_geo(self) -> None:
+        if not _GEOJSON.exists():
+            return
+        with open(_GEOJSON) as f:
+            data = json.load(f)
+        for feature in data['features']:
+            geom = feature['geometry']
+            polys = (
+                [geom['coordinates']] if geom['type'] == 'Polygon'
+                else geom['coordinates']
+            )
+            for poly in polys:
+                for ring in poly:
+                    path = QPainterPath()
+                    first = True
+                    for lon, lat in ring:
+                        x = (lon + 180) / 360
+                        y = (90  - lat) / 180
+                        if first:
+                            path.moveTo(x, y)
+                            first = False
+                        else:
+                            path.lineTo(x, y)
+                    path.closeSubpath()
+                    self._country_paths.append(path)
+
+    def set_location(self, lat: float, lon: float) -> None:
+        self._lat = lat
+        self._lon = lon
+        self._target_cx = (lon + 180) / 360
+        self._target_cy = (90  - lat) / 180
+        self._zoom = 1.0
+        self._cx   = 0.5
+        self._cy   = 0.5
+        self._step = 0
+        self._ripples = []
+        self._ripple_count = 0
+        self._pulse = 0.0
+        self._pulse_dir = 1.0
+        self._timer.start(33)
+
+    def _tick(self) -> None:
+        self._step += 1
+        s = self._step
+
+        if s <= self._ZOOM_FRAMES:
+            t    = s / self._ZOOM_FRAMES
+            ease = 1.0 - (1.0 - t) ** 3
+            self._zoom = 1.0 + (self._target_zoom - 1.0) * ease
+            self._cx   = 0.5  + (self._target_cx  - 0.5)  * ease
+            self._cy   = 0.5  + (self._target_cy  - 0.5)  * ease
+        else:
+            rel = s - self._ZOOM_FRAMES
+            if self._ripple_count < self._RIPPLE_MAX and rel % self._RIPPLE_PERIOD == 0:
+                self._ripples.append(s)
+                self._ripple_count += 1
+            self._pulse += 0.06 * self._pulse_dir
+            if self._pulse >= 1.0:
+                self._pulse_dir = -1.0
+            elif self._pulse <= 0.0:
+                self._pulse_dir = 1.0
+            if (self._ripple_count >= self._RIPPLE_MAX
+                    and self._ripples
+                    and (s - self._ripples[-1]) >= self._RIPPLE_DURATION):
+                self._timer.stop()
+
+        self.update()
+
+    def _make_transform(self) -> QTransform:
+        w, h = self.width(), self.height()
+        t = QTransform()
+        t.translate(w / 2, h / 2)
+        t.scale(self._zoom * w, self._zoom * h)
+        t.translate(-self._cx, -self._cy)
+        return t
+
+    def _world_to_screen(self, lat: float, lon: float) -> QPointF:
+        wx = (lon + 180) / 360
+        wy = (90  - lat) / 180
+        return self._make_transform().map(QPointF(wx, wy))
+
+    def paintEvent(self, _event) -> None:  # noqa: N802
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.fillRect(self.rect(), QColor('#1a2f4a'))
+
+        t = self._make_transform()
+        if self._country_paths:
+            p.save()
+            p.setTransform(t)
+            p.setPen(QPen(QColor('#1e3d2a'), 0))
+            p.setBrush(QBrush(QColor('#2d5a3d')))
+            for path in self._country_paths:
+                p.drawPath(path)
+            p.restore()
+
+        if self._lat is None:
+            return
+
+        pt = self._world_to_screen(self._lat, self._lon)
+
+        # Ripple rings
+        for born in self._ripples:
+            age = self._step - born
+            if age < 0 or age > self._RIPPLE_DURATION:
+                continue
+            progress = age / self._RIPPLE_DURATION
+            radius   = int(10 + progress * 40)
+            alpha    = int(180 * (1.0 - progress))
+            c = QColor(_MAP_ACCENT)
+            c.setAlpha(alpha)
+            p.setPen(QPen(c, 1.5))
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawEllipse(pt, radius, radius)
+
+        # Glow halo
+        pulse_r = int(6 + self._pulse * 3)
+        glow = QColor(_MAP_ACCENT)
+        glow.setAlpha(50)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(glow))
+        p.drawEllipse(pt, pulse_r + 5, pulse_r + 5)
+
+        # Outer ring
+        p.setPen(QPen(_MAP_ACCENT, 1.5))
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.drawEllipse(pt, pulse_r, pulse_r)
+
+        # Centre dot
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(QColor('#ffffff')))
+        p.drawEllipse(pt, 3, 3)
 
 
 # ── Data collectors (run in threads) ─────────────────────────────────────────
@@ -349,10 +517,16 @@ class DashboardPage(QWidget):
             f.addRow(QLabel(tr("dash_geo_unavail")))
             return
 
-        inner   = QWidget()
-        hlayout = QHBoxLayout(inner)
-        hlayout.setContentsMargins(0, 0, 0, 0)
-        hlayout.setSpacing(32)
+        wrapper = QWidget()
+        v_outer = QVBoxLayout(wrapper)
+        v_outer.setContentsMargins(0, 0, 0, 0)
+        v_outer.setSpacing(12)
+
+        # Text columns (unchanged layout)
+        text_w = QWidget()
+        h_text = QHBoxLayout(text_w)
+        h_text.setContentsMargins(0, 0, 0, 0)
+        h_text.setSpacing(32)
 
         left  = QFormLayout()
         right = QFormLayout()
@@ -366,25 +540,33 @@ class DashboardPage(QWidget):
             lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             form.addRow(tr(label_key) + " :", lbl)
 
-        row(left,  "geo_country",   'country')
-        row(left,  "geo_code",      'countryCode')
-        row(left,  "geo_region",    'regionName')
-        row(left,  "geo_city",      'city')
-        row(left,  "geo_zip",       'zip')
-        row(left,  "geo_lat",       'lat')
-        row(left,  "geo_lon",       'lon')
-        row(left,  "geo_timezone",  'timezone')
+        row(left,  "geo_country",  'country')
+        row(left,  "geo_code",     'countryCode')
+        row(left,  "geo_region",   'regionName')
+        row(left,  "geo_city",     'city')
+        row(left,  "geo_zip",      'zip')
+        row(left,  "geo_lat",      'lat')
+        row(left,  "geo_lon",      'lon')
+        row(left,  "geo_timezone", 'timezone')
+        row(right, "geo_isp",      'isp')
+        row(right, "geo_org",      'org')
+        row(right, "geo_as",       'as')
+        row(right, "geo_asname",   'asname')
 
-        row(right, "geo_isp",    'isp')
-        row(right, "geo_org",    'org')
-        row(right, "geo_as",     'as')
-        row(right, "geo_asname", 'asname')
+        h_text.addLayout(left)
+        h_text.addLayout(right)
+        h_text.addStretch(1)
+        v_outer.addWidget(text_w)
 
-        hlayout.addLayout(left)
-        hlayout.addLayout(right)
-        hlayout.addStretch(1)
+        # Animated map — below the text
+        lat = geo.get('lat')
+        lon = geo.get('lon')
+        if lat is not None and lon is not None:
+            geo_map = GeoMapWidget()
+            geo_map.set_location(float(lat), float(lon))
+            v_outer.addWidget(geo_map)
 
-        f.addRow(inner)
+        f.addRow(wrapper)
 
     def _fill_dns(self, d: dict) -> None:
         f       = self._form_dns
