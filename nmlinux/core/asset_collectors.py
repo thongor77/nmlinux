@@ -97,45 +97,58 @@ def _do_collect_ssh(ip: str, creds: dict, timeout: int) -> dict:
     data: dict = {'method': 'SSH'}
 
     raw_os = run('uname -s 2>/dev/null || echo Unknown')
-    if 'Darwin' in raw_os:
+    is_macos = 'Darwin' in raw_os
+
+    if is_macos:
         data['platform'] = 'macOS'
-    elif raw_os and raw_os != 'Unknown':
-        data['platform'] = 'Linux'
-
-    data['os'] = run(
-        'lsb_release -ds 2>/dev/null || '
-        r'cat /etc/os-release 2>/dev/null | grep PRETTY_NAME | cut -d= -f2 | tr -d "\"" || '
-        'sw_vers -productVersion 2>/dev/null || uname -r'
-    )[:80]
-
-    cpu_raw = run(
-        'grep "model name" /proc/cpuinfo 2>/dev/null | head -1 | cut -d: -f2 || '
-        'sysctl -n machdep.cpu.brand_string 2>/dev/null'
-    ).strip()
-    cores = run(
-        'nproc 2>/dev/null || '
-        'sysctl -n hw.logicalcpu 2>/dev/null || '
-        'grep -c "^processor" /proc/cpuinfo 2>/dev/null'
-    ).strip()
-    data['cpu'] = f'{cpu_raw[:40]} ({cores}c)' if cpu_raw else ''
-
-    # RAM: get raw KB (works on Linux + BusyBox), format in Python
-    ram_kb = run("free 2>/dev/null | grep '^Mem:' | awk '{print $2}'").strip()
-    if ram_kb.isdigit():
-        gb = int(ram_kb) / (1024 * 1024)
-        data['ram'] = f'{gb:.1f} GB' if gb >= 1 else f'{int(ram_kb) // 1024} MB'
-    else:
-        # macOS: sysctl returns bytes
+        # OS: sw_vers gives ProductName + ProductVersion on two lines
+        data['os'] = run(
+            "sw_vers 2>/dev/null | awk '/ProductName/{n=$NF} /ProductVersion/{v=$NF}"
+            " END{if(n)print n,v}'"
+        )[:80]
+        # CPU: Intel has brand_string; Apple Silicon falls back to hw.model
+        cpu_raw = run(
+            'sysctl -n machdep.cpu.brand_string 2>/dev/null || sysctl -n hw.model 2>/dev/null'
+        ).strip()
+        cores = run('sysctl -n hw.logicalcpu 2>/dev/null').strip()
+        # Disk: /System/Volumes/Data is the user-data volume on APFS (Ventura+)
+        disk_line = run(
+            '{ test -d /System/Volumes/Data && df -h /System/Volumes/Data | tail -1; } || df -h / | tail -1'
+        ).strip()
+        # RAM: macOS sysctl returns bytes
         hw = run('sysctl -n hw.memsize 2>/dev/null').strip()
         if hw.isdigit():
             data['ram'] = f'{int(hw) / (1024 ** 3):.1f} GB'
+    else:
+        if raw_os and raw_os != 'Unknown':
+            data['platform'] = 'Linux'
+        # OS: strip quotes from lsb_release output; use /etc/os-release as fallback
+        data['os'] = run(
+            r'lsb_release -ds 2>/dev/null | tr -d "\"" || '
+            r'{ test -f /etc/os-release && grep PRETTY_NAME /etc/os-release | cut -d= -f2 | tr -d "\""; } || '
+            'uname -r'
+        )[:80]
+        cpu_raw = run(
+            'grep "model name" /proc/cpuinfo 2>/dev/null | head -1 | cut -d: -f2'
+        ).strip()
+        cores = run(
+            'nproc 2>/dev/null || grep -c "^processor" /proc/cpuinfo 2>/dev/null'
+        ).strip()
+        # Disk: test -d avoids false-success from tail on empty df output
+        disk_line = run(
+            '{ test -d /mnt/user && df -h /mnt/user | tail -1; } || '
+            '{ test -d /mnt/disk1 && df -h /mnt/disk1 | tail -1; } || '
+            '{ test -d /volume1 && df -h /volume1 | tail -1; } || '
+            'df -h / | tail -1'
+        ).strip()
+        # RAM: raw KB (Linux/BusyBox)
+        ram_kb = run("free 2>/dev/null | grep '^Mem:' | awk '{print $2}'").strip()
+        if ram_kb.isdigit():
+            gb = int(ram_kb) / (1024 * 1024)
+            data['ram'] = f'{gb:.1f} GB' if gb >= 1 else f'{int(ram_kb) // 1024} MB'
 
-    # Disk: try NAS volumes first (/volume1 on Synology), then root
-    disk_line = run(
-        'df -h /volume1 2>/dev/null | tail -1 || '
-        'df -h /volume2 2>/dev/null | tail -1 || '
-        'df -h / 2>/dev/null | tail -1'
-    ).strip()
+    data['cpu'] = f'{cpu_raw[:40]} ({cores}c)' if cpu_raw else ''
+
     if disk_line:
         parts = disk_line.split()
         if len(parts) >= 4:
