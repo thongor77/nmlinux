@@ -34,6 +34,7 @@ _KEYWORDS: dict[str, list[str]] = {
     "Bandwidth":      ["bandwidth", "monitor", "rx", "tx", "traffic", "usage"],
     "Wake on LAN":    ["wol", "wake on lan", "magic packet", "boot", "remote", "power"],
     "Topology":       ["topology", "map", "network", "devices", "graph", "visual"],
+    "Asset Inventory": ["asset", "inventory", "scan", "ssh", "winrm", "snmp", "devices", "lan", "hardware"],
 }
 
 

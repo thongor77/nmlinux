@@ -3199,6 +3199,36 @@ _CONTENT: dict[str, dict[str, dict]] = {
             ],
         },
     },
+    "Asset Inventory": {
+        "fr": {
+            "desc": "Génère un inventaire instantané des équipements actifs sur le réseau. Sans credentials : détection OS via Nmap. Avec SSH : OS exact, CPU, RAM, disques, uptime. WinRM : même données sur Windows. SNMP : description et uptime des équipements réseau. Aucune donnée n'est conservée après fermeture de l'application.",
+            "examples": [
+                "Scanner 192.168.1.0/24 sans credentials pour lister tous les hôtes actifs.",
+                "Fournir un utilisateur SSH pour obtenir CPU/RAM/disque des serveurs Linux.",
+                "Utiliser WinRM pour inventorier les machines Windows du domaine.",
+                "Interroger les switches et NAS via SNMP v2c avec la communauté 'public'.",
+            ],
+            "cli": [
+                "nmap -O 192.168.1.0/24",
+                "ssh user@host 'uname -a && free -h && df -h /'",
+                "snmpget -v2c -c public 192.168.1.1 1.3.6.1.2.1.1.1.0",
+            ],
+        },
+        "en": {
+            "desc": "Generates an instant inventory of active network devices. Without credentials: OS detection via Nmap. With SSH: exact OS, CPU, RAM, disks, uptime. WinRM: same data on Windows. SNMP: description and uptime for network equipment. No data is retained after the app closes.",
+            "examples": [
+                "Scan 192.168.1.0/24 without credentials to list all active hosts.",
+                "Provide SSH user to get CPU/RAM/disk from Linux servers.",
+                "Use WinRM to inventory Windows domain machines.",
+                "Query switches and NAS via SNMP v2c with 'public' community.",
+            ],
+            "cli": [
+                "nmap -O 192.168.1.0/24",
+                "ssh user@host 'uname -a && free -h && df -h /'",
+                "snmpget -v2c -c public 192.168.1.1 1.3.6.1.2.1.1.1.0",
+            ],
+        },
+    },
 }
 
 
