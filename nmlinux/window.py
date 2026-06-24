@@ -41,6 +41,7 @@ from nmlinux.pages.wol import WolPage
 from nmlinux.pages.file_transfer import FileTransferPage
 from nmlinux.pages.connection_manager import ConnectionManagerPage
 from nmlinux.pages.topology import TopologyPage
+from nmlinux.pages.asset_inventory import AssetInventoryPage
 from nmlinux.pages.settings import SettingsPage
 from nmlinux.pages.about import AboutPage
 from nmlinux.pages.help_page import HelpPage
@@ -187,6 +188,11 @@ _TOOLS = [
         ("network-workgroup", "computer", "network-wired"),
         "Topology", TopologyPage,
         tr("nav_hint_topology"),
+    ),
+    (
+        ("system-search", "edit-find", "network-workgroup", "computer"),
+        "Asset Inventory", AssetInventoryPage,
+        tr("nav_hint_asset_inventory"),
     ),
 ]
 
