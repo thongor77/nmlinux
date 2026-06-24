@@ -245,24 +245,35 @@ def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
                 ram_b = str(max(mb_vals) * 1024 * 1024)
         data['ram'] = f'{int(ram_b) // (1024**3)} GB' if ram_b and ram_b.isdigit() else ''
 
-        # Disk: Get-CimInstance (correct Size/FreeSpace) → fsutil fallback
-        disk_raw = ps(
-            '$d=Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3"'
-            '|Select-Object -First 1;'
-            '[string][math]::Round($d.Size/1GB)+" GB total, "'
-            '+[string][math]::Round($d.FreeSpace/1GB)+" GB free"'
+        # Disk: return raw bytes as "size,free" to avoid quoting issues with -Command
+        disk_bytes = ps(
+            'Get-CimInstance Win32_LogicalDisk|'
+            'Where-Object{$_.DriveType -eq 3}|'
+            'Select-Object -First 1|'
+            'ForEach-Object{$_.Size.ToString()+","+$_.FreeSpace.ToString()}'
         )
+        disk_raw = ''
+        if disk_bytes and ',' in disk_bytes:
+            try:
+                size_s, free_s = disk_bytes.split(',', 1)
+                if size_s.isdigit() and free_s.isdigit():
+                    total_gb = round(int(size_s) / (1024**3))
+                    free_gb  = round(int(free_s) / (1024**3))
+                    disk_raw = f'{total_gb} GB total, {free_gb} GB free'
+            except Exception:
+                pass
         if not disk_raw:
-            # fsutil line order: free bytes / total bytes / avail-free bytes
+            import re as _re
+            # fsutil: extract each number individually (re.findall avoids digit concatenation)
             fsutil = cmd('fsutil', 'volume', 'diskfree', 'C:')
             byte_vals = []
             for line in fsutil.splitlines():
                 if ':' not in line:
                     continue
                 after_colon = line.rsplit(':', 1)[-1]
-                digits = ''.join(c for c in after_colon if c.isdigit())
-                if digits and len(digits) > 6:
-                    byte_vals.append(int(digits))
+                for m in _re.findall(r'\d+', after_colon):
+                    if len(m) >= 9:   # ≥ 512 MB in bytes
+                        byte_vals.append(int(m))
             if len(byte_vals) >= 2:
                 total_gb = round(max(byte_vals) / (1024**3))
                 free_gb  = round(min(byte_vals) / (1024**3))
