@@ -40,7 +40,7 @@ def _nmap_detect(ip: str, timeout: int = 5) -> dict:
         return result
     try:
         r = subprocess.run(
-            ['nmap', '-O', '--osscan-guess', '-T4', '--host-timeout', f'{timeout}s', '-n', ip],
+            [_CMD_NMAP, '-O', '--osscan-guess', '-T4', '--host-timeout', f'{timeout}s', '-n', ip],
             capture_output=True, text=True, timeout=timeout + 5,
         )
         for line in r.stdout.splitlines():
@@ -75,7 +75,7 @@ def _ssh_run(ip: str, cmd: str, user: str, password: str, key: str, timeout: int
         base += ['-i', key]
     target = f'{user}@{ip}' if user else ip
     if password and _CMD_SSHPASS:
-        cmd_list = ['sshpass', '-p', password] + base + [target, cmd]
+        cmd_list = [_CMD_SSHPASS, '-p', password] + base + [target, cmd]
     else:
         cmd_list = base + [target, cmd]
     try:
@@ -243,7 +243,7 @@ def _snmpget_val(ip: str, oid: str, version_args: list[str], timeout: int) -> st
         return ''
     try:
         r = subprocess.run(
-            ['snmpget', '-v', *version_args, '-t', str(timeout), '-r', '1', ip, oid],
+            [_CMD_SNMPGET, '-v', *version_args, '-t', str(timeout), '-r', '1', ip, oid],
             capture_output=True, text=True, timeout=timeout + 2,
         )
         line = r.stdout.strip()
