@@ -6,6 +6,7 @@
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
 [![Languages](https://img.shields.io/badge/languages-FR%20EN%20ES%20DE%20IT%20PT%20JA%20ZH-purple.svg)](#features)
 [![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.com/donate/?business=JFQGY7NU3ANCN&no_recurring=0&item_name=Every+donation%2C+no+matter+how+small%2C+helps+me+keep+this+project+alive.+Thank+you%21%0A&currency_code=EUR)
+[![Bitcoin](https://img.shields.io/badge/Donate-Bitcoin-orange.svg)](#support-the-project)
 
 **A unified network toolkit for Linux and macOS — inspect, connect, diagnose.**
 
@@ -509,6 +510,15 @@ Most modules work out of the box since they rely on tools available on both plat
 - **[BornToBeRoot](https://github.com/BornToBeRoot)** — for [NETworkManager](https://github.com/BornToBeRoot/NETworkManager), the original inspiration and reference for features and UX
 - **[Anthropic](https://www.anthropic.com)** — Claude Code, the AI assistant used to build this project
 - The author, for the vision, testing, and direction
+
+---
+
+## Support the project
+
+If NMLinux is useful to you, consider supporting its development:
+
+- **PayPal** — [Donate via PayPal](https://www.paypal.com/donate/?business=JFQGY7NU3ANCN&no_recurring=0&item_name=Every+donation%2C+no+matter+how+small%2C+helps+me+keep+this+project+alive.+Thank+you%21%0A&currency_code=EUR)
+- **Bitcoin** — `bc1qspe0tky7552qas72wgn8w9dswr0dxlv24w39t6ztjqk3nz6kc5tqv753a4`
 
 ---
 
