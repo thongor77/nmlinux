@@ -78,8 +78,16 @@ def _ssh_run(ip: str, cmd: str, user: str, password: str, key: str, timeout: int
         return ''
 
 
-def _collect_ssh(ip: str, creds: dict, timeout: int) -> dict:
-    user     = creds.get('user', '')
+def _ssh_connects(ip: str, creds: dict, timeout: int) -> bool:
+    """Test SSH connectivity with a cheap echo command."""
+    out = _ssh_run(ip, 'echo __nmlinux_ok__',
+                   creds['user'], creds.get('password', ''), creds.get('key', ''),
+                   min(timeout, 4))
+    return '__nmlinux_ok__' in out
+
+
+def _do_collect_ssh(ip: str, creds: dict, timeout: int) -> dict:
+    user     = creds['user']
     password = creds.get('password', '')
     key      = creds.get('key', '')
 
@@ -122,8 +130,12 @@ def _collect_ssh(ip: str, creds: dict, timeout: int) -> dict:
         if hw.isdigit():
             data['ram'] = f'{int(hw) / (1024 ** 3):.1f} GB'
 
-    # Disk: get raw df line, parse in Python (avoids awk quoting issues)
-    disk_line = run('df -h / 2>/dev/null | tail -1').strip()
+    # Disk: try NAS volumes first (/volume1 on Synology), then root
+    disk_line = run(
+        'df -h /volume1 2>/dev/null | tail -1 || '
+        'df -h /volume2 2>/dev/null | tail -1 || '
+        'df -h / 2>/dev/null | tail -1'
+    ).strip()
     if disk_line:
         parts = disk_line.split()
         if len(parts) >= 4:
@@ -134,11 +146,21 @@ def _collect_ssh(ip: str, creds: dict, timeout: int) -> dict:
     return {k: v for k, v in data.items() if v}
 
 
+def _collect_ssh(ip: str, creds_list: list[dict], timeout: int) -> dict:
+    """Try each credential set in order; return data from the first that connects."""
+    for creds in creds_list:
+        if not creds.get('user'):
+            continue
+        if _ssh_connects(ip, creds, timeout):
+            return _do_collect_ssh(ip, creds, timeout)
+    return {}
+
+
 # ── WinRM collection ──────────────────────────────────────────────────────────
 
-def _collect_winrm(ip: str, creds: dict, timeout: int) -> dict:
+def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
     if not _HAS_WINRM:
-        return {'method': 'WinRM', 'error': 'pywinrm not installed'}
+        return {}
     user   = creds.get('user', '')
     passwd = creds.get('password', '')
     domain = creds.get('domain', '')
@@ -173,8 +195,19 @@ def _collect_winrm(ip: str, creds: dict, timeout: int) -> dict:
             'ForEach-Object { "up since " + $_.ToString("yyyy-MM-dd HH:mm") }'
         )[:60]
         return {k: v for k, v in data.items() if v}
-    except Exception as exc:
-        return {'method': 'WinRM', 'error': str(exc)[:80]}
+    except Exception:
+        return {}
+
+
+def _collect_winrm(ip: str, creds_list: list[dict], timeout: int) -> dict:
+    """Try each credential set in order; return data from the first that connects."""
+    for creds in creds_list:
+        if not creds.get('user'):
+            continue
+        result = _try_winrm(ip, creds, timeout)
+        if result:
+            return result
+    return {'method': 'WinRM', 'error': 'pywinrm not installed'} if not _HAS_WINRM else {}
 
 
 # ── SNMP collection ───────────────────────────────────────────────────────────
@@ -245,8 +278,8 @@ def _ping(ip: str, timeout: int = 1) -> bool:
 
 def collect_host(
     ip: str,
-    ssh_creds: dict,
-    winrm_creds: dict,
+    ssh_creds: list[dict],
+    winrm_creds: list[dict],
     snmp_creds: dict,
     timeout: int = 5,
 ) -> dict | None:
@@ -256,9 +289,13 @@ def collect_host(
     base = _nmap_detect(ip, timeout=timeout)
 
     if ssh_creds and _port_open(ip, 22, timeout=1.5):
-        base.update(_collect_ssh(ip, ssh_creds, timeout))
+        result = _collect_ssh(ip, ssh_creds, timeout)
+        if result:
+            base.update(result)
     elif winrm_creds and (_port_open(ip, 5985, 1.5) or _port_open(ip, 5986, 1.5)):
-        base.update(_collect_winrm(ip, winrm_creds, timeout))
+        result = _collect_winrm(ip, winrm_creds, timeout)
+        if result:
+            base.update(result)
     elif snmp_creds and _port_open(ip, 161, 1.5):
         base.update(_collect_snmp(ip, snmp_creds, timeout))
 
@@ -275,17 +312,17 @@ class AssetScanWorker(QThread):
     def __init__(
         self,
         cidr: str,
-        ssh_creds: dict,
-        winrm_creds: dict,
+        ssh_creds: list[dict],
+        winrm_creds: list[dict],
         snmp_creds: dict,
         timeout: int = 5,
         threads: int = 40,
     ) -> None:
         super().__init__()
         self._cidr        = cidr
-        self._ssh_creds   = ssh_creds
-        self._winrm_creds = winrm_creds
-        self._snmp_creds  = snmp_creds
+        self._ssh_creds   = [dict(c) for c in ssh_creds]
+        self._winrm_creds = [dict(c) for c in winrm_creds]
+        self._snmp_creds  = dict(snmp_creds)
         self._timeout     = timeout
         self._threads     = threads
         self._stop        = False
@@ -302,8 +339,8 @@ class AssetScanWorker(QThread):
         total = len(hosts)
         done  = 0
 
-        ssh_c   = dict(self._ssh_creds)
-        winrm_c = dict(self._winrm_creds)
+        ssh_c   = [dict(c) for c in self._ssh_creds]
+        winrm_c = [dict(c) for c in self._winrm_creds]
         snmp_c  = dict(self._snmp_creds)
 
         with ThreadPoolExecutor(max_workers=self._threads) as pool:
@@ -324,7 +361,10 @@ class AssetScanWorker(QThread):
                 except Exception:
                     pass
 
-        for d in (ssh_c, winrm_c, snmp_c):
-            d.clear()
+        for c in ssh_c:
+            c.clear()
+        for c in winrm_c:
+            c.clear()
+        snmp_c.clear()
 
         self.finished_.emit()

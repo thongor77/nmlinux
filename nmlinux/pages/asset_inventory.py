@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QAbstractItemView, QProgressBar, QFileDialog,
     QScrollArea,
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
 
 from nmlinux.core.i18n import tr
@@ -27,10 +27,94 @@ def _item(text: str, color: QColor | None = None) -> QTableWidgetItem:
     return it
 
 
+# ── Per-row credential widgets ────────────────────────────────────────────────
+
+class _SshCredRow(QWidget):
+    removed = Signal(object)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        h = QHBoxLayout(self)
+        h.setContentsMargins(0, 1, 0, 1)
+        h.setSpacing(4)
+        self._user = QLineEdit()
+        self._user.setPlaceholderText("user")
+        self._user.setFixedWidth(72)
+        self._pass = QLineEdit()
+        self._pass.setEchoMode(QLineEdit.EchoMode.Password)
+        self._pass.setPlaceholderText("password")
+        self._key = QLineEdit()
+        self._key.setPlaceholderText("~/.ssh/id_ed25519  (optional)")
+        btn = QPushButton("✕")
+        btn.setFixedWidth(22)
+        btn.setFixedHeight(22)
+        btn.clicked.connect(lambda: self.removed.emit(self))
+        if not _CMD_SSHPASS:
+            self._pass.setEnabled(False)
+            self._pass.setPlaceholderText(tr("inv_warn_sshpass"))
+        h.addWidget(self._user)
+        h.addWidget(self._pass, 1)
+        h.addWidget(self._key, 1)
+        h.addWidget(btn)
+
+    def creds(self) -> dict:
+        u = self._user.text().strip()
+        if not u:
+            return {}
+        return {'user': u, 'password': self._pass.text(), 'key': self._key.text().strip()}
+
+    def clear_sensitive(self) -> None:
+        self._pass.clear()
+
+
+class _WinRmCredRow(QWidget):
+    removed = Signal(object)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        h = QHBoxLayout(self)
+        h.setContentsMargins(0, 1, 0, 1)
+        h.setSpacing(4)
+        self._user = QLineEdit()
+        self._user.setPlaceholderText("user")
+        self._user.setFixedWidth(72)
+        self._pass = QLineEdit()
+        self._pass.setEchoMode(QLineEdit.EchoMode.Password)
+        self._pass.setPlaceholderText("password")
+        self._domain = QLineEdit()
+        self._domain.setPlaceholderText("domain (opt.)")
+        self._domain.setFixedWidth(90)
+        btn = QPushButton("✕")
+        btn.setFixedWidth(22)
+        btn.setFixedHeight(22)
+        btn.clicked.connect(lambda: self.removed.emit(self))
+        if not _HAS_WINRM:
+            for w in (self._user, self._pass, self._domain):
+                w.setEnabled(False)
+                w.setPlaceholderText(tr("inv_warn_pywinrm"))
+        h.addWidget(self._user)
+        h.addWidget(self._pass, 1)
+        h.addWidget(self._domain)
+        h.addWidget(btn)
+
+    def creds(self) -> dict:
+        u = self._user.text().strip()
+        if not u:
+            return {}
+        return {'user': u, 'password': self._pass.text(), 'domain': self._domain.text().strip()}
+
+    def clear_sensitive(self) -> None:
+        self._pass.clear()
+
+
+# ── Main page ─────────────────────────────────────────────────────────────────
+
 class AssetInventoryPage(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self._worker: AssetScanWorker | None = None
+        self._ssh_rows: list[_SshCredRow]     = []
+        self._winrm_rows: list[_WinRmCredRow] = []
         self._build_ui()
 
     # ── Layout ────────────────────────────────────────────────────────────────
@@ -61,53 +145,38 @@ class AssetInventoryPage(QWidget):
         root.addLayout(bar)
 
         # ── Credentials ───────────────────────────────────────────────────────
-        creds_scroll = QScrollArea()
-        creds_scroll.setWidgetResizable(True)
-        creds_scroll.setFrameShape(creds_scroll.Shape.NoFrame)
-        creds_scroll.setFixedHeight(155)
-        creds_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
         creds_w = QWidget()
         creds_h = QHBoxLayout(creds_w)
         creds_h.setContentsMargins(0, 0, 0, 0)
         creds_h.setSpacing(8)
 
-        # SSH
-        ssh_box  = QGroupBox(tr("inv_creds_ssh_group"))
-        ssh_form = QFormLayout(ssh_box)
-        ssh_form.setHorizontalSpacing(8)
-        ssh_form.setVerticalSpacing(4)
-        self._ssh_user = QLineEdit()
-        self._ssh_user.setPlaceholderText("user")
-        self._ssh_pass = QLineEdit()
-        self._ssh_pass.setEchoMode(QLineEdit.EchoMode.Password)
-        self._ssh_key  = QLineEdit()
-        self._ssh_key.setPlaceholderText("~/.ssh/id_ed25519")
-        if not _CMD_SSHPASS:
-            self._ssh_pass.setEnabled(False)
-            self._ssh_pass.setPlaceholderText(tr("inv_warn_sshpass"))
-        ssh_form.addRow(tr("inv_user_label") + ":", self._ssh_user)
-        ssh_form.addRow(tr("inv_pass_label") + ":", self._ssh_pass)
-        ssh_form.addRow(tr("inv_key_label")  + ":", self._ssh_key)
+        # SSH — multiple credential sets
+        ssh_box = QGroupBox(tr("inv_creds_ssh_group"))
+        ssh_outer = QVBoxLayout(ssh_box)
+        ssh_outer.setSpacing(2)
+        self._ssh_rows_container = QVBoxLayout()
+        self._ssh_rows_container.setSpacing(2)
+        ssh_outer.addLayout(self._ssh_rows_container)
+        btn_add_ssh = QPushButton("+ " + tr("inv_add_cred_set"))
+        btn_add_ssh.setFixedHeight(22)
+        btn_add_ssh.clicked.connect(self._add_ssh_row)
+        ssh_outer.addWidget(btn_add_ssh)
         creds_h.addWidget(ssh_box, 1)
+        self._add_ssh_row()
 
-        # WinRM
-        winrm_box  = QGroupBox(tr("inv_creds_winrm_group"))
-        winrm_form = QFormLayout(winrm_box)
-        winrm_form.setHorizontalSpacing(8)
-        winrm_form.setVerticalSpacing(4)
-        self._winrm_user   = QLineEdit()
-        self._winrm_pass   = QLineEdit()
-        self._winrm_pass.setEchoMode(QLineEdit.EchoMode.Password)
-        self._winrm_domain = QLineEdit()
-        if not _HAS_WINRM:
-            for w in (self._winrm_user, self._winrm_pass, self._winrm_domain):
-                w.setEnabled(False)
-                w.setPlaceholderText(tr("inv_warn_pywinrm"))
-        winrm_form.addRow(tr("inv_user_label")   + ":", self._winrm_user)
-        winrm_form.addRow(tr("inv_pass_label")   + ":", self._winrm_pass)
-        winrm_form.addRow(tr("inv_domain_label") + ":", self._winrm_domain)
+        # WinRM — multiple credential sets
+        winrm_box = QGroupBox(tr("inv_creds_winrm_group"))
+        winrm_outer = QVBoxLayout(winrm_box)
+        winrm_outer.setSpacing(2)
+        self._winrm_rows_container = QVBoxLayout()
+        self._winrm_rows_container.setSpacing(2)
+        winrm_outer.addLayout(self._winrm_rows_container)
+        btn_add_winrm = QPushButton("+ " + tr("inv_add_cred_set"))
+        btn_add_winrm.setFixedHeight(22)
+        btn_add_winrm.clicked.connect(self._add_winrm_row)
+        winrm_outer.addWidget(btn_add_winrm)
         creds_h.addWidget(winrm_box, 1)
+        self._add_winrm_row()
 
         # SNMP
         snmp_box  = QGroupBox(tr("inv_creds_snmp_group"))
@@ -143,8 +212,7 @@ class AssetInventoryPage(QWidget):
         self._on_snmp_version_changed('v2c')
         creds_h.addWidget(snmp_box, 1)
 
-        creds_scroll.setWidget(creds_w)
-        root.addWidget(creds_scroll)
+        root.addWidget(creds_w)
 
         # ── Progress ──────────────────────────────────────────────────────────
         self._progress = QProgressBar()
@@ -185,6 +253,34 @@ class AssetInventoryPage(QWidget):
         self._btn_md.clicked.connect(lambda: self._export('md'))
         root.addLayout(export_row)
 
+    # ── Credential row management ─────────────────────────────────────────────
+
+    def _add_ssh_row(self) -> None:
+        row = _SshCredRow(self)
+        row.removed.connect(self._remove_ssh_row)
+        self._ssh_rows.append(row)
+        self._ssh_rows_container.addWidget(row)
+
+    def _remove_ssh_row(self, row: _SshCredRow) -> None:
+        if len(self._ssh_rows) <= 1:
+            return
+        self._ssh_rows.remove(row)
+        self._ssh_rows_container.removeWidget(row)
+        row.deleteLater()
+
+    def _add_winrm_row(self) -> None:
+        row = _WinRmCredRow(self)
+        row.removed.connect(self._remove_winrm_row)
+        self._winrm_rows.append(row)
+        self._winrm_rows_container.addWidget(row)
+
+    def _remove_winrm_row(self, row: _WinRmCredRow) -> None:
+        if len(self._winrm_rows) <= 1:
+            return
+        self._winrm_rows.remove(row)
+        self._winrm_rows_container.removeWidget(row)
+        row.deleteLater()
+
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     def _on_snmp_version_changed(self, val: str) -> None:
@@ -199,17 +295,11 @@ class AssetInventoryPage(QWidget):
         for btn in (self._btn_json, self._btn_csv, self._btn_md):
             btn.setVisible(False)
 
-    def _get_ssh_creds(self) -> dict:
-        u = self._ssh_user.text().strip()
-        if not u:
-            return {}
-        return {'user': u, 'password': self._ssh_pass.text(), 'key': self._ssh_key.text().strip()}
+    def _get_ssh_creds(self) -> list[dict]:
+        return [c for row in self._ssh_rows if (c := row.creds())]
 
-    def _get_winrm_creds(self) -> dict:
-        u = self._winrm_user.text().strip()
-        if not u:
-            return {}
-        return {'user': u, 'password': self._winrm_pass.text(), 'domain': self._winrm_domain.text().strip()}
+    def _get_winrm_creds(self) -> list[dict]:
+        return [c for row in self._winrm_rows if (c := row.creds())]
 
     def _get_snmp_creds(self) -> dict:
         ver = self._snmp_version.currentText().lstrip('v')
