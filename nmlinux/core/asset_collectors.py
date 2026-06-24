@@ -190,7 +190,7 @@ def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
             f'http://{ip}:5985/wsman',
             auth=(login, passwd),
             transport='ntlm',
-            read_timeout_sec=timeout,
+            read_timeout_sec=timeout + 1,
             operation_timeout_sec=timeout,
         )
 
