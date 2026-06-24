@@ -245,30 +245,42 @@ def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
                 ram_b = str(max(mb_vals) * 1024 * 1024)
         data['ram'] = f'{int(ram_b) // (1024**3)} GB' if ram_b and ram_b.isdigit() else ''
 
-        # Disk: cmd only — ps() unreliable in restricted WinRM environments
+        # Disk: wmic (no admin, locale-safe /value) → fsutil fallback
         import re as _re
-
-        def _locale_bytes(text: str) -> list[int]:
-            # Handle both comma (EN) and space (FR) as thousands separators
-            clean = _re.sub(
-                r'(\d)([, ]\d{3})+',
-                lambda m: ''.join(c for c in m.group(0) if c.isdigit()),
-                text,
-            )
-            return [int(m) for m in _re.findall(r'\d+', clean) if len(m) >= 9]
-
         disk_raw = ''
-        fsutil_out = cmd('fsutil', 'volume', 'diskfree', 'C:')
-        byte_vals = []
-        for line in fsutil_out.splitlines():
-            if ':' not in line:
-                continue
-            byte_vals.extend(_locale_bytes(line.rsplit(':', 1)[-1]))
-        if len(byte_vals) >= 2:
-            total_b = max(byte_vals)
-            free_b  = min(byte_vals)
-            if total_b < 100 * (1024**4) and free_b < total_b:  # sanity: < 100 TB
-                disk_raw = f'{round(total_b/(1024**3))} GB total, {round(free_b/(1024**3))} GB free'
+
+        wmic_out = cmd('wmic', 'logicaldisk', 'where', 'DriveType=3',
+                       'get', 'Size,FreeSpace', '/value')
+        kv: dict = {}
+        for line in wmic_out.splitlines():
+            if '=' in line:
+                k, v = line.split('=', 1)
+                if v.strip().isdigit():
+                    kv[k.strip()] = int(v.strip())
+        if 'Size' in kv and 'FreeSpace' in kv:
+            disk_raw = (f'{round(kv["Size"]/(1024**3))} GB total, '
+                        f'{round(kv["FreeSpace"]/(1024**3))} GB free')
+
+        if not disk_raw:
+            # fsutil: locale-aware regex handles comma (EN) and space (FR) separators
+            def _locale_bytes(text: str) -> list[int]:
+                clean = _re.sub(
+                    r'(\d)([, ]\d{3})+',
+                    lambda m: ''.join(c for c in m.group(0) if c.isdigit()),
+                    text,
+                )
+                return [int(m) for m in _re.findall(r'\d+', clean) if len(m) >= 9]
+
+            byte_vals: list[int] = []
+            for line in cmd('fsutil', 'volume', 'diskfree', 'C:').splitlines():
+                if ':' in line:
+                    byte_vals.extend(_locale_bytes(line.rsplit(':', 1)[-1]))
+            if len(byte_vals) >= 2:
+                total_b, free_b = max(byte_vals), min(byte_vals)
+                if total_b < 100 * (1024**4) and free_b < total_b:
+                    disk_raw = (f'{round(total_b/(1024**3))} GB total, '
+                                f'{round(free_b/(1024**3))} GB free')
+
         data['disk'] = disk_raw[:40] if disk_raw else ''
 
         # Uptime: PowerShell → net statistics workstation (extract date digits)
