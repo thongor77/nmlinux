@@ -10,9 +10,16 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from PySide6.QtCore import QThread, Signal
 
 _IS_MACOS    = platform.system() == 'Darwin'
-_CMD_SSHPASS = shutil.which('sshpass')
-_CMD_SNMPGET = shutil.which('snmpget')
-_CMD_NMAP    = shutil.which('nmap')
+
+# .app bundles on macOS don't inherit the Homebrew PATH — probe known locations
+_EXTRA_PATH  = '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'
+
+def _which(cmd: str) -> str | None:
+    return shutil.which(cmd) or shutil.which(cmd, path=_EXTRA_PATH)
+
+_CMD_SSHPASS = _which('sshpass')
+_CMD_SNMPGET = _which('snmpget')
+_CMD_NMAP    = _which('nmap')
 
 try:
     import winrm as _winrm
