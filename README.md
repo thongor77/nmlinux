@@ -1,6 +1,6 @@
-# NMLinux · v1.5.3
+# NMLinux · v1.6.0
 
-[![Version](https://img.shields.io/badge/version-1.5.3-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.6.0-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -10,7 +10,7 @@
 
 **A unified network toolkit for Linux and macOS — inspect, connect, diagnose.**
 
-NMLinux is a single, unified GUI that brings together 28 network modules in one window: interface monitoring, Wi-Fi, DNS, SSH terminal, firewall viewer, topology map, traceroute, and more. Built from scratch in Python and PySide6 (Qt 6), with 8 interface languages and no external dependencies beyond standard system tools.
+NMLinux is a single, unified GUI that brings together 29 network modules in one window: interface monitoring, Wi-Fi, DNS, SSH terminal, firewall viewer, topology map, traceroute, and more. Built from scratch in Python and PySide6 (Qt 6), with 8 interface languages and no external dependencies beyond standard system tools.
 
 Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkManager) by BornToBeRoot (a Windows-only tool), NMLinux has since grown well beyond that starting point — adding a PTY-embedded SSH terminal, interactive topology map, macOS support, TLS inspector, command palette, multi-format export engine, and now an on-demand TFTP/HTTP file transfer server.
 
@@ -29,7 +29,7 @@ Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkM
 
 ## Screenshots
 
-> Linux screenshots from v1.2.7 — macOS screenshots from v1.3.5. The app now has 28 modules and 8 interface languages (FR/EN/ES/DE/IT/PT/JA/ZH).
+> Linux screenshots from v1.2.7 — macOS screenshots from v1.3.5. The app now has 29 modules and 8 interface languages (FR/EN/ES/DE/IT/PT/JA/ZH).
 
 **Linux (KDE)**
 
@@ -50,6 +50,12 @@ Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkM
 ---
 
 ## Changelog
+
+### v1.6.0 — 2026-06-24
+
+- **Asset Inventory — WinRM Windows (complet)** : détection via TCP port probe si ICMP bloqué par le pare-feu Windows ; PowerShell utilise désormais le chemin absolu + **EncodedCommand base64** pour éviter que cmd.exe n'interprète les pipes `|` ; fallbacks complets sans droits admin : OS via `ver`, CPU via registre, RAM via `systeminfo`, disque via `wmic` → `fsutil` (locale EN/FR) → `dir /-C`
+- **Asset Inventory — multi-credentials SSH** : plusieurs jeux d'identifiants SSH supportés ; corrections disk macOS (`/System/Volumes/Data`), Apple Silicon (fallback `hw.model`), Synology (`/volume1`), Unraid (`/mnt/user`)
+- **Corrections** : WinRM ne masque plus les erreurs (affiché dans la table), détection hôtes WinRM/SNMP indépendante des credentials SSH, timeout pywinrm corrigé
 
 ### v1.5.3 — 2026-06-24
 
@@ -208,7 +214,7 @@ Initial public release — 13 modules: Dashboard, Interfaces, Wi-Fi, Subnet Calc
 | **Wake on LAN** | Pure Python magic packet (UDP broadcast), persistent host book, no external tool required |
 | **Topology Map** | Auto-discovers LAN devices via `nmap -sn`; interactive graph with draggable nodes, zoom/pan, detail panel |
 | **Settings** | Language selection (FR / EN / ES / DE / IT / PT / JA / ZH), persisted; restart required after change |
-| **Command Palette** | Ctrl+P overlay: fuzzy search across all 28 modules by name or keyword |
+| **Command Palette** | Ctrl+P overlay: fuzzy search across all 29 modules by name or keyword |
 | **File Transfer** | On-demand TFTP or HTTP server; configurable port and root dir; local IPs as copy buttons; live log table (filename, client IP, direction ↑/↓, size); HTTP directory listing + GET/POST/PUT; TFTP GET + PUT; port 69 prompts pkexec |
 | **Export** | File → Export Network Report (JSON/Markdown/Text/PDF); per-module export on Interfaces, DNS, Firewall, SSH, Connections |
 
@@ -438,7 +444,7 @@ nmlinux/
     help_content.py — Module contextual help strings (all 8 languages)
     cli_bar.py      — CliBar singleton: pedagogical CLI equivalent bar
     export_dialog.py — open_export_dialog(): QFileDialog with live extension update
-  command_palette.py — CommandPalette (Ctrl+P): fuzzy search across 28 modules
+  command_palette.py — CommandPalette (Ctrl+P): fuzzy search across 29 modules
   export_manager.py  — collect_snapshot(), to_json/text/markdown/pdf, save_export()
   pages/
     about.py        — About page (credits, tools & services)
@@ -491,7 +497,7 @@ Since v1.2.7, NMLinux uses 21 bundled [Lucide](https://lucide.dev) SVG icons ren
 ## Limitations
 
 ### Linux
-Full support — all 28 modules available.
+Full support — all 29 modules available.
 
 ### macOS
 Most modules work out of the box since they rely on tools available on both platforms (`ssh`, `dig`, `ping`, `curl`, `nmap`, `openssl`…).
