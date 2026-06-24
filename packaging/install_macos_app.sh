@@ -7,7 +7,7 @@ set -euo pipefail
 
 APP_NAME="NMLinux"
 BUNDLE_ID="com.thongor77.nmlinux"
-VERSION="1.5.0"
+VERSION="1.5.2"
 DEST="${HOME}/Applications"
 VENV_DIR="${HOME}/.local/share/nmlinux/venv"
 
