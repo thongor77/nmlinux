@@ -248,11 +248,29 @@ def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
                 ram_b = str(max(mb_vals) * 1024 * 1024)
         data['ram'] = f'{int(ram_b) // (1024**3)} GB' if ram_b and ram_b.isdigit() else ''
 
-        # Disk: wmic (no admin, locale-safe /value) → fsutil fallback
+        # Disk: PS EncodedCommand → wmic → fsutil → dir /-C (free only)
         import re as _re
         disk_raw = ''
 
-        wmic_out = cmd('wmic', 'logicaldisk', 'where', 'DriveType=3',
+        # EncodedCommand now handles pipes correctly (no cmd.exe interpretation)
+        disk_out = ps(
+            '$d=Get-CimInstance Win32_LogicalDisk'
+            '|Where-Object{$_.DriveType -eq 3}'
+            '|Select-Object -First 1;'
+            'if($d){[string][long]$d.Size+","+[string][long]$d.FreeSpace}'
+        )
+        if disk_out and ',' in disk_out:
+            try:
+                size_s, free_s = disk_out.split(',', 1)
+                size_s = size_s.strip(); free_s = free_s.strip()
+                if size_s.isdigit() and free_s.isdigit():
+                    disk_raw = (f'{round(int(size_s)/(1024**3))} GB total, '
+                                f'{round(int(free_s)/(1024**3))} GB free')
+            except Exception:
+                pass
+
+        if not disk_raw:
+            wmic_out = cmd('wmic', 'logicaldisk', 'where', 'DriveType=3',
                        'get', 'Size,FreeSpace', '/value')
         kv: dict = {}
         for line in wmic_out.splitlines():
