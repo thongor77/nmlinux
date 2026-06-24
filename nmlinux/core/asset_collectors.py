@@ -245,39 +245,30 @@ def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
                 ram_b = str(max(mb_vals) * 1024 * 1024)
         data['ram'] = f'{int(ram_b) // (1024**3)} GB' if ram_b and ram_b.isdigit() else ''
 
-        # Disk: return raw bytes as "size,free" to avoid quoting issues with -Command
-        disk_bytes = ps(
-            'Get-CimInstance Win32_LogicalDisk|'
-            'Where-Object{$_.DriveType -eq 3}|'
-            'Select-Object -First 1|'
-            'ForEach-Object{$_.Size.ToString()+","+$_.FreeSpace.ToString()}'
-        )
+        # Disk: cmd only — ps() unreliable in restricted WinRM environments
+        import re as _re
+
+        def _locale_bytes(text: str) -> list[int]:
+            # Handle both comma (EN) and space (FR) as thousands separators
+            clean = _re.sub(
+                r'(\d)([, ]\d{3})+',
+                lambda m: ''.join(c for c in m.group(0) if c.isdigit()),
+                text,
+            )
+            return [int(m) for m in _re.findall(r'\d+', clean) if len(m) >= 9]
+
         disk_raw = ''
-        if disk_bytes and ',' in disk_bytes:
-            try:
-                size_s, free_s = disk_bytes.split(',', 1)
-                if size_s.isdigit() and free_s.isdigit():
-                    total_gb = round(int(size_s) / (1024**3))
-                    free_gb  = round(int(free_s) / (1024**3))
-                    disk_raw = f'{total_gb} GB total, {free_gb} GB free'
-            except Exception:
-                pass
-        if not disk_raw:
-            # fsutil: join all digits per line — handles both "," and " " as thousands sep
-            # Each line has exactly one value after the colon, so joining is safe
-            fsutil = cmd('fsutil', 'volume', 'diskfree', 'C:')
-            byte_vals = []
-            for line in fsutil.splitlines():
-                if ':' not in line:
-                    continue
-                after_colon = line.rsplit(':', 1)[-1]
-                digits = ''.join(c for c in after_colon if c.isdigit())
-                if len(digits) >= 9:   # ≥ ~500 MB in bytes
-                    byte_vals.append(int(digits))
-            if len(byte_vals) >= 2:
-                total_gb = round(max(byte_vals) / (1024**3))
-                free_gb  = round(min(byte_vals) / (1024**3))
-                disk_raw = f'{total_gb} GB total, {free_gb} GB free'
+        fsutil_out = cmd('fsutil', 'volume', 'diskfree', 'C:')
+        byte_vals = []
+        for line in fsutil_out.splitlines():
+            if ':' not in line:
+                continue
+            byte_vals.extend(_locale_bytes(line.rsplit(':', 1)[-1]))
+        if len(byte_vals) >= 2:
+            total_b = max(byte_vals)
+            free_b  = min(byte_vals)
+            if total_b < 100 * (1024**4) and free_b < total_b:  # sanity: < 100 TB
+                disk_raw = f'{round(total_b/(1024**3))} GB total, {round(free_b/(1024**3))} GB free'
         data['disk'] = disk_raw[:40] if disk_raw else ''
 
         # Uptime: PowerShell → net statistics workstation (extract date digits)
