@@ -271,16 +271,16 @@ def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
 
         if not disk_raw:
             wmic_out = cmd('wmic', 'logicaldisk', 'where', 'DriveType=3',
-                       'get', 'Size,FreeSpace', '/value')
-        kv: dict = {}
-        for line in wmic_out.splitlines():
-            if '=' in line:
-                k, v = line.split('=', 1)
-                if v.strip().isdigit():
-                    kv[k.strip()] = int(v.strip())
-        if 'Size' in kv and 'FreeSpace' in kv:
-            disk_raw = (f'{round(kv["Size"]/(1024**3))} GB total, '
-                        f'{round(kv["FreeSpace"]/(1024**3))} GB free')
+                           'get', 'Size,FreeSpace', '/value')
+            kv: dict = {}
+            for line in wmic_out.splitlines():
+                if '=' in line:
+                    k, v = line.split('=', 1)
+                    if v.strip().isdigit():
+                        kv[k.strip()] = int(v.strip())
+            if 'Size' in kv and 'FreeSpace' in kv:
+                disk_raw = (f'{round(kv["Size"]/(1024**3))} GB total, '
+                            f'{round(kv["FreeSpace"]/(1024**3))} GB free')
 
         if not disk_raw:
             # fsutil: locale-aware regex handles comma (EN) and space (FR) separators
