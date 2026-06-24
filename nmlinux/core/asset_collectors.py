@@ -245,21 +245,29 @@ def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
                 ram_b = str(max(mb_vals) * 1024 * 1024)
         data['ram'] = f'{int(ram_b) // (1024**3)} GB' if ram_b and ram_b.isdigit() else ''
 
-        # Disk: PowerShell → fsutil volume diskfree (bytes, locale-safe number extraction)
+        # Disk: PowerShell Get-PSDrive (simpler, no WMI) → fsutil fallback
         disk_raw = ps(
-            'Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | '
-            'Select-Object -First 1 | '
-            'ForEach-Object { "{0:.0f} GB total, {1:.0f} GB free" -f ($_.Size/1GB),($_.FreeSpace/1GB) }'
+            '$d=Get-PSDrive C;'
+            '[string][math]::Round(($d.Used+$d.Free)/1GB)+" GB total, "'
+            '+[string][math]::Round($d.Free/1GB)+" GB free"'
         )
         if not disk_raw:
+            # fsutil outputs 3 lines: free bytes, total bytes, avail free bytes
+            # Extract the number after the last colon on each line
+            import re as _re
             fsutil = cmd('fsutil', 'volume', 'diskfree', 'C:')
-            nums = [int(''.join(filter(str.isdigit, p)))
-                    for p in fsutil.splitlines()
-                    if ':' in p and any(c.isdigit() for c in p)]
-            nums = sorted(set(nums), reverse=True)
-            if len(nums) >= 2:
-                total_gb = nums[0] // (1024**3)
-                free_gb  = nums[1] // (1024**3)
+            byte_vals = []
+            for line in fsutil.splitlines():
+                if ':' not in line:
+                    continue
+                after_colon = line.rsplit(':', 1)[-1]
+                digits = ''.join(c for c in after_colon if c.isdigit())
+                if digits and len(digits) > 6:
+                    byte_vals.append(int(digits))
+            if len(byte_vals) >= 2:
+                # line order: free, total, avail-free → take max as total, min as free
+                total_gb = max(byte_vals) // (1024**3)
+                free_gb  = min(byte_vals) // (1024**3)
                 disk_raw = f'{total_gb} GB total, {free_gb} GB free'
         data['disk'] = disk_raw[:40] if disk_raw else ''
 
