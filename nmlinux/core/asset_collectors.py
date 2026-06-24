@@ -245,16 +245,15 @@ def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
                 ram_b = str(max(mb_vals) * 1024 * 1024)
         data['ram'] = f'{int(ram_b) // (1024**3)} GB' if ram_b and ram_b.isdigit() else ''
 
-        # Disk: PowerShell Get-PSDrive (simpler, no WMI) → fsutil fallback
+        # Disk: Get-CimInstance (correct Size/FreeSpace) → fsutil fallback
         disk_raw = ps(
-            '$d=Get-PSDrive C;'
-            '[string][math]::Round(($d.Used+$d.Free)/1GB)+" GB total, "'
-            '+[string][math]::Round($d.Free/1GB)+" GB free"'
+            '$d=Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3"'
+            '|Select-Object -First 1;'
+            '[string][math]::Round($d.Size/1GB)+" GB total, "'
+            '+[string][math]::Round($d.FreeSpace/1GB)+" GB free"'
         )
         if not disk_raw:
-            # fsutil outputs 3 lines: free bytes, total bytes, avail free bytes
-            # Extract the number after the last colon on each line
-            import re as _re
+            # fsutil line order: free bytes / total bytes / avail-free bytes
             fsutil = cmd('fsutil', 'volume', 'diskfree', 'C:')
             byte_vals = []
             for line in fsutil.splitlines():
@@ -265,9 +264,8 @@ def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
                 if digits and len(digits) > 6:
                     byte_vals.append(int(digits))
             if len(byte_vals) >= 2:
-                # line order: free, total, avail-free → take max as total, min as free
-                total_gb = max(byte_vals) // (1024**3)
-                free_gb  = min(byte_vals) // (1024**3)
+                total_gb = round(max(byte_vals) / (1024**3))
+                free_gb  = round(min(byte_vals) / (1024**3))
                 disk_raw = f'{total_gb} GB total, {free_gb} GB free'
         data['disk'] = disk_raw[:40] if disk_raw else ''
 
