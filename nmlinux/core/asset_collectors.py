@@ -195,25 +195,54 @@ def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
         )
 
         def ps(script: str) -> str:
-            return sess.run_ps(script).std_out.decode(errors='replace').strip()
+            r = sess.run_ps(script)
+            return r.std_out.decode(errors='replace').strip()
+
+        def cmd(command: str) -> str:
+            r = sess.run_cmd(command)
+            return r.std_out.decode(errors='replace').strip()
 
         data: dict = {'method': 'WinRM', 'platform': 'Windows'}
-        data['os']  = ps('(Get-WmiObject Win32_OperatingSystem).Caption')[:80]
-        cpu_name    = ps('(Get-WmiObject Win32_Processor | Select-Object -First 1).Name')
-        cpu_cores   = ps('(Get-WmiObject Win32_Processor | Select-Object -First 1).NumberOfLogicalProcessors')
+
+        # Try PowerShell first, fall back to wmic for environments
+        # where Enable-PSRemoting was not run
+        os_name = ps('(Get-CimInstance Win32_OperatingSystem).Caption')
+        if not os_name or 'help' in os_name.lower():
+            os_name = cmd('wmic os get Caption /value').replace('Caption=', '').strip()
+        data['os'] = os_name[:80]
+
+        cpu_name = ps('(Get-CimInstance Win32_Processor | Select-Object -First 1).Name')
+        if not cpu_name or 'help' in cpu_name.lower():
+            cpu_name = cmd('wmic cpu get Name /value').replace('Name=', '').strip()
+        cpu_cores = ps('(Get-CimInstance Win32_Processor | Select-Object -First 1).NumberOfLogicalProcessors')
+        if not cpu_cores or not cpu_cores.isdigit():
+            cpu_cores = cmd('wmic cpu get NumberOfLogicalProcessors /value').replace('NumberOfLogicalProcessors=', '').strip()
         data['cpu'] = f'{cpu_name[:40]} ({cpu_cores}c)' if cpu_name else ''
-        ram_b = ps('(Get-WmiObject Win32_ComputerSystem).TotalPhysicalMemory')
-        data['ram']  = f'{int(ram_b) // (1024**3)} GB' if ram_b.isdigit() else ''
-        data['disk'] = ps(
-            'Get-WmiObject Win32_LogicalDisk -Filter "DriveType=3" | '
+
+        ram_b = ps('(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory')
+        if not ram_b or not ram_b.isdigit():
+            ram_b = cmd('wmic computersystem get TotalPhysicalMemory /value').replace('TotalPhysicalMemory=', '').strip()
+        data['ram'] = f'{int(ram_b) // (1024**3)} GB' if ram_b.isdigit() else ''
+
+        disk_raw = ps(
+            'Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | '
             'Select-Object -First 1 | '
             'ForEach-Object { "{0:.0f} GB total, {1:.0f} GB free" -f ($_.Size/1GB),($_.FreeSpace/1GB) }'
-        )[:40]
+        )
+        if not disk_raw or 'help' in disk_raw.lower():
+            disk_raw = cmd('wmic logicaldisk where DriveType=3 get Size,FreeSpace /value')
+            lines = {k: v for k, v in (l.split('=') for l in disk_raw.splitlines() if '=' in l)}
+            if 'Size' in lines and 'FreeSpace' in lines:
+                total = int(lines['Size'].strip()) // (1024**3)
+                free  = int(lines['FreeSpace'].strip()) // (1024**3)
+                disk_raw = f'{total} GB total, {free} GB free'
+        data['disk'] = disk_raw[:40]
+
         data['uptime'] = ps(
-            '(Get-WmiObject Win32_OperatingSystem).ConvertToDateTime('
-            '(Get-WmiObject Win32_OperatingSystem).LastBootUpTime) | '
+            '(Get-CimInstance Win32_OperatingSystem).LastBootUpTime | '
             'ForEach-Object { "up since " + $_.ToString("yyyy-MM-dd HH:mm") }'
         )[:60]
+
         return {k: v for k, v in data.items() if v}
     except Exception as exc:
         return {'method': 'WinRM', 'error': str(exc)[:120]}
