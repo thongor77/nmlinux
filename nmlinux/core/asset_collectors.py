@@ -215,18 +215,27 @@ def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
             'ForEach-Object { "up since " + $_.ToString("yyyy-MM-dd HH:mm") }'
         )[:60]
         return {k: v for k, v in data.items() if v}
-    except Exception:
-        return {}
+    except Exception as exc:
+        return {'method': 'WinRM', 'error': str(exc)[:120]}
 
 
 def _collect_winrm(ip: str, creds_list: list[dict], timeout: int) -> dict:
     """Try each credential set in order; return data from the first that connects."""
+    if not _HAS_WINRM:
+        return {'method': 'WinRM', 'error': 'pywinrm not installed'}
+    has_creds = False
+    last_error: dict = {}
     for creds in creds_list:
         if not creds.get('user'):
             continue
+        has_creds = True
         result = _try_winrm(ip, creds, timeout)
-        if result:
+        if result and 'error' not in result:
             return result
+        last_error = result
+    if not has_creds:
+        return {}
+    return last_error or {'method': 'WinRM', 'error': 'auth failed'}
     return {'method': 'WinRM', 'error': 'pywinrm not installed'} if not _HAS_WINRM else {}
 
 
