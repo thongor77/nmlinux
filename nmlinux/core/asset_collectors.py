@@ -111,14 +111,23 @@ def _collect_ssh(ip: str, creds: dict, timeout: int) -> dict:
     ).strip()
     data['cpu'] = f'{cpu_raw[:40]} ({cores}c)' if cpu_raw else ''
 
-    data['ram'] = run(
-        r"free -h 2>/dev/null | awk '/^Mem:/{print $2}' || "
-        r"sysctl -n hw.memsize 2>/dev/null | awk '{printf \"%.0f GB\", $1/1073741824}'"
-    ).strip()[:20]
+    # RAM: get raw KB (works on Linux + BusyBox), format in Python
+    ram_kb = run("free 2>/dev/null | grep '^Mem:' | awk '{print $2}'").strip()
+    if ram_kb.isdigit():
+        gb = int(ram_kb) / (1024 * 1024)
+        data['ram'] = f'{gb:.1f} GB' if gb >= 1 else f'{int(ram_kb) // 1024} MB'
+    else:
+        # macOS: sysctl returns bytes
+        hw = run('sysctl -n hw.memsize 2>/dev/null').strip()
+        if hw.isdigit():
+            data['ram'] = f'{int(hw) / (1024 ** 3):.1f} GB'
 
-    data['disk'] = run(
-        r"df -h / 2>/dev/null | tail -1 | awk '{print $2\" total, \"$4\" free\"}'"
-    ).strip()[:40]
+    # Disk: get raw df line, parse in Python (avoids awk quoting issues)
+    disk_line = run('df -h / 2>/dev/null | tail -1').strip()
+    if disk_line:
+        parts = disk_line.split()
+        if len(parts) >= 4:
+            data['disk'] = f'{parts[1]} total, {parts[3]} free'
 
     data['uptime'] = run('uptime -p 2>/dev/null || uptime').strip()[:60]
 
