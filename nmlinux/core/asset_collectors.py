@@ -321,11 +321,14 @@ def collect_host(
         result = _collect_ssh(ip, ssh_creds, timeout)
         if result:
             base.update(result)
-    elif winrm_creds and (_port_open(ip, 5985, 1.5) or _port_open(ip, 5986, 1.5)):
+
+    # Try WinRM independently — SSH may be open but irrelevant (e.g. Windows with OpenSSH)
+    if not base.get('os') and winrm_creds and (_port_open(ip, 5985, 1.5) or _port_open(ip, 5986, 1.5)):
         result = _collect_winrm(ip, winrm_creds, timeout)
         if result:
             base.update(result)
-    elif snmp_creds and _port_open(ip, 161, 1.5):
+
+    if not base.get('os') and snmp_creds and _port_open(ip, 161, 1.5):
         base.update(_collect_snmp(ip, snmp_creds, timeout))
 
     return base
