@@ -263,17 +263,17 @@ def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
             except Exception:
                 pass
         if not disk_raw:
-            import re as _re
-            # fsutil: extract each number individually (re.findall avoids digit concatenation)
+            # fsutil: join all digits per line — handles both "," and " " as thousands sep
+            # Each line has exactly one value after the colon, so joining is safe
             fsutil = cmd('fsutil', 'volume', 'diskfree', 'C:')
             byte_vals = []
             for line in fsutil.splitlines():
                 if ':' not in line:
                     continue
                 after_colon = line.rsplit(':', 1)[-1]
-                for m in _re.findall(r'\d+', after_colon):
-                    if len(m) >= 9:   # ≥ 512 MB in bytes
-                        byte_vals.append(int(m))
+                digits = ''.join(c for c in after_colon if c.isdigit())
+                if len(digits) >= 9:   # ≥ ~500 MB in bytes
+                    byte_vals.append(int(digits))
             if len(byte_vals) >= 2:
                 total_gb = round(max(byte_vals) / (1024**3))
                 free_gb  = round(min(byte_vals) / (1024**3))
