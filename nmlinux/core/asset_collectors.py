@@ -196,52 +196,76 @@ def _try_winrm(ip: str, creds: dict, timeout: int) -> dict:
 
         def ps(script: str) -> str:
             r = sess.run_ps(script)
+            out = r.std_out.decode(errors='replace').strip()
+            return '' if 'help' in out.lower() else out
+
+        def cmd(command: str, *args) -> str:
+            r = sess.run_cmd(command, list(args))
             return r.std_out.decode(errors='replace').strip()
 
-        def cmd(command: str) -> str:
-            r = sess.run_cmd(command)
-            return r.std_out.decode(errors='replace').strip()
+        def reg(key: str, value: str) -> str:
+            out = cmd('reg', 'query', key, '/v', value)
+            for line in out.splitlines():
+                if value in line and 'REG_' in line:
+                    return line.split('REG_SZ')[-1].strip()
+            return ''
 
         data: dict = {'method': 'WinRM', 'platform': 'Windows'}
 
-        # Try PowerShell first, fall back to wmic for environments
-        # where Enable-PSRemoting was not run
+        # OS: PowerShell → ver (locale-safe)
         os_name = ps('(Get-CimInstance Win32_OperatingSystem).Caption')
-        if not os_name or 'help' in os_name.lower():
-            os_name = cmd('wmic os get Caption /value').replace('Caption=', '').strip()
+        if not os_name:
+            # ver gives "Microsoft Windows [Version 10.0.xxxxx]"
+            ver_out = cmd('ver')
+            os_name = ver_out.strip().replace('[', '').replace(']', '') if ver_out else ''
         data['os'] = os_name[:80]
 
+        # CPU: PowerShell → registry (locale-safe, no wmic needed)
         cpu_name = ps('(Get-CimInstance Win32_Processor | Select-Object -First 1).Name')
-        if not cpu_name or 'help' in cpu_name.lower():
-            cpu_name = cmd('wmic cpu get Name /value').replace('Name=', '').strip()
+        if not cpu_name:
+            cpu_name = reg(
+                r'HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor\0',
+                'ProcessorNameString',
+            ).strip()
         cpu_cores = ps('(Get-CimInstance Win32_Processor | Select-Object -First 1).NumberOfLogicalProcessors')
-        if not cpu_cores or not cpu_cores.isdigit():
-            cpu_cores = cmd('wmic cpu get NumberOfLogicalProcessors /value').replace('NumberOfLogicalProcessors=', '').strip()
-        data['cpu'] = f'{cpu_name[:40]} ({cpu_cores}c)' if cpu_name else ''
+        data['cpu'] = f'{cpu_name[:40]} ({cpu_cores}c)' if cpu_name else cpu_name[:60]
 
+        # RAM: PowerShell → wmic (bytes)
         ram_b = ps('(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory')
         if not ram_b or not ram_b.isdigit():
-            ram_b = cmd('wmic computersystem get TotalPhysicalMemory /value').replace('TotalPhysicalMemory=', '').strip()
+            ram_b = cmd('wmic', 'computersystem', 'get', 'TotalPhysicalMemory', '/value')
+            ram_b = next((l.split('=')[1].strip() for l in ram_b.splitlines() if 'TotalPhysicalMemory=' in l), '')
         data['ram'] = f'{int(ram_b) // (1024**3)} GB' if ram_b.isdigit() else ''
 
+        # Disk: PowerShell → wmic
         disk_raw = ps(
             'Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | '
             'Select-Object -First 1 | '
             'ForEach-Object { "{0:.0f} GB total, {1:.0f} GB free" -f ($_.Size/1GB),($_.FreeSpace/1GB) }'
         )
-        if not disk_raw or 'help' in disk_raw.lower():
-            disk_raw = cmd('wmic logicaldisk where DriveType=3 get Size,FreeSpace /value')
-            lines = {k: v for k, v in (l.split('=') for l in disk_raw.splitlines() if '=' in l)}
-            if 'Size' in lines and 'FreeSpace' in lines:
-                total = int(lines['Size'].strip()) // (1024**3)
-                free  = int(lines['FreeSpace'].strip()) // (1024**3)
+        if not disk_raw:
+            raw = cmd('wmic', 'logicaldisk', 'where', 'DriveType=3', 'get', 'Size,FreeSpace', '/value')
+            kv = {l.split('=')[0]: l.split('=')[1].strip()
+                  for l in raw.splitlines() if '=' in l and l.split('=')[1].strip().isdigit()}
+            if 'Size' in kv and 'FreeSpace' in kv:
+                total = int(kv['Size']) // (1024**3)
+                free  = int(kv['FreeSpace']) // (1024**3)
                 disk_raw = f'{total} GB total, {free} GB free'
-        data['disk'] = disk_raw[:40]
+        data['disk'] = disk_raw[:40] if disk_raw else ''
 
-        data['uptime'] = ps(
+        # Uptime: PowerShell → net stats (locale-dependent but best effort)
+        uptime = ps(
             '(Get-CimInstance Win32_OperatingSystem).LastBootUpTime | '
             'ForEach-Object { "up since " + $_.ToString("yyyy-MM-dd HH:mm") }'
-        )[:60]
+        )
+        if not uptime:
+            boot_raw = cmd('wmic', 'os', 'get', 'LastBootUpTime', '/value')
+            for line in boot_raw.splitlines():
+                if 'LastBootUpTime=' in line:
+                    t = line.split('=')[1].strip()  # "20250623102345.000000+060"
+                    if len(t) >= 12:
+                        uptime = f'up since {t[:4]}-{t[4:6]}-{t[6:8]} {t[8:10]}:{t[10:12]}'
+        data['uptime'] = uptime[:60] if uptime else ''
 
         return {k: v for k, v in data.items() if v}
     except Exception as exc:
