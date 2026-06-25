@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import sys
-import termios
 import ptyprocess
 from PySide6.QtCore import QThread, Signal
 
@@ -23,35 +22,24 @@ class SshWorker(QThread):
         self._cols  = cols
         self._proc: ptyprocess.PtyProcess | None = None
 
-    def _kill_echo(self) -> None:
-        """Disable local PTY echo via termios (more reliable than ptyprocess.setecho)."""
-        try:
-            fd = self._proc.fd
-            attrs = termios.tcgetattr(fd)
-            if attrs[3] & termios.ECHO:
-                attrs[3] &= ~(termios.ECHO | termios.ECHOE | termios.ECHOK | termios.ECHONL)
-                termios.tcsetattr(fd, termios.TCSANOW, attrs)
-        except Exception:
-            pass
-
     def run(self) -> None:
         code = -1
         try:
             _env = dict(os.environ)
             _env.setdefault('TERM', 'xterm-256color')
+            # echo=True keeps the local PTY in normal mode so ssh propagates
+            # ECHO-on to the remote pty (SSH pty-req carries the local tty modes).
+            # ssh then switches the local side to raw for the session, so there is
+            # no double echo. Forcing echo off here used to tell the remote
+            # "no echo", which killed remote echo entirely — keystrokes were sent
+            # to the shell but never displayed after login. See DT-14.
             self._proc = ptyprocess.PtyProcess.spawn(
-                self._args, echo=False, dimensions=(self._rows, self._cols), env=_env
+                self._args, echo=True, dimensions=(self._rows, self._cols), env=_env
             )
-            self._kill_echo()
 
-            # SSH resets termios during its handshake and may re-enable ECHO.
-            _echo_checks = 0
             while self._proc.isalive():
                 try:
                     raw = self._proc.read(4096)
-                    if _echo_checks < 8:
-                        _echo_checks += 1
-                        self._kill_echo()
                     if _DEBUG:
                         print(f'READ  {raw!r}', file=sys.stderr, flush=True)
                     self.output.emit(raw)

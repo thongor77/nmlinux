@@ -59,8 +59,7 @@ Chaque décision est documentée avec son contexte, le choix retenu et les alter
 
 **Contraintes résolues :**
 - `TERM=xterm-256color` forcé via `_env.setdefault()` (ZSH bascule en mode dégradé sans TERM).
-- Echo PTY désactivé via `termios.tcsetattr()` après spawn (SSH réinitialise ECHO pendant le handshake).
-- `_kill_echo()` appelé 8 fois en début de session pour contrer le reset SSH.
+- Echo PTY laissé activé (`echo=True`) — voir DT-14 : c'est ssh qui gère les modes du terminal.
 
 ---
 
@@ -163,3 +162,22 @@ result += "        },"   # PT_CLOSE — ferme explicitement le dernier bloc exis
 result += NEW_BLOCK      # nouveau bloc (commence par \n        "xx": {)
 result += "\n    },"     # MOD_CLOSE — ferme le module
 ```
+
+---
+
+## DT-14 — Terminal SSH : laisser ssh gérer l'écho (echo=True)
+
+**Contexte :** Sur une VM Ubuntu 26.04 fraîche, après authentification le prompt s'affichait mais les frappes n'étaient plus jamais ré-affichées (clavier « mort »). Le debug `NMLINUX_DEBUG=1` montrait des lignes `WRITE` (octets bien envoyés au PTY) mais aucune `READ` en retour. Depuis une vraie console ssh, aucun problème.
+
+**Cause :** `SshWorker` forçait l'écho **off** sur le PTY local (`ptyprocess.spawn(echo=False)` + `_kill_echo()` appelé sur les 8 premiers reads). Or le protocole SSH transmet les **modes du terminal local** au pty distant lors du `pty-req`. Avec l'écho local désactivé, ssh demandait au serveur « pas d'écho » → le shell distant n'écho plus rien. OpenSSH récent (Ubuntu 26.04) applique fidèlement ces modes ; les serveurs plus anciens les ignoraient parfois, ce qui masquait le bug.
+
+**Décision :** Spawn avec `echo=True` (comme un vrai émulateur de terminal). On laisse ssh gérer les modes : il propage écho-on au pty distant **et** bascule le côté local en raw mode pour la session, donc pas de double-écho.
+
+**Raisons :**
+- L'écho de session est un écho **distant**, pas local. Le couper localement le coupe à la source.
+- nmlinux n'écho jamais les frappes localement (`keyPressEvent` écrit seulement vers le PTY, ne nourrit pas pyte) → aucun risque de double-écho côté client.
+- `_kill_echo()` corrigeait un problème inexistant : le « reset ECHO pendant le handshake » par ssh **était** la mise en place correcte de l'écho.
+
+**Alternatives rejetées :**
+- Garder `echo=False` et forcer l'écho distant autrement : impossible proprement, le seul canal côté client est justement les modes propagés par le `pty-req`.
+- L'ancien `_kill_echo()` visait un faux « double-écho » : le bug de caractères dupliqués (commit `5fe69b8`) venait des redraws ZLE de ZSH dans l'ancien renderer QPlainTextEdit, pas de termios. Avec pyte il n'existe plus.
