@@ -69,3 +69,7 @@ Ce fichier reprend les jalons techniques essentiels.
 - Aide contextuelle : 8 langues × 27 modules.
 - Fix : `nav_hint_smb_nfs` + `nav_hint_hosts` manquants dans 7 blocs non-fr.
 - **Bug documenté :** injection programmatique — `ja` s'imbriquait dans `pt` (syntaxe valide mais sémantique incorrecte). Voir DT-13 dans Decisions-Techniques.md.
+
+## 2026-06-25 — v1.6.1
+
+- **Fix terminal SSH — écho distant** : sur VM Ubuntu 26.04 fraîche, le clavier semblait « mort » après l'auth (frappes envoyées au shell distant mais jamais ré-affichées). `SshWorker` forçait l'écho off (`echo=False` + `_kill_echo()`), et ssh propageait ce « no echo » au pty distant via les modes du `pty-req`. Fix : spawn `echo=True`, suppression de `_kill_echo()`/`_echo_checks` — on laisse ssh gérer les modes, comme un vrai émulateur. Voir DT-14.

@@ -1,6 +1,6 @@
-# NMLinux · v1.6.0
+# NMLinux · v1.6.1
 
-[![Version](https://img.shields.io/badge/version-1.6.0-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.6.1-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -50,6 +50,10 @@ Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkM
 ---
 
 ## Changelog
+
+### v1.6.1 — 2026-06-25
+
+- **SSH terminal — fixed remote echo**: keystrokes typed in the embedded SSH terminal were sent to the remote shell but never echoed back (the keyboard appeared "dead" after login). nmlinux forced the local PTY echo off, and ssh propagated that "no echo" to the remote pty via its terminal modes (pty-req), so the remote shell stopped echoing input. Reproduced on a fresh Ubuntu 26.04 VM (recent OpenSSH applies these modes faithfully). The terminal now keeps the PTY in normal mode and lets ssh manage echo, matching real terminal emulators.
 
 ### v1.6.0 — 2026-06-24
 

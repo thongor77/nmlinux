@@ -136,3 +136,4 @@ Pas de scheduler, pas de base SQL, pas de CMDB, pas d'inventaire logiciel comple
 | v1.3.1 | 2026-06-05 | SSH Key Manager, aide contextuelle (help_page.py) |
 | v1.3.2 | 2026-06-06 | i18n 8 langues, aide contextuelle 8 langues × 27 modules |
 | v1.3.5 | 2026-06-06 | Compatibilité macOS — 9 modules dual Linux/macOS |
+| v1.6.1 | 2026-06-25 | Fix écho terminal SSH (echo PTY géré par ssh, DT-14) |
