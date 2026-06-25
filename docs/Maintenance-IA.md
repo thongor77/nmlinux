@@ -217,9 +217,15 @@ git tag -a vX.Y.Z -m "vX.Y.Z — résumé"
 python -m build --wheel --no-isolation
 # (le sdist échoue à cause d'un symlink dans aur/ — wheel uniquement)
 
-# 5. Push + GitHub Release
+# 4b. Build AppImage (NE PAS OUBLIER — asset de chaque release Linux)
+#     lit la version depuis pyproject.toml → dist/NMLinux-X.Y.Z-x86_64.AppImage
+bash packaging/build-appimage.sh
+
+# 5. Push + GitHub Release (joindre wheel ET AppImage)
 git push origin main --tags
-gh release create vX.Y.Z dist/nmlinux-X.Y.Z-py3-none-any.whl \
+gh release create vX.Y.Z \
+  dist/nmlinux-X.Y.Z-py3-none-any.whl \
+  dist/NMLinux-X.Y.Z-x86_64.AppImage \
   --title "vX.Y.Z — titre" --notes "..."
 
 # 6. AUR
