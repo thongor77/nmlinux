@@ -86,10 +86,10 @@ def _ensure_icon_theme() -> None:
 
 
 def main() -> None:
-    # macOS: the menu bar shows "Python" because after exec() the process image
-    # is the Python framework binary, which macOS recognises as a "Python" bundle.
-    # NSProcessInfo.setProcessName_ overrides the OS-level name before Qt creates
-    # the application menu. setprogname + argv[0] are kept as fallbacks.
+    # macOS: NSBundle.mainBundle() resolves to the Python.framework bundle whose
+    # CFBundleName is "Python". Qt reads this dict during QApplication construction
+    # and uses it as the application menu title. We must patch the dict AND set the
+    # process name before QApplication is created.
     if sys.platform == 'darwin':
         sys.argv[0] = 'NMLinux'
         import ctypes
@@ -98,7 +98,10 @@ def main() -> None:
         except Exception:
             pass
         try:
-            from Foundation import NSProcessInfo
+            from Foundation import NSBundle, NSProcessInfo
+            _info = NSBundle.mainBundle().infoDictionary()
+            _info['CFBundleName'] = 'NMLinux'
+            _info['CFBundleDisplayName'] = 'NMLinux'
             NSProcessInfo.processInfo().setProcessName_('NMLinux')
         except Exception:
             pass
@@ -107,6 +110,22 @@ def main() -> None:
     _ensure_icon_theme()
     app.setApplicationName("NMLinux")
     app.setApplicationDisplayName("NMLinux")
+
+    # Belt-and-suspenders: rename any remaining "Python" in the native app menu
+    if sys.platform == 'darwin':
+        try:
+            import AppKit
+            menu = AppKit.NSApp.mainMenu()
+            if menu and menu.numberOfItems() > 0:
+                item = menu.itemAtIndex_(0)
+                item.setTitle_('NMLinux')
+                if item.submenu():
+                    for i in range(item.submenu().numberOfItems()):
+                        sub = item.submenu().itemAtIndex_(i)
+                        if sub and 'Python' in (sub.title() or ''):
+                            sub.setTitle_(sub.title().replace('Python', 'NMLinux'))
+        except Exception:
+            pass
     app.setOrganizationName("nmlinux")
     app.setDesktopFileName("nmlinux")
     app.setWindowIcon(themed_icon("network-wired", "network-server", "applications-internet"))

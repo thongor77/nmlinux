@@ -7,7 +7,7 @@ set -euo pipefail
 
 APP_NAME="NMLinux"
 BUNDLE_ID="com.thongor77.nmlinux"
-VERSION="1.6.3"
+VERSION="1.6.4"
 DEST="${HOME}/Applications"
 VENV_DIR="${HOME}/.local/share/nmlinux/venv"
 
@@ -39,7 +39,8 @@ PYTHON="${VENV_DIR}/bin/python3"
 
 # Install/upgrade nmlinux and its dependencies into the venv unconditionally.
 echo "Installing NMLinux into ${VENV_DIR} ..."
-"${VENV_DIR}/bin/pip" install --quiet --upgrade PySide6 ptyprocess pyte tftpy pyobjc-framework-Cocoa
+"${VENV_DIR}/bin/pip" install --quiet --upgrade PySide6 ptyprocess pyte tftpy
+"${VENV_DIR}/bin/pip" install --upgrade pyobjc-framework-Cocoa
 "${VENV_DIR}/bin/pip" install --quiet --upgrade "${REPO_ROOT}"
 echo "NMLinux installed."
 
