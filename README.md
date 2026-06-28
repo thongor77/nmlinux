@@ -1,6 +1,6 @@
-# NMLinux · v1.6.1
+# NMLinux · v1.6.4
 
-[![Version](https://img.shields.io/badge/version-1.6.1-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.6.4-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -50,6 +50,18 @@ Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkM
 ---
 
 ## Changelog
+
+### v1.6.4 — 2026-06-28
+
+- **macOS**: menu bar now shows **NMLinux** instead of **Python** — root cause: after `exec()` into Python, `NSBundle.mainBundle()` resolves to the `Python.framework` bundle (CFBundleName = "Python") that Qt reads during QApplication construction; fixed by patching the bundle's `infoDictionary()` and renaming native menu items via AppKit before the application menu is created
+
+### v1.6.3 — 2026-06-28
+
+- **macOS**: first attempt at fixing the menu bar using `NSProcessInfo.setProcessName_` via `pyobjc-framework-Cocoa` (superseded by v1.6.4)
+
+### v1.6.2 — 2026-06-28
+
+- **macOS**: replaced bash launcher script with a compiled C stub in `install_macos_app.sh` so macOS correctly associates the `.app` bundle with the running process; added `setprogname` and `sys.argv[0]` override as fallbacks
 
 ### v1.6.1 — 2026-06-25
 
