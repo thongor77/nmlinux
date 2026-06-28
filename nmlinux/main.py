@@ -86,9 +86,12 @@ def _ensure_icon_theme() -> None:
 
 
 def main() -> None:
-    # macOS: set the process name before QApplication so the menu bar shows
-    # "NMLinux" instead of "Python" when launched outside a proper .app bundle.
+    # macOS: set argv[0] and the process name before QApplication so the menu bar
+    # shows "NMLinux" instead of "Python". Qt uses argv[0] basename as the default
+    # applicationName when the process is not detected as a proper .app bundle
+    # (which happens when Python is exec'd from a shell script launcher).
     if sys.platform == 'darwin':
+        sys.argv[0] = 'NMLinux'
         import ctypes
         try:
             ctypes.CDLL(None).setprogname(b'NMLinux')
