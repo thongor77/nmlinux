@@ -49,12 +49,36 @@ echo "Installing to: ${APP}"
 # --- build bundle structure ---
 mkdir -p "${MACOS_DIR}" "${RES_DIR}"
 
-# Launcher script — calls the venv python directly (no activate needed)
-cat > "${MACOS_DIR}/${APP_NAME}" << LAUNCHER
+# Compile a native launcher stub so macOS associates the bundle with the process.
+# A bash script as CFBundleExecutable causes the menu bar to show "Python" because
+# macOS tracks the interpreter (not the script) as the running application.
+# A compiled binary that exec()s into Python preserves the bundle association.
+LAUNCHER_SRC="$(mktemp /tmp/nmlinux_launcher_XXXXXX.c)"
+cat > "${LAUNCHER_SRC}" << C_EOF
+#include <unistd.h>
+#include <stdio.h>
+int main(void) {
+    char *python = "${PYTHON}";
+    char *args[] = {"NMLinux", "-m", "nmlinux.main", (char*)0};
+    execv(python, args);
+    perror("NMLinux: exec failed");
+    return 1;
+}
+C_EOF
+
+if command -v cc &>/dev/null && cc -o "${MACOS_DIR}/${APP_NAME}" "${LAUNCHER_SRC}" 2>/dev/null; then
+    rm -f "${LAUNCHER_SRC}"
+    echo "Compiled native launcher (menu bar will show NMLinux)."
+else
+    # Fallback: bash script — menu bar may show Python instead of NMLinux
+    rm -f "${LAUNCHER_SRC}"
+    cat > "${MACOS_DIR}/${APP_NAME}" << LAUNCHER
 #!/usr/bin/env bash
 exec "${PYTHON}" -m nmlinux.main "\$@"
 LAUNCHER
-chmod +x "${MACOS_DIR}/${APP_NAME}"
+    chmod +x "${MACOS_DIR}/${APP_NAME}"
+    echo "Warning: cc not found — using shell launcher (menu bar may show Python)."
+fi
 
 # Info.plist
 cat > "${APP}/Contents/Info.plist" << PLIST
