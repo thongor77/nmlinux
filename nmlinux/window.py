@@ -46,6 +46,12 @@ from nmlinux.pages.settings import SettingsPage
 from nmlinux.pages.about import AboutPage
 from nmlinux.pages.help_page import HelpPage
 
+from nmlinux.core.host_actions import (
+    ACT_PING, ACT_PORT_SCAN, ACT_WHOIS, ACT_DNS,
+    ACT_TRACEROUTE, ACT_MTR, ACT_SSH, ACT_RDP,
+    ACT_VNC, ACT_TOPOLOGY, ACT_ASSET,
+)
+
 
 # (icon_names, label, PageClass, description)
 _TOOLS = [
@@ -397,6 +403,14 @@ class MainWindow(QMainWindow):
         self._help_page.back_requested.connect(self._on_help_back)
         self._stack.addWidget(self._help_page)
 
+        # Auto-connect source pages
+        for page in self._pages:
+            if hasattr(page, 'action_requested'):
+                page.action_requested.connect(self._on_host_action)
+
+        # Build routing table (requires all pages to be instantiated)
+        self._setup_host_action_routes()
+
         self._nav.setCurrentRow(0)
         return self._stack
 
@@ -475,6 +489,48 @@ class MainWindow(QMainWindow):
     def navigate_to(self, index: int) -> None:
         if 0 <= index < len(_TOOLS):
             self._nav.setCurrentRow(index)
+
+    def _page_index(self, class_name: str) -> int:
+        for i, page in enumerate(self._pages):
+            if type(page).__name__ == class_name:
+                return i
+        raise ValueError(f"Page class not found: {class_name}")
+
+    def _setup_host_action_routes(self) -> None:
+        self._host_routes: dict[str, tuple[int, object]] = {
+            ACT_PING:       (self._page_index('PingPage'),
+                             lambda p, ip, h, _s: p.set_target(h or ip)),
+            ACT_PORT_SCAN:  (self._page_index('PortScannerPage'),
+                             lambda p, ip, h, _s: p.set_target(ip)),
+            ACT_WHOIS:      (self._page_index('WhoisPage'),
+                             lambda p, ip, h, _s: p.set_target(h or ip)),
+            ACT_DNS:        (self._page_index('DnsPage'),
+                             lambda p, ip, h, _s: p.set_target(h or ip)),
+            ACT_TRACEROUTE: (self._page_index('TraceroutePage'),
+                             lambda p, ip, h, _s: p.set_target(h or ip)),
+            ACT_MTR:        (self._page_index('MtrPage'),
+                             lambda p, ip, h, _s: p.set_target(h or ip)),
+            ACT_SSH:        (self._page_index('SshPage'),
+                             lambda p, ip, h, _s: p.set_target(ip, h)),
+            ACT_RDP:        (self._page_index('RdpPage'),
+                             lambda p, ip, h, _s: p.set_target(ip, h)),
+            ACT_VNC:        (self._page_index('VncPage'),
+                             lambda p, ip, h, _s: p.set_target(ip, h)),
+            ACT_TOPOLOGY:   (self._page_index('TopologyPage'),
+                             lambda p, ip, h, src: p.load_hosts(
+                                 getattr(src, '_last_scan_hosts', []))),
+            ACT_ASSET:      (self._page_index('AssetInventoryPage'),
+                             lambda p, ip, h, src: p.prefill_hosts(
+                                 getattr(src, '_last_scan_hosts', []))),
+        }
+
+    def _on_host_action(self, action: str, ip: str, host: str) -> None:
+        if action not in self._host_routes:
+            return
+        idx, fn = self._host_routes[action]
+        sender = self.sender()
+        fn(self._pages[idx], ip, host, sender)
+        self.navigate_to(idx)
 
     def _open_palette(self) -> None:
         self._palette.open_palette()
