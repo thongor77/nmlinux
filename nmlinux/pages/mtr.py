@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from nmlinux.core.cli_bar import get_cli_bar
+from nmlinux.core.host_actions import HostActionMenu
 from nmlinux.core.i18n import tr
 from nmlinux.core.theme import color_ok, color_err
 
@@ -135,6 +136,8 @@ class MtrWorker(QThread):
 # ── Page ──────────────────────────────────────────────────────────────────────
 
 class MtrPage(QWidget):
+    action_requested = Signal(str, str, str)
+
     def __init__(self) -> None:
         super().__init__()
         self._worker: MtrWorker | None = None
@@ -142,6 +145,24 @@ class MtrPage(QWidget):
         self._build_ui()
 
     # ── Layout ───────────────────────────────────────────────────────────────
+
+    def set_target(self, host: str) -> None:
+        self._input.setText(host)
+        self._on_start()
+
+    def _on_right_click(self, pos) -> None:
+        row = self._table.rowAt(pos.y())
+        if row < 0:
+            return
+        host_item = self._table.item(row, 1)
+        if not host_item:
+            return
+        host = host_item.text()
+        if host in ('*', '???', ''):
+            return
+        menu = HostActionMenu(host, host, parent=self)
+        menu.action_chosen.connect(self.action_requested)
+        menu.exec(self._table.viewport().mapToGlobal(pos))
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
@@ -256,6 +277,8 @@ class MtrPage(QWidget):
         self._table.setAlternatingRowColors(True)
         self._table.setFont(QFont('Menlo' if _IS_MACOS else 'Monospace', 9))
         layout.addWidget(self._table, 1)
+        self._table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._table.customContextMenuRequested.connect(self._on_right_click)
 
         if not _CMD_MTR:
             self._btn_go.setEnabled(False)
