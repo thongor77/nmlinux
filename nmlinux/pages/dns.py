@@ -162,6 +162,9 @@ class DnsPage(QWidget):
         layout.addWidget(self._status)
         layout.addStretch(1)
 
+    def set_target(self, host: str) -> None:
+        self._input.setText(host)
+
     def _update_cli(self) -> None:
         bar = get_cli_bar()
         if not bar:

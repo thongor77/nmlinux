@@ -79,6 +79,10 @@ class WhoisPage(QWidget):
         self._output.setFont(mono)
         layout.addWidget(self._output, 10)
 
+    def set_target(self, target: str) -> None:
+        self._input.setText(target)
+        self._lookup()
+
     def _lookup(self) -> None:
         target = self._input.text().strip()
         if not target or (self._worker and self._worker.isRunning()):
