@@ -17,6 +17,7 @@ from PySide6.QtCore import Qt, QThread, Signal
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 from nmlinux.core.theme import color_ok, color_err
+from nmlinux.core.host_actions import HostActionMenu
 
 
 class PingWorker(QThread):
@@ -84,12 +85,18 @@ _GREY  = QColor("#a6adc8")
 
 
 class PingPage(QWidget):
+    action_requested = Signal(str, str, str)  # action_key, ip, host
+
     def __init__(self) -> None:
         super().__init__()
         self._workers: dict[str, PingWorker] = {}
         self._stats:   dict[str, _Stats]     = {}
         self._rows:    dict[str, int]         = {}
         self._build_ui()
+
+    def set_target(self, host: str) -> None:
+        self._input.setText(host)
+        self._on_add()
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
@@ -143,6 +150,9 @@ class PingPage(QWidget):
         self._table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self._table.verticalHeader().setVisible(False)
         layout.addWidget(self._table, 1)
+
+        self._table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._table.customContextMenuRequested.connect(self._on_right_click)
 
     def _update_cli(self) -> None:
         bar = get_cli_bar()
@@ -235,6 +245,18 @@ class PingPage(QWidget):
         t.item(row, _C_MIN).setText(st.rtt_min)
         t.item(row, _C_AVG).setText(st.rtt_avg)
         t.item(row, _C_MAX).setText(st.rtt_max)
+
+    def _on_right_click(self, pos) -> None:
+        row = self._table.rowAt(pos.y())
+        if row < 0:
+            return
+        item = self._table.item(row, _C_HOST)
+        if not item:
+            return
+        host = item.text()
+        menu = HostActionMenu(host, host, parent=self)
+        menu.action_chosen.connect(self.action_requested)
+        menu.exec(self._table.viewport().mapToGlobal(pos))
 
     def closeEvent(self, event) -> None:
         self._on_clear_all()
