@@ -14,6 +14,7 @@ from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt, QThread, Signal
 
 from nmlinux.core.cli_bar import get_cli_bar
+from nmlinux.core.host_actions import HostActionMenu
 from nmlinux.core.i18n import tr
 from nmlinux.core.theme import color_ok, color_err
 
@@ -121,6 +122,8 @@ class ScanWorker(QThread):
 
 
 class PortScannerPage(QWidget):
+    action_requested = Signal(str, str, str)
+
     def __init__(self) -> None:
         super().__init__()
         self._worker: ScanWorker | None = None
@@ -192,6 +195,8 @@ class PortScannerPage(QWidget):
         self._table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self._table.verticalHeader().setVisible(False)
         self._table.setVisible(False)
+        self._table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._table.customContextMenuRequested.connect(self._on_right_click)
         layout.addWidget(self._table, 10)
 
         bottom = QHBoxLayout()
@@ -212,6 +217,30 @@ class PortScannerPage(QWidget):
         bottom.addWidget(self._btn_txt)
         layout.addLayout(bottom)
         layout.addStretch(1)
+
+    def set_target(self, ip: str) -> None:
+        self._host_input.setText(ip)
+        self._host_input.setFocus()
+
+    def _get_open_ports(self) -> list[int]:
+        ports = []
+        for r in range(self._table.rowCount()):
+            item = self._table.item(r, _C_PORT)
+            if item:
+                try:
+                    ports.append(int(item.text()))
+                except ValueError:
+                    pass
+        return ports
+
+    def _on_right_click(self, pos) -> None:
+        ip = self._host_input.text().strip()
+        if not ip:
+            return
+        ports = self._get_open_ports() if self._table.rowCount() > 0 else None
+        menu = HostActionMenu(ip, '', ports, parent=self)
+        menu.action_chosen.connect(self.action_requested)
+        menu.exec(self._table.viewport().mapToGlobal(pos))
 
     def _on_preset(self, idx: int) -> None:
         key   = self._preset_keys[idx]
