@@ -1,14 +1,60 @@
 # Roadmap NMLinux
 
-## Version courante : v1.3.5 (2026-06-06)
+## Version courante : v1.6.4 (2026-06-28)
 
-27 modules, 8 langues UI, aide contextuelle 8 langues × 27 modules, compatibilité macOS.
+29 modules, 8 langues UI, aide contextuelle 8 langues × 27 modules, compatibilité Linux + macOS partielle, Asset Inventory (SSH/WinRM/SNMP), AppImage + macOS .app.
 
 ---
 
 ## Candidats vérifiés (mentionnés explicitement par l'utilisateur)
 
 Ces idées ont été discutées et validées — elles ne sont pas encore implémentées.
+
+### Liens inter-modules
+
+**Principe général :** pattern Signal → MainWindow → `set_target()` déjà posé par TLS Watchlist → sidebar. Couplage nul entre les pages elles-mêmes.
+
+#### Liens prioritaires
+
+| Source | Cible | Déclencheur | Bénéfice |
+|--------|-------|-------------|----------|
+| IP Scanner | Port Scanner | Clic droit sur host → "Scanner les ports" | Workflow naturel découverte → analyse |
+| IP Scanner | Ping | Clic droit → "Pinger" | Idem |
+| IP Scanner | Whois | Clic droit → "Whois" | Idem |
+| IP Scanner | Topology | Bouton "Voir en topologie" | Réutilise les nœuds déjà découverts |
+| IP Scanner | Asset Inventory | Bouton "Inventorier" | Saute la phase de re-scan |
+| Topology | SSH / RDP / VNC | Clic droit sur nœud → connect | Auto-détecte le protocole via ports ouverts |
+| Topology | Ping / Port Scanner | Clic droit sur nœud | Navigation directe depuis la carte |
+| Dashboard | Ping gateway (mini-graph) | Passif, en fond | Réutilise le moteur QPainter Bandwidth |
+| Dashboard | TLS Watchlist résumé | Passif | Données déjà calculées, juste afficher N certs |
+
+#### Implémentation type (IP Scanner → Port Scanner)
+- `IpScannerPage` : `host_activated = Signal(str)` — émis au clic droit → action
+- `PortScannerPage` : `set_target(ip: str)` — prefill le champ host + focus
+- `MainWindow._build_stack` : connecte le signal + appelle `navigate_to(idx_port_scanner)`
+
+---
+
+### SMB/NFS — montage depuis l'interface
+
+Actuellement nmlinux liste les partages (smbclient / showmount) sans pouvoir monter.
+
+**Approche :** même pattern que `hosts.py` — `pkexec` pour l'élévation, logique de montage inspirée de `netmnt/crates/netmntd/src/exec.rs` (projet parallèle), sans requérir que netmnt soit installé.
+
+- **Session mount** : `pkexec mount.cifs //host/share /mount/point -o rw,uid=X,username=U`, mot de passe via variable d'environnement `PASSWD` (jamais en argument CLI)
+- **Persistent mount** : générer une unit systemd `.mount` + fichier credentials chmod 600 + `systemctl enable --now`
+- **Unmount** : détecter si unit systemd active → `systemctl disable --now` + cleanup, sinon `umount` direct
+- **NFS** : `pkexec mount -t nfs host:/export /mount/point`
+- **UI** : bouton "Monter" sur la ligne sélectionnée, dialogue choix du point de montage (session / persistant), liste des montages actifs avec bouton "Démonter"
+
+---
+
+### ~~Asset Inventory~~ — LIVRÉ en v1.6.0
+
+> Implémenté en v1.6.0 (2026-06-24). Voir historique ci-dessous pour référence.
+
+<details>
+<summary>Spécification originale (archivée)</summary>
 
 ### Asset Inventory (v1.6.x)
 
@@ -88,16 +134,23 @@ Pas de scheduler, pas de base SQL, pas de CMDB, pas d'inventaire logiciel comple
 
 **Cohérence avec nmlinux :** réutilise IP Scanner, SNMP, SSH existants. S'intègre naturellement dans la sidebar.
 
-**Priorité :** validé par l'utilisateur en session 2026-06-24 — à planifier après stabilisation v1.5.x.
+</details>
 
 ---
 
-### Générateur de mots de passe
+## Idées futures (direction validée, pas encore spécifiées)
 
-- Module standalone (pas de page réseau)
-- Backend : `secrets` (stdlib)
-- Fonctionnalités discutées : longueur configurable, jeux de caractères, affichage entropie en bits, bouton Copier
-- Priorité : mentionné comme "prochaine étape candidate" après v1.3.2
+### Firewall — mode écriture
+
+Le module Firewall est actuellement en lecture seule (affichage nft/iptables/pf). Direction validée : ajouter l'écriture.
+
+**Axes à spécifier avant implémentation :**
+- Ajout/suppression de règles via GUI (nft et iptables)
+- Recherche/filtre par port, IP, action
+- Export des règles en script shell
+- Périmètre : nft uniquement d'abord (nftables est le standard moderne sur Arch/Debian/Ubuntu), iptables en option
+
+**Contrainte :** élévation de privilège requise pour toute modification — pkexec ou sudo selon la distribution.
 
 ---
 
@@ -105,12 +158,9 @@ Pas de scheduler, pas de base SQL, pas de CMDB, pas d'inventaire logiciel comple
 
 ⚠️ Ces éléments ont été mentionnés mais pas actés. **Ne pas implémenter sans confirmation.**
 
-### WifiMapper
+### ~~WifiMapper~~ — LIVRÉ comme projet indépendant
 
-- Web app locale Python (Flask ou FastAPI)
-- Heatmap Wi-Fi pour PME
-- Hybride : simulation + mesures réelles (`nmcli dev wifi list` en boucle)
-- Brainstorming réalisé en session 2026-06-03b — pas de spec formelle
+> Implémenté sous le nom **WifiMapLinux** dans `/home/luust/claude-projects/WifiMapLinux/` — projet distinct, hors scope nmlinux.
 
 ### nmlinux-tui
 
@@ -132,8 +182,21 @@ Pas de scheduler, pas de base SQL, pas de CMDB, pas d'inventaire logiciel comple
 | v1.2.7 | 2026-05-26 | Icônes Lucide bundlées |
 | v1.2.8 | 2026-05-30 | Remote Desktop (RDP) |
 | v1.2.9 | 2026-05-30 | VNC, About outils, sidebar i18n, 23 tooltips |
-| v1.3.0 | 2026-06-03 | TLS Inspector, SMB/NFS, Hosts File, install.sh |
+| v1.3.0 | 2026-06-03 | TLS Inspector, SMB/NFS, Hosts File, install.sh Debian/Ubuntu/Mint |
 | v1.3.1 | 2026-06-05 | SSH Key Manager, aide contextuelle (help_page.py) |
-| v1.3.2 | 2026-06-06 | i18n 8 langues, aide contextuelle 8 langues × 27 modules |
-| v1.3.5 | 2026-06-06 | Compatibilité macOS — 9 modules dual Linux/macOS |
+| v1.3.2 | 2026-06-06 | i18n 8 langues (+ it/pt/ja/zh), aide contextuelle 8 langues × 27 modules |
+| v1.3.5 | 2026-06-06 | Compatibilité macOS — 9 modules dual Linux/macOS, MACOS_PORTING.md |
+| v1.3.6 | 2026-06-08 | Fix Ubuntu 26.04 (freerdp3-x11, pipx system deps) |
+| v1.3.7 | 2026-06-12 | Topology : icônes précises 7 classes d'appareil via vendor OUI |
+| v1.3.8 | 2026-06-13 | Command Palette (Ctrl+P), Export Manager (JSON/MD/TXT/PDF), boutons export DNS/Firewall/SSH/Connections |
+| v1.4.0 | 2026-06-13 | SSH agent forwarding, badges README shields.io (version/python/license/platform/languages) |
+| v1.4.1 | 2026-06-14 | IP Scanner macOS : ARP via `arp -n`, VNC server note × 8 langues |
+| v1.4.2 | 2026-06-14 | TLS Watchlist : dot rouge/orange dans sidebar, fichier de config persistant |
+| v1.4.3 | 2026-06-14 | TLS Watchlist : détection UNTRUSTED (cert invalide / chaîne brisée) |
+| v1.5.0 | 2026-06-17 | Module File Transfer (serveur TFTP + serveur HTTP GET/POST), AppImage 93 Mo |
+| v1.5.1 | 2026-06-18 | Fix HTTP download macOS (URL encoding), fix couleurs map traceroute |
+| v1.5.2 | 2026-06-19 | macOS .app bundle : install_macos_app.sh + uninstall_macos.sh + icône .icns auto-générée |
+| v1.6.0 | 2026-06-24 | Asset Inventory : SSH Linux/macOS/Unraid + WinRM Windows (EncodedCommand base64) + SNMP |
 | v1.6.1 | 2026-06-25 | Fix écho terminal SSH (echo PTY géré par ssh, DT-14) |
+| v1.6.2 | 2026-06-28 | Fix macOS menu bar "Python" → NSBundle.infoDictionary patch |
+| v1.6.4 | 2026-06-28 | Fix macOS menu bar : fallback AppKit robuste, stabilisation |

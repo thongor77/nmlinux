@@ -1,6 +1,6 @@
-# NMLinux · v1.6.4
+# NMLinux · v1.7.0
 
-[![Version](https://img.shields.io/badge/version-1.6.4-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.7.0-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -50,6 +50,15 @@ Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkM
 ---
 
 ## Changelog
+
+### v1.7.0 — 2026-07-02
+
+- **Universal right-click context menu** on every table that contains IPs or hostnames — navigate directly between modules without copy-pasting: right-click any discovered host and choose Ping, Scan ports, Whois, DNS, Traceroute, MTR, SSH, RDP, VNC, View in Topology, or Add to Inventory. Menu items SSH/RDP/VNC appear **bold** when the corresponding port is detected open. Labels are fully translated in all 8 interface languages.
+- **Source pages** (emit right-click actions): IP Scanner, Nmap, Ping, Port Scanner, Traceroute, MTR, Topology (node right-click)
+- **Target pages** (receive host and pre-fill): Whois (`set_target` + auto-query), DNS (`set_target` prefill only), Ping (`set_target` + auto-start), Traceroute (`set_target` + auto-start), MTR (`set_target` + auto-start), Port Scanner (`set_target` + focus), SSH / RDP / VNC (`set_target` opens new-connection form prefilled), Topology (`load_hosts` injects nodes from IP Scanner/Nmap scan without re-scanning — gateway detected automatically, edges drawn, origin node highlighted in red), Asset Inventory (`prefill_hosts` starts credential scan directly on discovered hosts, skips ICMP discovery phase)
+- **Dashboard — gateway ping graph**: live latency sparkline updated every 2 seconds; color-coded (<20 ms green / 20–100 ms orange / >100 ms red / timeout red)
+- **Dashboard — TLS Watchlist summary**: status card in Dashboard automatically reflects the TLS Watchlist state (OK / expiring / alert) without re-querying
+- **Dashboard — geo map resize**: world map now expands horizontally when the window is resized
 
 ### v1.6.4 — 2026-06-28
 
