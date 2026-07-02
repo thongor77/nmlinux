@@ -868,6 +868,14 @@ _T: dict[str, dict[str, str]] = {
         "cli_bar_idle":  "sélectionnez un outil et renseignez les paramètres…",
         "cli_bar_copy":  "Copier",
         "cli_bar_about": "équivalent CLI · à des fins pédagogiques",
+
+        # ── Context menu (HostActionMenu) ────────────────────────────────
+        "ctx_section_navigate":  "Naviguer vers",
+        "ctx_section_connect":   "Connexion",
+        "ctx_section_inventory": "Inventaire",
+        "ctx_scan_ports":        "Scanner les ports",
+        "ctx_view_topology":     "Voir en Topologie",
+        "ctx_add_inventory":     "Ajouter à l'inventaire",
     },
 
     "en": {
@@ -1717,6 +1725,14 @@ _T: dict[str, dict[str, str]] = {
         "cli_bar_idle":  "select a tool and fill in the parameters…",
         "cli_bar_copy":  "Copy",
         "cli_bar_about": "CLI equivalent · for learning purposes",
+
+        # ── Context menu (HostActionMenu) ────────────────────────────────
+        "ctx_section_navigate":  "Navigate to",
+        "ctx_section_connect":   "Connect",
+        "ctx_section_inventory": "Inventory",
+        "ctx_scan_ports":        "Scan ports",
+        "ctx_view_topology":     "View in Topology",
+        "ctx_add_inventory":     "Add to Inventory",
     },
 
     "es": {
@@ -2568,6 +2584,14 @@ _T: dict[str, dict[str, str]] = {
         "cli_bar_idle":  "selecciona una herramienta y completa los parámetros…",
         "cli_bar_copy":  "Copiar",
         "cli_bar_about": "equivalente CLI · con fines pedagógicos",
+
+        # ── Context menu (HostActionMenu) ────────────────────────────────
+        "ctx_section_navigate":  "Navegar a",
+        "ctx_section_connect":   "Conexión",
+        "ctx_section_inventory": "Inventario",
+        "ctx_scan_ports":        "Escanear puertos",
+        "ctx_view_topology":     "Ver en Topología",
+        "ctx_add_inventory":     "Añadir al inventario",
     },
 
     "de": {
@@ -3357,6 +3381,14 @@ _T: dict[str, dict[str, str]] = {
         "cli_bar_idle":  "Werkzeug wählen und Parameter eingeben…",
         "cli_bar_copy":  "Kopieren",
         "cli_bar_about": "CLI-Äquivalent · zu Lernzwecken",
+
+        # ── Context menu (HostActionMenu) ────────────────────────────────
+        "ctx_section_navigate":  "Navigieren zu",
+        "ctx_section_connect":   "Verbindung",
+        "ctx_section_inventory": "Inventar",
+        "ctx_scan_ports":        "Ports scannen",
+        "ctx_view_topology":     "In Topologie anzeigen",
+        "ctx_add_inventory":     "Zum Inventar hinzufügen",
     },
 
     "it": {
@@ -4223,6 +4255,14 @@ _T: dict[str, dict[str, str]] = {
         "cli_bar_idle":  "seleziona uno strumento e compila i parametri…",
         "cli_bar_copy":  "Copia",
         "cli_bar_about": "equivalente CLI · a scopo didattico",
+
+        # ── Context menu (HostActionMenu) ────────────────────────────────
+        "ctx_section_navigate":  "Naviga verso",
+        "ctx_section_connect":   "Connessione",
+        "ctx_section_inventory": "Inventario",
+        "ctx_scan_ports":        "Scansiona porte",
+        "ctx_view_topology":     "Visualizza in Topologia",
+        "ctx_add_inventory":     "Aggiungi all'inventario",
     },
 
     "pt": {
@@ -5089,6 +5129,14 @@ _T: dict[str, dict[str, str]] = {
         "cli_bar_idle":  "selecione uma ferramenta e preencha os parâmetros…",
         "cli_bar_copy":  "Copiar",
         "cli_bar_about": "equivalente CLI · para fins pedagógicos",
+
+        # ── Context menu (HostActionMenu) ────────────────────────────────
+        "ctx_section_navigate":  "Navegar para",
+        "ctx_section_connect":   "Conexão",
+        "ctx_section_inventory": "Inventário",
+        "ctx_scan_ports":        "Varredura de portas",
+        "ctx_view_topology":     "Ver na Topologia",
+        "ctx_add_inventory":     "Adicionar ao inventário",
     },
 
     "ja": {
@@ -5922,6 +5970,14 @@ _T: dict[str, dict[str, str]] = {
         "cli_bar_idle":  "ツールを選択してパラメーターを入力してください…",
         "cli_bar_copy":  "コピー",
         "cli_bar_about": "CLIコマンド · 学習目的",
+
+        # ── Context menu (HostActionMenu) ────────────────────────────────
+        "ctx_section_navigate":  "移動先",
+        "ctx_section_connect":   "接続",
+        "ctx_section_inventory": "インベントリ",
+        "ctx_scan_ports":        "ポートをスキャン",
+        "ctx_view_topology":     "トポロジーで表示",
+        "ctx_add_inventory":     "インベントリに追加",
     },
 
     "zh": {
@@ -6755,6 +6811,14 @@ _T: dict[str, dict[str, str]] = {
         "cli_bar_idle":  "选择一个工具并填写参数…",
         "cli_bar_copy":  "复制",
         "cli_bar_about": "等效CLI命令 · 仅供学习",
+
+        # ── Context menu (HostActionMenu) ────────────────────────────────
+        "ctx_section_navigate":  "导航到",
+        "ctx_section_connect":   "连接",
+        "ctx_section_inventory": "清单",
+        "ctx_scan_ports":        "扫描端口",
+        "ctx_view_topology":     "在拓扑中查看",
+        "ctx_add_inventory":     "添加到清单",
     },
 }
 

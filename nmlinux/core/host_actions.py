@@ -1,6 +1,7 @@
 from __future__ import annotations
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QMenu
+from nmlinux.core.i18n import tr
 
 ACT_PING       = "ping"
 ACT_PORT_SCAN  = "port_scan"
@@ -37,22 +38,22 @@ class HostActionMenu(QMenu):
         title = host if (host and host != ip) else ip
         self.setTitle(title)
 
-        self.addSection("Naviguer vers")
+        self.addSection(tr("ctx_section_navigate"))
         self._add(ACT_PING,       "Ping")
-        self._add(ACT_PORT_SCAN,  "Scanner les ports")
+        self._add(ACT_PORT_SCAN,  tr("ctx_scan_ports"))
         self._add(ACT_WHOIS,      "Whois")
         self._add(ACT_DNS,        "DNS")
         self._add(ACT_TRACEROUTE, "Traceroute")
         self._add(ACT_MTR,        "MTR")
 
-        self.addSection("Connexion")
+        self.addSection(tr("ctx_section_connect"))
         self._add(ACT_SSH, "SSH", bold=_PORT_SSH in self._ports)
         self._add(ACT_RDP, "RDP", bold=_PORT_RDP in self._ports)
         self._add(ACT_VNC, "VNC", bold=_PORT_VNC in self._ports)
 
-        self.addSection("Inventaire")
-        self._add(ACT_TOPOLOGY, "Voir en Topologie")
-        self._add(ACT_ASSET,    "Ajouter à l'inventaire")
+        self.addSection(tr("ctx_section_inventory"))
+        self._add(ACT_TOPOLOGY, tr("ctx_view_topology"))
+        self._add(ACT_ASSET,    tr("ctx_add_inventory"))
 
     def _add(self, key: str, label: str, bold: bool = False) -> None:
         action = self.addAction(label)
