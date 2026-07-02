@@ -389,6 +389,13 @@ class MainWindow(QMainWindow):
             )
             QTimer.singleShot(2000, tls_page.start_watchlist_check)
 
+        # TLS watchlist → Dashboard summary
+        dash_row = next((i for i, (_, lbl, _, _) in enumerate(_TOOLS) if lbl == "Dashboard"), -1)
+        if tls_row >= 0 and dash_row >= 0:
+            tls_page  = self._pages[tls_row]
+            dash_page = self._pages[dash_row]
+            tls_page.watchlist_status_changed.connect(dash_page.set_tls_summary)
+
         # Settings page — index = len(_TOOLS)
         self._settings_page = SettingsPage()
         self._settings_page.language_changed.connect(self._on_language_changed)
@@ -534,3 +541,9 @@ class MainWindow(QMainWindow):
 
     def _open_palette(self) -> None:
         self._palette.open_palette()
+
+    def closeEvent(self, event) -> None:
+        dash_row = next((i for i, (_, lbl, _, _) in enumerate(_TOOLS) if lbl == "Dashboard"), -1)
+        if dash_row >= 0:
+            self._pages[dash_row].stop_ping_worker()
+        super().closeEvent(event)

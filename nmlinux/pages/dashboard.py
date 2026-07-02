@@ -359,6 +359,95 @@ class DashboardWorker(QThread):
         self.ready.emit({**local, **internet})
 
 
+# ── Gateway ping worker ───────────────────────────────────────────────────────
+
+class _GatewayPingWorker(QThread):
+    rtt_ready = Signal(float)   # ms, ou -1.0 si timeout
+
+    def __init__(self, gateway: str) -> None:
+        super().__init__()
+        self._running = True   # instance attribute — not class attribute
+        self._gateway = gateway
+
+    def run(self) -> None:
+        import time
+        while self._running:
+            try:
+                proc = subprocess.run(
+                    ['ping', '-c', '1', '-W', '1', self._gateway],
+                    capture_output=True, text=True, timeout=3,
+                )
+                if proc.returncode == 0:
+                    m = re.search(r'time=(\d+\.?\d*)', proc.stdout)
+                    self.rtt_ready.emit(float(m.group(1)) if m else 0.0)
+                else:
+                    self.rtt_ready.emit(-1.0)
+            except Exception:
+                self.rtt_ready.emit(-1.0)
+            time.sleep(2)
+
+    def stop(self) -> None:
+        self._running = False
+        self.quit()
+
+
+# ── Mini ping graph ───────────────────────────────────────────────────────────
+
+class _MiniPingGraph(QWidget):
+    _MAX = 60
+    _H   = 60
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self.setFixedHeight(self._H)
+        self._data: list[float] = []   # ms, -1.0 = timeout
+
+    def push(self, rtt: float) -> None:
+        self._data.append(rtt)
+        if len(self._data) > self._MAX:
+            self._data.pop(0)
+        self.update()
+
+    def paintEvent(self, _event) -> None:  # noqa: N802
+        if not self._data:
+            return
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        w, h = self.width(), self.height()
+        valid = [v for v in self._data if v > 0]
+        if not valid:
+            return
+        max_rtt = max(max(valid), 100.0)
+
+        def _color(rtt: float) -> QColor:
+            if rtt < 0:
+                return QColor('#f38ba8')   # timeout rouge
+            if rtt < 20:
+                return QColor('#a6e3a1')   # vert
+            if rtt < 100:
+                return QColor('#fab387')   # orange
+            return QColor('#f38ba8')       # rouge
+
+        step = w / max(len(self._data), 1)
+        pts  = []
+        for i, rtt in enumerate(self._data):
+            x = i * step + step / 2
+            y = h - (max(rtt, 0) / max_rtt) * (h - 4) - 2 if rtt > 0 else h - 2
+            pts.append((x, y, rtt))
+
+        for x, y, rtt in pts:
+            painter.setPen(QPen(_color(rtt), 2))
+            painter.drawEllipse(QPointF(x, y), 2, 2)
+
+        if len(pts) > 1:
+            for i in range(len(pts) - 1):
+                x1, y1, r1 = pts[i]
+                x2, y2, r2 = pts[i + 1]
+                if r1 > 0 and r2 > 0:
+                    painter.setPen(QPen(_color(r1), 1))
+                    painter.drawLine(QPointF(x1, y1), QPointF(x2, y2))
+
+
 # ── UI helpers ────────────────────────────────────────────────────────────────
 
 _GREY  = 'palette(mid)'
@@ -396,8 +485,10 @@ class DashboardPage(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self._worker: DashboardWorker | None = None
+        self._ping_worker: _GatewayPingWorker | None = None
         self._build_ui()
         self._refresh()
+        QTimer.singleShot(1000, self._start_gateway_ping)
 
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)
@@ -427,8 +518,25 @@ class DashboardPage(QWidget):
         vbox.setContentsMargins(0, 0, 0, 0)
 
         self._box_pc,  self._form_pc  = _card(tr("dash_card_pc"))
-        self._box_gw,  self._form_gw  = _card(tr("dash_card_gw"))
         self._box_net, self._form_net = _card(tr("dash_card_net"))
+
+        # Gateway card — manual layout so mini-graph survives form clears
+        self._box_gw = QGroupBox(tr("dash_card_gw"))
+        _gw_vbox = QVBoxLayout(self._box_gw)
+        _gw_vbox.setContentsMargins(12, 12, 12, 12)
+        _gw_vbox.setSpacing(6)
+        _gw_form_w = QWidget()
+        self._form_gw = QFormLayout(_gw_form_w)
+        self._form_gw.setHorizontalSpacing(16)
+        self._form_gw.setVerticalSpacing(6)
+        self._form_gw.setContentsMargins(0, 0, 0, 0)
+        _gw_vbox.addWidget(_gw_form_w)
+        self._mini_graph = _MiniPingGraph()
+        _lat_row = QHBoxLayout()
+        _lat_row.setContentsMargins(0, 0, 0, 0)
+        _lat_row.addWidget(QLabel("Latence :"))
+        _lat_row.addWidget(self._mini_graph, 1)
+        _gw_vbox.addLayout(_lat_row)
         top = QHBoxLayout()
         top.setSpacing(12)
         top.addWidget(self._box_pc,  1)
@@ -443,6 +551,12 @@ class DashboardPage(QWidget):
         bot.addWidget(self._box_geo, 3)
         bot.addWidget(self._box_dns, 2)
         vbox.addLayout(bot, 1)
+
+        # TLS Watchlist summary card
+        self._box_tls, self._form_tls = _card("TLS Watchlist")
+        self._lbl_tls = _val("—")
+        self._form_tls.addRow("Statut :", self._lbl_tls)
+        vbox.addWidget(self._box_tls)
 
         scroll.setWidget(container)
         root.addWidget(scroll, 1)
@@ -586,3 +700,46 @@ class DashboardPage(QWidget):
                 h.setStyleSheet(f"color: {_GREY};")
                 h.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
                 f.addRow("", h)
+
+    # ── Ping worker ───────────────────────────────────────────────────────────
+
+    def _start_gateway_ping(self) -> None:
+        try:
+            if _IS_MACOS:
+                raw = subprocess.run(
+                    ['route', '-n', 'get', 'default'],
+                    capture_output=True, text=True, timeout=3,
+                )
+                m = re.search(r'gateway:\s+(\S+)', raw.stdout)
+            else:
+                raw = subprocess.run(
+                    ['ip', 'route', 'show', 'default'],
+                    capture_output=True, text=True, timeout=3,
+                )
+                m = re.search(r'via\s+(\S+)', raw.stdout)
+            gateway = m.group(1) if m else ''
+        except Exception:
+            gateway = ''
+        if not gateway:
+            return
+        self._ping_worker = _GatewayPingWorker(gateway)
+        self._ping_worker.rtt_ready.connect(self._mini_graph.push)
+        self._ping_worker.start()
+
+    def stop_ping_worker(self) -> None:
+        if self._ping_worker and self._ping_worker.isRunning():
+            self._ping_worker.stop()
+            self._ping_worker.wait(1000)
+
+    # ── TLS summary slot ──────────────────────────────────────────────────────
+
+    def set_tls_summary(self, status: str) -> None:
+        if status == 'red':
+            self._lbl_tls.setText("⚠ Alerte")
+            self._lbl_tls.setStyleSheet(f"color: {color_err()};")
+        elif status == 'orange':
+            self._lbl_tls.setText("Expiration proche")
+            self._lbl_tls.setStyleSheet("color: orange;")
+        else:
+            self._lbl_tls.setText("OK")
+            self._lbl_tls.setStyleSheet(f"color: {color_ok()};")
