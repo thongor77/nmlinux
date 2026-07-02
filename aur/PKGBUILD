@@ -1,6 +1,6 @@
 # Maintainer: thongor77 <magetriste@proton.me>
 pkgname=nmlinux
-pkgver=1.7.0
+pkgver=1.7.1
 pkgrel=1
 pkgdesc="A unified network toolkit for Linux and macOS — SSH, WinRM, topology, 29 modules"
 arch=('any')
