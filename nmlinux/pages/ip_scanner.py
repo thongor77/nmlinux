@@ -21,6 +21,7 @@ from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt, QThread, Signal
 
 from nmlinux.core.cli_bar import get_cli_bar
+from nmlinux.core.host_actions import HostActionMenu
 from nmlinux.core.i18n import tr
 from nmlinux.core.theme import color_ok, color_err
 
@@ -231,9 +232,12 @@ def _parse_range(text: str) -> list[str] | str:
 
 
 class IpScannerPage(QWidget):
+    action_requested = Signal(str, str, str)
+
     def __init__(self) -> None:
         super().__init__()
         self._worker: ScanWorker | None = None
+        self._last_scan_hosts: list[dict] = []
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -313,6 +317,23 @@ class IpScannerPage(QWidget):
         layout.addLayout(bottom)
         layout.addStretch(1)
 
+        self._table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._table.customContextMenuRequested.connect(self._on_right_click)
+
+    def _on_right_click(self, pos) -> None:
+        row = self._table.rowAt(pos.y())
+        if row < 0:
+            return
+        ip_item   = self._table.item(row, _C_IP)
+        host_item = self._table.item(row, _C_HOST)
+        if not ip_item:
+            return
+        ip   = ip_item.text()
+        host = host_item.text() if host_item else ''
+        menu = HostActionMenu(ip, host, parent=self)
+        menu.action_chosen.connect(self.action_requested)
+        menu.exec(self._table.viewport().mapToGlobal(pos))
+
     def _update_cli(self) -> None:
         bar = get_cli_bar()
         if not bar:
@@ -338,6 +359,7 @@ class IpScannerPage(QWidget):
             return
 
         self._table.setRowCount(0)
+        self._last_scan_hosts = []
         self._table.setVisible(False)
         self._btn_csv.setVisible(False)
         self._btn_txt.setVisible(False)
@@ -373,6 +395,9 @@ class IpScannerPage(QWidget):
         rtt_item = QTableWidgetItem(f"{rtt:.1f}")
         rtt_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         self._table.setItem(r, _C_RTT, rtt_item)
+        self._last_scan_hosts.append({
+            'ip': ip, 'hostname': hostname, 'mac': mac, 'vendor': vendor,
+        })
 
     def _on_progress(self, done: int, total: int) -> None:
         self._progress.setValue(done)
