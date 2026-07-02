@@ -525,7 +525,8 @@ class MainWindow(QMainWindow):
                              lambda p, ip, h, _s: p.set_target(ip, h)),
             ACT_TOPOLOGY:   (self._page_index('TopologyPage'),
                              lambda p, ip, h, src: p.load_hosts(
-                                 getattr(src, '_last_scan_hosts', []))),
+                                 getattr(src, '_last_scan_hosts', []),
+                                 highlight_ip=ip)),
             ACT_ASSET:      (self._page_index('AssetInventoryPage'),
                              lambda p, ip, h, src: p.prefill_hosts(
                                  getattr(src, '_last_scan_hosts', []))),

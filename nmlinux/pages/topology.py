@@ -254,6 +254,7 @@ class _NodeItem(QGraphicsItem):
         self._dev_class = data.get('device_class', 'computer')
         self._edges: list[_EdgeItem] = []
         self._r     = float(self._R_GW if data['type'] == 'gateway' else self._R)
+        self._highlight = False
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
@@ -268,6 +269,12 @@ class _NodeItem(QGraphicsItem):
         r   = self._r
         col = self._color
         pal = QApplication.palette()
+
+        # Origin highlight — node that triggered navigation from another module
+        if self._highlight:
+            painter.setPen(QPen(QColor('#89b4fa'), 3))
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawEllipse(QPointF(0, 0), r + 7, r + 7)
 
         # Selection highlight
         if self.isSelected():
@@ -871,29 +878,40 @@ class TopologyPage(QWidget):
 
     # ── load_hosts (inject from IP Scanner) ──────────────────────────────────
 
-    def load_hosts(self, hosts: list[dict]) -> None:
+    def load_hosts(self, hosts: list[dict], highlight_ip: str = '') -> None:
         if not hosts:
             return
-        # Réinitialiser la scène
         self._scene_hint = None
         self._scene.clear()
         self._nodes.clear()
         self._gateway_node = None
 
+        # Inject gateway first so _on_node draws edges automatically
+        _, gateway_ip, _ = _local_network()
+        if gateway_ip and not any(h.get('ip') == gateway_ip for h in hosts):
+            self._on_node({
+                'ip': gateway_ip, 'hostname': '', 'mac': '', 'vendor': '',
+                'type': 'gateway', 'rtt': 0.0,
+            })
+
         for data in hosts:
-            node_data = {
+            self._on_node({
                 'ip':       data.get('ip', ''),
                 'hostname': data.get('hostname', ''),
                 'mac':      data.get('mac', ''),
                 'vendor':   data.get('vendor', ''),
                 'type':     'host',
                 'rtt':      0.0,
-            }
-            self._on_node(node_data)
+            })
+
+        if highlight_ip and highlight_ip in self._nodes:
+            node = self._nodes[highlight_ip]
+            node._highlight = True
+            self._view.centerOn(node)
 
         self._do_layout()
         self._view.fit_all()
-        self._lbl_status.setText(f"{len(hosts)} hôtes importés depuis IP Scanner")
+        self._lbl_status.setText(f"{len(hosts)} hôtes importés")
 
     # ── Visibility ────────────────────────────────────────────────────────────
 
