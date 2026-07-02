@@ -5,6 +5,7 @@ import platform
 import re
 import socket
 import subprocess
+import threading
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, wait as _wait
 from ipaddress import IPv4Address, IPv4Network
@@ -367,12 +368,11 @@ class _GatewayPingWorker(QThread):
 
     def __init__(self, gateway: str) -> None:
         super().__init__()
-        self._running = True   # instance attribute — not class attribute
+        self._stop_event = threading.Event()
         self._gateway = gateway
 
     def run(self) -> None:
-        import time
-        while self._running:
+        while not self._stop_event.is_set():
             try:
                 proc = subprocess.run(
                     ['ping', '-c', '1', '-W', '1000' if _IS_MACOS else '1', self._gateway],
@@ -385,10 +385,11 @@ class _GatewayPingWorker(QThread):
                     self.rtt_ready.emit(-1.0)
             except Exception:
                 self.rtt_ready.emit(-1.0)
-            time.sleep(2)
+            # Interruptible 2-second sleep — wakes immediately on stop()
+            self._stop_event.wait(2.0)
 
     def stop(self) -> None:
-        self._running = False
+        self._stop_event.set()
         self.quit()
 
 
