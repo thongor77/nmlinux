@@ -310,45 +310,36 @@ class _DetailWorkerMacos(QThread):
 
         ssid     = ''
         security = ''
-        _AIRPORT = (
-            '/System/Library/PrivateFrameworks/Apple80211.framework'
-            '/Versions/Current/Resources/airport'
-        )
+        # airport CLI removed in macOS 26; networksetup -getairportnetwork broken
+        # Use system_profiler which works reliably on all modern macOS versions
         try:
-            ap_proc = subprocess.run(
-                [_AIRPORT, '-I'],
-                capture_output=True, text=True, timeout=5,
+            import json as _json
+            sp = subprocess.run(
+                ['system_profiler', 'SPAirPortDataType', '-json'],
+                capture_output=True, text=True, timeout=15,
             )
-            for line in ap_proc.stdout.splitlines():
-                line = line.strip()
-                if line.startswith('SSID:'):
-                    ssid = line.split(':', 1)[1].strip()
-                elif line.startswith('link auth:'):
-                    raw = line.split(':', 1)[1].strip()
-                    if 'wpa3' in raw:
-                        security = 'WPA3'
-                    elif 'wpa2' in raw:
-                        security = 'WPA2'
-                    elif 'wpa' in raw:
-                        security = 'WPA'
-                    elif 'wep' in raw:
-                        security = 'WEP'
-                    elif 'open' in raw:
-                        security = 'Open'
+            sp_data = _json.loads(sp.stdout)
+            ifaces = (sp_data.get('SPAirPortDataType', [{}])[0]
+                              .get('spairport_airport_interfaces', []))
+            for iface_data in ifaces:
+                if iface_data.get('_name') != dev:
+                    continue
+                cur = iface_data.get('spairport_current_network_information', {})
+                ssid = cur.get('_name', '')
+                sec_raw = cur.get('spairport_security_mode', '')
+                if 'wpa3' in sec_raw:
+                    security = 'WPA3'
+                elif 'wpa2' in sec_raw:
+                    security = 'WPA2'
+                elif 'wpa' in sec_raw:
+                    security = 'WPA'
+                elif 'wep' in sec_raw:
+                    security = 'WEP'
+                elif sec_raw and 'none' not in sec_raw:
+                    security = 'Open'
+                break
         except Exception:
             pass
-
-        # Fallback for SSID if airport gave nothing
-        if not ssid and dev:
-            try:
-                ns_out = subprocess.run(
-                    ['networksetup', '-getairportnetwork', dev],
-                    capture_output=True, text=True, timeout=5,
-                ).stdout.strip()
-                if 'Current Wi-Fi Network:' in ns_out:
-                    ssid = ns_out.split(':', 1)[1].strip()
-            except Exception:
-                pass
 
         lines = [
             f'GENERAL.STATE:                          {state_str}',
