@@ -473,24 +473,29 @@ class AssetScanWorker(QThread):
         snmp_creds: dict,
         timeout: int = 5,
         threads: int = 40,
+        hosts: list[str] | None = None,
     ) -> None:
         super().__init__()
-        self._cidr        = cidr
-        self._ssh_creds   = [dict(c) for c in ssh_creds]
-        self._winrm_creds = [dict(c) for c in winrm_creds]
-        self._snmp_creds  = dict(snmp_creds)
-        self._timeout     = timeout
-        self._threads     = threads
-        self._stop        = False
+        self._cidr           = cidr
+        self._hosts_override = hosts
+        self._ssh_creds      = [dict(c) for c in ssh_creds]
+        self._winrm_creds    = [dict(c) for c in winrm_creds]
+        self._snmp_creds     = dict(snmp_creds)
+        self._timeout        = timeout
+        self._threads        = threads
+        self._stop           = False
 
     def stop(self) -> None:
         self._stop = True
 
     def run(self) -> None:
-        try:
-            hosts = [str(h) for h in ipaddress.ip_network(self._cidr, strict=False).hosts()]
-        except ValueError:
-            hosts = [self._cidr]
+        if self._hosts_override is not None:
+            hosts = self._hosts_override
+        else:
+            try:
+                hosts = [str(h) for h in ipaddress.ip_network(self._cidr, strict=False).hosts()]
+            except ValueError:
+                hosts = [self._cidr]
 
         total = len(hosts)
         done  = 0
