@@ -16,7 +16,7 @@ from PySide6.QtGui import QBrush, QColor, QPainter, QPainterPath, QPen, QTransfo
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QGroupBox, QFormLayout,
-    QScrollArea,
+    QScrollArea, QSizePolicy,
 )
 from PySide6.QtCore import Qt, QPointF, QThread, Signal, QTimer
 
@@ -39,6 +39,7 @@ class GeoMapWidget(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setMinimumHeight(240)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._country_paths: list[QPainterPath] = []
         self._lat: float | None = None
         self._lon: float | None = None
