@@ -6,6 +6,9 @@ import re
 import shutil
 import socket
 import subprocess
+import threading
+import time
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -42,29 +45,101 @@ _OUI_PATHS = [
     '/opt/homebrew/share/ieee-data/oui.txt',
     '/usr/local/share/ieee-data/oui.txt',
 ]
+_OUI_CACHE = Path.home() / '.local' / 'share' / 'nmlinux' / 'oui_cache.txt'
+_OUI_CACHE_MAX_AGE = 30 * 86400  # refresh after 30 days
+_OUI_DOWNLOAD_LOCK = threading.Lock()
+
+
+def _parse_ieee_oui(text: str) -> dict[str, str]:
+    """Parse IEEE oui.txt format: '28-6F-B9   (hex)   Vendor name'"""
+    db: dict[str, str] = {}
+    for line in text.splitlines():
+        if '(hex)' in line:
+            oui_raw, _, vendor = line.partition('(hex)')
+            oui = oui_raw.strip().replace('-', ':').upper()
+            v = vendor.strip()
+            if oui and v:
+                db[oui] = v
+    return db
+
+
+def _parse_wireshark_manuf(text: str) -> dict[str, str]:
+    """Parse Wireshark manuf format: 'OUI<TAB>Short<TAB>Long name'
+    Only 3-byte (6-char hex) OUI prefixes are kept."""
+    db: dict[str, str] = {}
+    for line in text.splitlines():
+        if not line or line.startswith('#'):
+            continue
+        parts = line.split('\t')
+        if len(parts) < 2:
+            continue
+        oui_raw = parts[0].strip()
+        # Skip entries with masks (e.g. "00:00:5E:00:01:01/40") — not 3-byte OUI
+        if '/' in oui_raw or len(oui_raw) != 8:
+            continue
+        vendor = (parts[2] if len(parts) >= 3 else parts[1]).strip()
+        if vendor:
+            db[oui_raw.upper()] = vendor
+    return db
+
+
+def _download_oui_db() -> None:
+    """Download OUI database (Wireshark manuf, IEEE fallback) and cache locally."""
+    with _OUI_DOWNLOAD_LOCK:
+        global _OUI_DB
+        if _OUI_DB:
+            return
+        _OUI_CACHE.parent.mkdir(parents=True, exist_ok=True)
+        for url, parser in [
+            ('https://www.wireshark.org/download/automated/data/manuf',
+             _parse_wireshark_manuf),
+            ('https://standards-oui.ieee.org/oui/oui.txt',
+             _parse_ieee_oui),
+        ]:
+            try:
+                req = urllib.request.Request(url, headers={'User-Agent': 'nmlinux/1'})
+                with urllib.request.urlopen(req, timeout=12) as resp:
+                    text = resp.read().decode('utf-8', errors='replace')
+                db = parser(text)
+                if len(db) > 1000:
+                    _OUI_CACHE.write_text(text, encoding='utf-8')
+                    _OUI_DB = db
+                    return
+            except Exception:
+                continue
 
 
 def _ensure_oui_db() -> None:
     global _OUI_DB
     if _OUI_DB:
         return
+    # 1. Check system paths (Linux distro packages)
     for path in _OUI_PATHS:
         p = Path(path)
         if not p.exists():
             continue
         try:
-            db: dict[str, str] = {}
-            for line in p.read_text(errors='replace').splitlines():
-                if '(hex)' in line:
-                    # "28-6F-B9   (hex)    Nokia Shanghai Bell Co., Ltd."
-                    oui_raw, _, vendor = line.partition('(hex)')
-                    oui = oui_raw.strip().replace('-', ':').upper()  # "28:6F:B9"
-                    db[oui] = vendor.strip()
+            text = p.read_text(errors='replace')
+            db = _parse_ieee_oui(text)
             if db:
                 _OUI_DB = db
                 return
         except Exception:
             continue
+    # 2. Check local cache
+    if _OUI_CACHE.exists():
+        age = time.time() - _OUI_CACHE.stat().st_mtime
+        if age < _OUI_CACHE_MAX_AGE:
+            try:
+                text = _OUI_CACHE.read_text(errors='replace')
+                db = _parse_wireshark_manuf(text) or _parse_ieee_oui(text)
+                if db:
+                    _OUI_DB = db
+                    return
+            except Exception:
+                pass
+    # 3. Download in background (non-blocking — vendor column fills in on next scan)
+    threading.Thread(target=_download_oui_db, daemon=True).start()
 
 
 def _vendor_of(mac: str) -> str:
@@ -161,7 +236,7 @@ class ScanWorker(QThread):
 
 
 def _resolve_hostname(ip: str, timeout: int = 2) -> str:
-    """Try reverse DNS → mDNS (avahi) → NetBIOS (nmblookup)."""
+    """Try reverse DNS → mDNS (avahi/dns-sd) → NetBIOS (nmblookup)."""
     # 1. Pure Python reverse DNS — cross-platform (Linux, macOS, Windows)
     try:
         hostname, _, _ = socket.gethostbyaddr(ip)
@@ -170,7 +245,7 @@ def _resolve_hostname(ip: str, timeout: int = 2) -> str:
     except Exception:
         pass
 
-    # 2. mDNS via avahi-resolve
+    # 2a. mDNS via avahi-resolve (Linux)
     if _CMD_AVAHI:
         try:
             proc = subprocess.run(
@@ -179,6 +254,24 @@ def _resolve_hostname(ip: str, timeout: int = 2) -> str:
             )
             if proc.returncode == 0 and '\t' in proc.stdout:
                 return proc.stdout.strip().split('\t')[-1].strip()
+        except Exception:
+            pass
+
+    # 2b. mDNS via dns-sd (macOS native Bonjour)
+    if _IS_MACOS:
+        try:
+            parts = ip.split('.')
+            reversed_ip = '.'.join(reversed(parts)) + '.in-addr.arpa.'
+            proc = subprocess.run(
+                ['dns-sd', '-Q', reversed_ip, 'PTR'],
+                capture_output=True, text=True, timeout=1,
+            )
+            for line in proc.stdout.splitlines():
+                # output: "Timestamp  A  B  Add  <name>  <type>  <rdata>"
+                if 'PTR' in line and '.local.' in line:
+                    m = re.search(r'(\S+\.local\.)', line)
+                    if m:
+                        return m.group(1).rstrip('.')
         except Exception:
             pass
 
