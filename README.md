@@ -270,10 +270,17 @@ sudo dnf install iproute NetworkManager bind-utils nmap whois net-snmp-utils mtr
 **macOS** — install via [Homebrew](https://brew.sh):
 
 ```bash
-brew install nmap whois net-snmp mtr curl
+# Required
+brew install nmap mtr curl
+
+# Optional — enable additional modules
+brew install whois          # WHOIS page
+brew install net-snmp       # SNMP page (snmpwalk / snmpget)
+brew install samba          # SMB scan with credentials (smbclient)
+brew install ieee-data      # OUI vendor lookup in IP Scanner
 ```
 
-> macOS ships `ping`, `dig`, `traceroute`, `netstat`, `ifconfig` and `route` natively. `networksetup` and `scutil` are built-in macOS tools, no install needed.
+> macOS ships `ping`, `dig`, `traceroute`, `netstat`, `ifconfig`, `smbutil` and `route` natively. `networksetup` and `scutil` are built-in macOS tools, no install needed.
 
 ### Optional tools
 
@@ -339,49 +346,31 @@ Works on any x86_64 Linux with glibc 2.17+ (Ubuntu 16.04+, Fedora 26+, Arch, Min
 
 ### Option 5 — macOS
 
-```bash
-# 1. Install system tools (if not already present)
-brew install nmap whois net-snmp mtr curl
-
-# 2. Install NMLinux and its Python dependencies
-pip install PySide6 ptyprocess pyte tftpy
-pip install nmlinux-1.5.3-py3-none-any.whl   # download from Releases, or use the line below
-
-# Alternative: run directly from source (no install)
-git clone https://github.com/thongor77/nmlinux.git
-cd nmlinux
-pip install PySide6 ptyprocess pyte tftpy
-python3 -m nmlinux.main
-
-# Update an existing clone
-git pull && python3 -m nmlinux.main
-```
-
-Download the `.whl` from the [latest release](https://github.com/thongor77/nmlinux/releases/latest).
-
-> **Note:** Most modules work on macOS without modification. 9 modules use native macOS commands (`networksetup`, `scutil`, `ifconfig`, `pfctl`, `system_profiler`…) instead of their Linux equivalents. RDP falls back to `open rdp://` (Microsoft Remote Desktop), VNC falls back to `open vnc://` (Screen Sharing built-in). Only Connection Manager has reduced functionality on macOS (`nmcli` not available) — see [Limitations](#limitations).
-
-**Add a Finder icon (optional)**
-
-Run the bundled script — it creates a dedicated venv, installs NMLinux and its Python dependencies automatically, then creates `NMLinux.app` in `~/Applications`. No `pip` or manual dependency management required.
+The recommended way is to use the bundled install script — it creates a dedicated venv, installs all Python and pyobjc dependencies automatically, then creates `NMLinux.app` in `~/Applications`:
 
 ```bash
+# 1. Install Homebrew system tools (see Requirements above)
+brew install nmap mtr curl
+
+# 2. Clone and install
 git clone https://github.com/thongor77/nmlinux.git
 cd nmlinux
 bash packaging/install_macos_app.sh
 ```
 
-Use `--system` to install to `/Applications` instead:
+To update: `git pull && bash packaging/install_macos_app.sh`  
+To uninstall: `bash packaging/uninstall_macos.sh`  
+To install system-wide (`/Applications`): `bash packaging/install_macos_app.sh --system`
 
-```bash
-bash packaging/install_macos_app.sh --system
-```
+The script installs the following Python packages into the venv automatically:
+- `PySide6`, `ptyprocess`, `pyte`, `tftpy`
+- `pyobjc-framework-Cocoa` — macOS menu bar, native dialogs
+- `pyobjc-framework-CoreWLAN` — Wi-Fi SSID scanning
+- `pyobjc-framework-CoreLocation` — Location Services permission for Wi-Fi names
 
-To update later: `git pull && bash packaging/install_macos_app.sh`
+**Wi-Fi on macOS 26 (Tahoe):** on first launch, macOS will ask for Location Services permission — grant it to display Wi-Fi network names. The permission appears under *System Settings › Privacy & Security › Location Services*.
 
-To uninstall: `bash packaging/uninstall_macos.sh`
-
-The `.app` is a lightweight wrapper around a venv in `~/.local/share/nmlinux/venv` — no bundling or file copying.
+> Most modules work on macOS without modification. RDP falls back to `open rdp://` (Microsoft Remote Desktop), VNC falls back to `open vnc://` (Screen Sharing built-in). Connection Manager has reduced functionality on macOS (`nmcli` not available).
 
 ### Option 6 — Debian / Ubuntu / Linux Mint (install script)
 

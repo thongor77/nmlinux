@@ -40,7 +40,10 @@ PYTHON="${VENV_DIR}/bin/python3"
 # Install/upgrade nmlinux and its dependencies into the venv unconditionally.
 echo "Installing NMLinux into ${VENV_DIR} ..."
 "${VENV_DIR}/bin/pip" install --quiet --upgrade PySide6 ptyprocess pyte tftpy
-"${VENV_DIR}/bin/pip" install --upgrade pyobjc-framework-Cocoa
+"${VENV_DIR}/bin/pip" install --quiet --upgrade \
+    pyobjc-framework-Cocoa \
+    pyobjc-framework-CoreWLAN \
+    pyobjc-framework-CoreLocation
 "${VENV_DIR}/bin/pip" install --quiet --upgrade "${REPO_ROOT}"
 echo "NMLinux installed."
 
