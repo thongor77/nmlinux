@@ -121,6 +121,8 @@ def main() -> None:
                 global _cl_manager  # keep reference to prevent GC before dialog shows
                 _cl_manager = CLLocationManager.alloc().init()
                 _cl_manager.requestWhenInUseAuthorization()
+                import atexit
+                atexit.register(lambda: setattr(sys.modules[__name__], '_cl_manager', None))
         except Exception:
             pass
 
