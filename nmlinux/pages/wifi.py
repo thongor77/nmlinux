@@ -174,7 +174,7 @@ def _sp_network_to_entry(net: dict, connected: bool) -> dict:
         rssi = int(m.group(1))
     pct = max(0, min(100, 2 * (rssi + 100)))
     if location_restricted and rssi == 0:
-        pct = 50  # show mid-strength bar when signal is also redacted
+        pct = 50
 
     chan_raw = net.get('spairport_network_channel', '')
     chan_m   = re.search(r'(\d+)', chan_raw)
@@ -204,70 +204,98 @@ def _sp_network_to_entry(net: dict, connected: bool) -> dict:
     }
 
 
-_AIRPORT_CLI = (
-    '/System/Library/PrivateFrameworks/Apple80211.framework'
-    '/Versions/Current/Resources/airport'
-)
+# CWSecurityMode enum values (CoreWLAN private)
+_CW_SEC_NAMES: dict[int, str] = {
+    0: '', 1: 'WEP', 2: 'WPA', 3: 'WPA2', 4: 'WPA-Ent.', 5: 'WPA2-Ent.',
+    8: 'WPA3', 9: 'WPA3-Ent.',
+}
+# CWChannelBand enum values
+_CW_BAND_NAMES: dict[int, str] = {1: '2.4 GHz', 2: '5 GHz', 3: '6 GHz'}
 
 
-def _airport_scan(wifi_iface: str) -> list[dict]:
-    """Fallback scan via airport CLI — no Location Services permission required."""
+def _cw_network_to_entry(n, connected: bool) -> dict:
+    ssid  = n.ssid() or '(hidden_sentinel)'
+    bssid = n.bssid() or '—'
+    rssi  = n.rssiValue()
+    pct   = max(0, min(100, 2 * (rssi + 100)))
+
+    ch       = n.wlanChannel()
+    chan_num = ch.channelNumber() if ch else 0
+    band_val = ch.channelBand()   if ch else 0
+    freq     = _CW_BAND_NAMES.get(band_val, '?')
+
     try:
-        proc = subprocess.run(
-            [_AIRPORT_CLI, '-s'],
-            capture_output=True, text=True, timeout=15,
-        )
-        lines = proc.stdout.splitlines()
-        if not lines:
-            return []
-        header = lines[0]
-        bssid_col = header.find('BSSID')
-        if bssid_col < 0:
-            return []
-        ssids: list[dict] = []
-        for line in lines[1:]:
-            if len(line) <= bssid_col:
-                continue
-            ssid = line[:bssid_col].strip()
-            rest = line[bssid_col:].split()
-            if len(rest) < 3:
-                continue
-            bssid    = rest[0]
-            try:
-                rssi = int(rest[1])
-            except ValueError:
-                rssi = -100
-            chan_raw = rest[2]
-            security_raw = rest[4] if len(rest) > 4 else ''
-            sec_m = re.match(r'(WPA3|WPA2|WPA|WEP|NONE)', security_raw, re.I)
-            sec   = sec_m.group(1).upper() if sec_m else security_raw[:10]
-
-            pct      = max(0, min(100, 2 * (rssi + 100)))
-            chan_m   = re.search(r'(\d+)', chan_raw)
-            chan_num = int(chan_m.group(1)) if chan_m else 0
-            freq     = '2.4 GHz' if 0 < chan_num <= 14 else '5 GHz'
-            bars     = '▂▄▆█'
-            bar_str  = ''.join(bars[i] if pct >= (i + 1) * 25 else '░' for i in range(4)) + f'  {pct}%'
-
-            ssids.append({
-                'connected': False,
-                'ssid':      ssid or '(hidden)',
-                'bssid':     bssid,
-                'chan':       str(chan_num) if chan_num else '—',
-                'freq':       freq,
-                'signal':     str(pct),
-                'signal_pct': pct,
-                'bar':        bar_str,
-                'security':   sec,
-                'mode':       '—',
-            })
-        return ssids
+        sec_mode = n.securityMode()
     except Exception:
-        return []
+        sec_mode = 0
+    security = _CW_SEC_NAMES.get(sec_mode, '')
+
+    bars    = '▂▄▆█'
+    bar_str = ''.join(bars[i] if pct >= (i + 1) * 25 else '░' for i in range(4)) + f'  {pct}%'
+
+    return {
+        'connected':           connected,
+        'ssid':                ssid,
+        'bssid':               bssid,
+        'chan':                 str(chan_num) if chan_num else '—',
+        'freq':                 freq,
+        'signal':               str(pct),
+        'signal_pct':           pct,
+        'bar':                  bar_str,
+        'security':             security,
+        'mode':                 '—',
+        'location_restricted': False,
+    }
+
+
+def _collect_wifi_macos_corewlan(wifi_iface: str) -> dict | None:
+    """Primary collection via CoreWLAN — works when Location Services is granted.
+    Returns None if unavailable or LS not yet granted."""
+    try:
+        import objc
+        from CoreWLAN import CWWiFiClient
+
+        client   = CWWiFiClient.sharedWiFiClient()
+        cw_iface = client.interface()
+        if not cw_iface:
+            return None
+
+        connected_ssid = cw_iface.ssid()
+        if not connected_ssid:
+            return None  # Not connected or LS not granted
+
+        # Prefer cached results (fast); fall back to active scan
+        networks: set = cw_iface.cachedScanResults() or set()
+        if not networks:
+            networks, _ = cw_iface.scanForNetworksWithName_error_(None, objc.nil)
+        if not networks:
+            return None
+
+        seen: set[str] = set()
+        ssids: list[dict] = []
+        for n in networks:
+            bssid = n.bssid() or '—'
+            if bssid in seen:
+                continue
+            seen.add(bssid)
+            ssid = n.ssid() or '(hidden_sentinel)'
+            ssids.append(_cw_network_to_entry(n, connected=(ssid == connected_ssid)))
+
+        ssids.sort(key=lambda x: (not x['connected'], -x['signal_pct']))
+
+        return {
+            'iface':               wifi_iface,
+            'connected_ssid':      connected_ssid,
+            'ssids':               ssids,
+            'location_restricted': False,
+        }
+    except Exception:
+        return None
 
 
 def _collect_wifi_macos() -> dict:
-    result: dict = {'iface': '—', 'connected_ssid': '', 'ssids': []}
+    result: dict = {'iface': '—', 'connected_ssid': '', 'ssids': [],
+                    'location_restricted': False}
 
     wifi_iface = '—'
     try:
@@ -292,6 +320,12 @@ def _collect_wifi_macos() -> dict:
     if wifi_iface == '—':
         return result
 
+    # Try CoreWLAN first (works when Location Services granted)
+    cw_result = _collect_wifi_macos_corewlan(wifi_iface)
+    if cw_result:
+        return cw_result
+
+    # Fallback: system_profiler (returns <redacted> on macOS 26 without LS)
     try:
         raw = subprocess.run(
             ['system_profiler', 'SPAirPortDataType', '-json'],
@@ -313,7 +347,6 @@ def _collect_wifi_macos() -> dict:
             ssids: list[dict] = []
             if current:
                 ssids.append(_sp_network_to_entry(current, connected=True))
-
             for net in iface_data.get('spairport_airport_other_local_wireless_networks', []):
                 ssids.append(_sp_network_to_entry(net, connected=False))
 
@@ -326,52 +359,6 @@ def _collect_wifi_macos() -> dict:
 
     except Exception:
         pass
-
-    # Fallback: airport CLI (macOS < 26 only; airport removed in macOS 26)
-    if not result['ssids']:
-        ssids = _airport_scan(wifi_iface)
-        for s in ssids:
-            if result['connected_ssid'] and s['ssid'] == result['connected_ssid']:
-                s['connected'] = True
-        ssids.sort(key=lambda x: (not x['connected'], -x['signal_pct']))
-        result['ssids'] = ssids
-
-    # CoreWLAN overlay: when Location Services is granted, ssid() returns the real name.
-    # Patch redacted entries so the UI shows actual SSIDs without a full re-scan.
-    if result.get('location_restricted'):
-        try:
-            from CoreWLAN import CWWiFiClient
-            client = CWWiFiClient.sharedWiFiClient()
-            cw_iface = client.interface()
-            if cw_iface:
-                cw_ssid = cw_iface.ssid()  # None without LS, real value with LS
-                if cw_ssid:
-                    result['connected_ssid'] = cw_ssid
-                    for s in result['ssids']:
-                        if s['connected']:
-                            s['ssid'] = cw_ssid
-                            s['location_restricted'] = False
-
-                # Patch other networks via full scan
-                networks_set, _ = cw_iface.scanForNetworksWithName_error_(None)
-                if networks_set:
-                    bssid_ssid = {
-                        n.bssid(): n.ssid()
-                        for n in networks_set
-                        if n.bssid() and n.ssid()
-                    }
-                    for s in result['ssids']:
-                        mapped = bssid_ssid.get(s.get('bssid', ''))
-                        if mapped:
-                            s['ssid'] = mapped
-                            s['location_restricted'] = False
-
-                if any(not s.get('location_restricted') for s in result['ssids']):
-                    result['location_restricted'] = any(
-                        s.get('location_restricted') for s in result['ssids']
-                    )
-        except Exception:
-            pass
 
     return result
 
