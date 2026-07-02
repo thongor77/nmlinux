@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import subprocess
 import xml.etree.ElementTree as ET
 
@@ -13,6 +14,7 @@ from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QColor
 
 from nmlinux.core.cli_bar import get_cli_bar
+from nmlinux.core.host_actions import HostActionMenu
 from nmlinux.core.i18n import tr
 from nmlinux.core.theme import color_ok, color_err
 
@@ -117,10 +119,22 @@ class NmapWorker(QThread):
 
 
 class NmapPage(QWidget):
+    action_requested = Signal(str, str, str)
+
     def __init__(self) -> None:
         super().__init__()
         self._worker: NmapWorker | None = None
+        self._last_scan_hosts: list[dict] = []
+        self._scan_agg: dict[str, dict] = {}  # host_label -> {ip, hostname, ports}
         self._build_ui()
+
+    @staticmethod
+    def _parse_host_label(label: str) -> tuple[str, str]:
+        """'hostname (1.2.3.4)' -> (ip, hostname); '1.2.3.4' -> (ip, '')"""
+        m = re.match(r'^(.*)\s+\((\d+\.\d+\.\d+\.\d+)\)$', label)
+        if m:
+            return m.group(2), m.group(1).strip()
+        return label, ''
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
@@ -194,6 +208,8 @@ class NmapPage(QWidget):
         hdr.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         hdr.setSectionResizeMode(_COL_HOST,    QHeaderView.ResizeMode.Stretch)
         hdr.setSectionResizeMode(_COL_VERSION, QHeaderView.ResizeMode.Stretch)
+        self._table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._table.customContextMenuRequested.connect(self._on_right_click)
         layout.addWidget(self._table, 10)
         layout.addStretch(1)
 
@@ -221,6 +237,8 @@ class NmapPage(QWidget):
         flags = _SCAN_FLAGS[mode_idx]
         ports = self._ports.text().strip()
 
+        self._scan_agg = {}
+        self._last_scan_hosts = []
         self._table.setRowCount(0)
         self._btn_scan.setEnabled(False)
         self._btn_stop.setEnabled(True)
@@ -241,6 +259,18 @@ class NmapPage(QWidget):
             self._status.setText(tr("nmap_interrupted"))
 
     def _add_row(self, data: dict) -> None:
+        # Aggregation for _last_scan_hosts
+        host_label = data.get('host', '')
+        if host_label not in self._scan_agg:
+            ip, hostname = self._parse_host_label(host_label)
+            self._scan_agg[host_label] = {'ip': ip, 'hostname': hostname, 'ports': []}
+        try:
+            port_num = int(data.get('port', ''))
+            if data.get('state', '') == 'open':
+                self._scan_agg[host_label]['ports'].append(port_num)
+        except ValueError:
+            pass
+
         r = self._table.rowCount()
         self._table.insertRow(r)
         for col, key in enumerate(['host', 'port', 'proto', 'state', 'service', 'version']):
@@ -251,6 +281,8 @@ class NmapPage(QWidget):
             self._table.setItem(r, col, item)
 
     def _on_finished(self, summary: str) -> None:
+        self._last_scan_hosts = list(self._scan_agg.values())
+        self._scan_agg = {}
         self._btn_scan.setEnabled(True)
         self._btn_stop.setEnabled(False)
         self._status.setText(summary)
@@ -263,6 +295,37 @@ class NmapPage(QWidget):
         self._btn_stop.setEnabled(False)
         self._status.setText(tr("common_error_prefix", msg=msg))
         self._status.setStyleSheet(f"color: {color_err()};")
+
+    def _on_right_click(self, pos) -> None:
+        row = self._table.rowAt(pos.y())
+        if row < 0:
+            return
+        host_item = self._table.item(row, _COL_HOST)
+        if not host_item:
+            return
+        host_label = host_item.text()
+        ip, hostname = self._parse_host_label(host_label)
+        # Start with the port from the clicked row
+        port_item = self._table.item(row, _COL_PORT)
+        ports: list[int] = []
+        if port_item:
+            try:
+                ports = [int(port_item.text())]
+            except ValueError:
+                pass
+        # Prefer the full aggregated port list (during scan use _scan_agg, after scan use _last_scan_hosts)
+        agg_entry = self._scan_agg.get(host_label)
+        if agg_entry and agg_entry['ports']:
+            ports = agg_entry['ports']
+        else:
+            for entry in self._last_scan_hosts:
+                if entry['ip'] == ip:
+                    if entry['ports']:
+                        ports = entry['ports']
+                    break
+        menu = HostActionMenu(ip or host_label, hostname, ports or None, parent=self)
+        menu.action_chosen.connect(self.action_requested)
+        menu.exec(self._table.viewport().mapToGlobal(pos))
 
     def _table_rows(self) -> list[tuple[str, ...]]:
         keys = ['host', 'port', 'proto', 'state', 'service', 'version']
