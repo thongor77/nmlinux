@@ -311,8 +311,17 @@ class _DetailWorkerMacos(QThread):
         ssid     = ''
         ssid_raw = ''
         security = ''
-        # airport CLI removed in macOS 26; networksetup -getairportnetwork broken
-        # Use system_profiler which works reliably on all modern macOS versions
+        # Try CoreWLAN first (returns real SSID when Location Services granted)
+        try:
+            from CoreWLAN import CWWiFiClient
+            _cw = CWWiFiClient.sharedWiFiClient().interface()
+            if _cw:
+                ssid = _cw.ssid() or ''
+                ssid_raw = ssid
+        except Exception:
+            pass
+
+        # system_profiler for security mode (and SSID fallback on older macOS)
         try:
             import json as _json
             sp = subprocess.run(
@@ -326,8 +335,9 @@ class _DetailWorkerMacos(QThread):
                 if iface_data.get('_name') != dev:
                     continue
                 cur = iface_data.get('spairport_current_network_information', {})
-                ssid_raw = cur.get('_name', '')
-                ssid = '' if ssid_raw == '<redacted>' else ssid_raw
+                if not ssid:  # use system_profiler SSID only if CoreWLAN gave nothing
+                    ssid_raw = cur.get('_name', '')
+                    ssid = '' if ssid_raw == '<redacted>' else ssid_raw
                 sec_raw = cur.get('spairport_security_mode', '')
                 if 'wpa3' in sec_raw:
                     security = 'WPA3'
