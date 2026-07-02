@@ -12,10 +12,8 @@
 
 NMLinux is a single, unified GUI that brings together 29 network modules in one window: interface monitoring, Wi-Fi, DNS, SSH terminal, firewall viewer, topology map, traceroute, and more. Built from scratch in Python and PySide6 (Qt 6), with 8 interface languages and no external dependencies beyond standard system tools.
 
-Originally inspired by [NETworkManager](https://github.com/BornToBeRoot/NETworkManager) by BornToBeRoot (a Windows-only tool), NMLinux has since grown well beyond that starting point — adding a PTY-embedded SSH terminal, interactive topology map, macOS support, TLS inspector, command palette, multi-format export engine, and now an on-demand TFTP/HTTP file transfer server.
-
 > [!NOTE]
-> **NMLinux is not related to the Linux system daemon `/usr/bin/NetworkManager` (NetworkManager by Red Hat/GNOME).** The name refers to [NETworkManager](https://github.com/BornToBeRoot/NETworkManager) by BornToBeRoot, the Windows tool that originally inspired this project.
+> **NMLinux is not related to the Linux system daemon `/usr/bin/NetworkManager` (NetworkManager by Red Hat/GNOME).** NMLinux is a standalone project built from scratch in Python and PySide6.
 
 > Built with [Claude Code](https://claude.ai/code) (Anthropic) and the contribution of its author.
 
@@ -548,7 +546,6 @@ Most modules work out of the box since they rely on tools available on both plat
 
 ## Credits and acknowledgements
 
-- **[BornToBeRoot](https://github.com/BornToBeRoot)** — for [NETworkManager](https://github.com/BornToBeRoot/NETworkManager), the original inspiration and reference for features and UX
 - **[Anthropic](https://www.anthropic.com)** — Claude Code, the AI assistant used to build this project
 - The author, for the vision, testing, and direction
 

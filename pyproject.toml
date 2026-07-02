@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "nmlinux"
 version = "1.7.0"
-description = "A free Linux adaptation of NETworkManager by BornToBeRoot"
+description = "A unified network toolkit for Linux and macOS — 29 modules in one window"
 readme = "README.md"
 license = { text = "GPL-2.0-only" }
 requires-python = ">=3.11"
@@ -25,7 +25,6 @@ dependencies = [
 ]
 
 [project.urls]
-"Inspired by" = "https://github.com/BornToBeRoot/NETworkManager"
 
 [project.scripts]
 nmlinux = "nmlinux.main:main"
