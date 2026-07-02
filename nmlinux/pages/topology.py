@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from nmlinux.core.cli_bar import get_cli_bar
+from nmlinux.core.host_actions import HostActionMenu
 from nmlinux.core.i18n import tr
 from nmlinux.core.theme import color_err
 
@@ -327,6 +328,19 @@ class _NodeItem(QGraphicsItem):
             parts.append(f'({vendor})')
         return '\n'.join(parts)
 
+    def contextMenuEvent(self, event) -> None:  # noqa: N802
+        ports = self.data.get('ports', [])
+        ip    = self.data.get('ip', '')
+        host  = self.data.get('hostname', '')
+        # Remonter à TopologyPage via la scène
+        scene = self.scene()
+        if scene:
+            views = scene.views()
+            if views:
+                page = views[0].property('topology_page')
+                if page is not None:
+                    page._show_node_menu(ip, host, ports, event.screenPos())
+        event.accept()
 
 
 # ── Custom view (zoom + pan + selection signal) ───────────────────────────────
@@ -581,6 +595,8 @@ class _MDNSWorker(QThread):
 # ── Page ─────────────────────────────────────────────────────────────────────
 
 class TopologyPage(QWidget):
+    action_requested = Signal(str, str, str)  # action_key, ip, host
+
     def __init__(self) -> None:
         super().__init__()
         self._worker:       _TopoWorker  | None = None
@@ -648,6 +664,7 @@ class TopologyPage(QWidget):
         self._scene = QGraphicsScene()
         self._view  = _TopoView(self._scene)
         self._view.setMinimumHeight(300)
+        self._view.setProperty('topology_page', self)
         self._view.node_selected.connect(self._on_node_selected)
         splitter.addWidget(self._view)
 
@@ -844,6 +861,39 @@ class TopologyPage(QWidget):
             vp_rect = self._view.mapToScene(self._view.viewport().rect()).boundingRect()
             if not vp_rect.contains(node_item.pos()):
                 self._view.centerOn(node_item)
+
+    # ── Context menu (node right-click) ──────────────────────────────────────
+
+    def _show_node_menu(self, ip: str, host: str, ports: list[int], screen_pos) -> None:
+        menu = HostActionMenu(ip, host, ports or None, parent=self)
+        menu.action_chosen.connect(self.action_requested)
+        menu.exec(screen_pos.toPoint())
+
+    # ── load_hosts (inject from IP Scanner) ──────────────────────────────────
+
+    def load_hosts(self, hosts: list[dict]) -> None:
+        if not hosts:
+            return
+        # Réinitialiser la scène
+        self._scene_hint = None
+        self._scene.clear()
+        self._nodes.clear()
+        self._gateway_node = None
+
+        for data in hosts:
+            node_data = {
+                'ip':       data.get('ip', ''),
+                'hostname': data.get('hostname', ''),
+                'mac':      data.get('mac', ''),
+                'vendor':   data.get('vendor', ''),
+                'type':     'host',
+                'rtt':      0.0,
+            }
+            self._on_node(node_data)
+
+        self._do_layout()
+        self._view.fit_all()
+        self._lbl_status.setText(f"{len(hosts)} hôtes importés depuis IP Scanner")
 
     # ── Visibility ────────────────────────────────────────────────────────────
 
