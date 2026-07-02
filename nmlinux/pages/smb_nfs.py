@@ -2,9 +2,14 @@ from __future__ import annotations
 
 import platform
 import re
+import shutil
 import subprocess
 
 _IS_MACOS = platform.system() == 'Darwin'
+_EXTRA_PATH = '/opt/homebrew/bin:/usr/local/bin'
+
+def _which(cmd: str) -> str | None:
+    return shutil.which(cmd) or shutil.which(cmd, path=_EXTRA_PATH)
 
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
@@ -70,7 +75,11 @@ class _SmbWorker(QThread):
         self.result.emit(shares)
 
     def _run_macos(self) -> None:
-        # smbutil is built-in on macOS; no Homebrew required
+        # Prefer smbclient (Homebrew) — broader NAS compatibility than smbutil
+        if _which('smbclient'):
+            self._run_linux()
+            return
+        # Fallback: smbutil (built-in, no Homebrew required)
         host = self._host
         if self._user:
             host = f"{self._user}:{self._password}@{self._host}"
@@ -80,7 +89,6 @@ class _SmbWorker(QThread):
         )
         shares = []
         for line in proc.stdout.splitlines():
-            # smbutil output: "ShareName   Disk   Comment" after header
             m = re.match(r"^(\S+)\s+(Disk|Pipe|Printer)\s*(.*)", line)
             if m:
                 shares.append((m.group(1), m.group(2), m.group(3).strip()))

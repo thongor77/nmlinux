@@ -190,6 +190,68 @@ def _sp_network_to_entry(net: dict, connected: bool) -> dict:
     }
 
 
+_AIRPORT_CLI = (
+    '/System/Library/PrivateFrameworks/Apple80211.framework'
+    '/Versions/Current/Resources/airport'
+)
+
+
+def _airport_scan(wifi_iface: str) -> list[dict]:
+    """Fallback scan via airport CLI — no Location Services permission required."""
+    try:
+        proc = subprocess.run(
+            [_AIRPORT_CLI, '-s'],
+            capture_output=True, text=True, timeout=15,
+        )
+        lines = proc.stdout.splitlines()
+        if not lines:
+            return []
+        header = lines[0]
+        bssid_col = header.find('BSSID')
+        if bssid_col < 0:
+            return []
+        ssids: list[dict] = []
+        for line in lines[1:]:
+            if len(line) <= bssid_col:
+                continue
+            ssid = line[:bssid_col].strip()
+            rest = line[bssid_col:].split()
+            if len(rest) < 3:
+                continue
+            bssid    = rest[0]
+            try:
+                rssi = int(rest[1])
+            except ValueError:
+                rssi = -100
+            chan_raw = rest[2]
+            security_raw = rest[4] if len(rest) > 4 else ''
+            sec_m = re.match(r'(WPA3|WPA2|WPA|WEP|NONE)', security_raw, re.I)
+            sec   = sec_m.group(1).upper() if sec_m else security_raw[:10]
+
+            pct      = max(0, min(100, 2 * (rssi + 100)))
+            chan_m   = re.search(r'(\d+)', chan_raw)
+            chan_num = int(chan_m.group(1)) if chan_m else 0
+            freq     = '2.4 GHz' if 0 < chan_num <= 14 else '5 GHz'
+            bars     = '▂▄▆█'
+            bar_str  = ''.join(bars[i] if pct >= (i + 1) * 25 else '░' for i in range(4)) + f'  {pct}%'
+
+            ssids.append({
+                'connected': False,
+                'ssid':      ssid or '(hidden)',
+                'bssid':     bssid,
+                'chan':       str(chan_num) if chan_num else '—',
+                'freq':       freq,
+                'signal':     str(pct),
+                'signal_pct': pct,
+                'bar':        bar_str,
+                'security':   sec,
+                'mode':       '—',
+            })
+        return ssids
+    except Exception:
+        return []
+
+
 def _collect_wifi_macos() -> dict:
     result: dict = {'iface': '—', 'connected_ssid': '', 'ssids': []}
 
@@ -247,6 +309,27 @@ def _collect_wifi_macos() -> dict:
 
     except Exception:
         pass
+
+    # Fallback: airport CLI (no Location Services required, macOS 13+)
+    if not result['ssids']:
+        # Get connected SSID via networksetup if system_profiler didn't find it
+        if not result['connected_ssid']:
+            try:
+                ns_out = subprocess.run(
+                    ['networksetup', '-getairportnetwork', wifi_iface],
+                    capture_output=True, text=True, timeout=4,
+                ).stdout.strip()
+                if 'Current Wi-Fi Network:' in ns_out:
+                    result['connected_ssid'] = ns_out.split(':', 1)[1].strip()
+            except Exception:
+                pass
+
+        ssids = _airport_scan(wifi_iface)
+        for s in ssids:
+            if result['connected_ssid'] and s['ssid'] == result['connected_ssid']:
+                s['connected'] = True
+        ssids.sort(key=lambda x: (not x['connected'], -x['signal_pct']))
+        result['ssids'] = ssids
 
     return result
 

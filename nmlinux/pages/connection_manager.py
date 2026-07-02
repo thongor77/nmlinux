@@ -308,15 +308,47 @@ class _DetailWorkerMacos(QThread):
         has_inet = bool(re.search(r'\binet\s+\d', ifc_out))
         state_str = 'activated' if has_inet else 'inactive'
 
-        ssid = ''
-        if dev:
-            ssid_proc = subprocess.run(
-                ['networksetup', '-getairportnetwork', dev],
+        ssid     = ''
+        security = ''
+        _AIRPORT = (
+            '/System/Library/PrivateFrameworks/Apple80211.framework'
+            '/Versions/Current/Resources/airport'
+        )
+        try:
+            ap_proc = subprocess.run(
+                [_AIRPORT, '-I'],
                 capture_output=True, text=True, timeout=5,
             )
-            out = ssid_proc.stdout.strip()
-            if 'Current Wi-Fi Network:' in out:
-                ssid = out.split(':', 1)[1].strip()
+            for line in ap_proc.stdout.splitlines():
+                line = line.strip()
+                if line.startswith('SSID:'):
+                    ssid = line.split(':', 1)[1].strip()
+                elif line.startswith('link auth:'):
+                    raw = line.split(':', 1)[1].strip()
+                    if 'wpa3' in raw:
+                        security = 'WPA3'
+                    elif 'wpa2' in raw:
+                        security = 'WPA2'
+                    elif 'wpa' in raw:
+                        security = 'WPA'
+                    elif 'wep' in raw:
+                        security = 'WEP'
+                    elif 'open' in raw:
+                        security = 'Open'
+        except Exception:
+            pass
+
+        # Fallback for SSID if airport gave nothing
+        if not ssid and dev:
+            try:
+                ns_out = subprocess.run(
+                    ['networksetup', '-getairportnetwork', dev],
+                    capture_output=True, text=True, timeout=5,
+                ).stdout.strip()
+                if 'Current Wi-Fi Network:' in ns_out:
+                    ssid = ns_out.split(':', 1)[1].strip()
+            except Exception:
+                pass
 
         lines = [
             f'GENERAL.STATE:                          {state_str}',
@@ -333,7 +365,8 @@ class _DetailWorkerMacos(QThread):
             lines.append(f'IP6.ADDRESS[1]:                         {ip6}')
         if ssid:
             lines.append(f'802-11-wireless.ssid:                   {ssid}')
-        lines.append('802-11-wireless-security.key-mgmt:      --')
+        if security:
+            lines.append(f'802-11-wireless-security.key-mgmt:      {security}')
         if mac:
             lines.append(f'connection.uuid:                        {mac}')
         return '\n'.join(lines)

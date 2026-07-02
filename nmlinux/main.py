@@ -91,6 +91,11 @@ def main() -> None:
     # and uses it as the application menu title. We must patch the dict AND set the
     # process name before QApplication is created.
     if sys.platform == 'darwin':
+        import os
+        _brew_paths = '/opt/homebrew/bin:/usr/local/bin'
+        if _brew_paths not in os.environ.get('PATH', ''):
+            os.environ['PATH'] = _brew_paths + ':' + os.environ.get('PATH', '')
+
         sys.argv[0] = 'NMLinux'
         import ctypes
         try:

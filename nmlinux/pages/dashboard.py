@@ -375,7 +375,7 @@ class _GatewayPingWorker(QThread):
         while self._running:
             try:
                 proc = subprocess.run(
-                    ['ping', '-c', '1', '-W', '1', self._gateway],
+                    ['ping', '-c', '1', '-W', '1000' if _IS_MACOS else '1', self._gateway],
                     capture_output=True, text=True, timeout=3,
                 )
                 if proc.returncode == 0:
@@ -460,6 +460,7 @@ def _card(title: str) -> tuple[QGroupBox, QFormLayout]:
     form.setHorizontalSpacing(16)
     form.setVerticalSpacing(6)
     form.setContentsMargins(12, 12, 12, 12)
+    form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
     return box, form
 
 

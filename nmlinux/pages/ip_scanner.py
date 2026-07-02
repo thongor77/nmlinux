@@ -39,6 +39,8 @@ _OUI_PATHS = [
     '/var/lib/ieee-data/oui.txt',
     '/usr/share/ieee-data/oui.txt',
     '/usr/share/arp-scan/ieee-oui.txt',
+    '/opt/homebrew/share/ieee-data/oui.txt',
+    '/usr/local/share/ieee-data/oui.txt',
 ]
 
 
