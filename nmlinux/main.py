@@ -107,7 +107,20 @@ def main() -> None:
             _info = NSBundle.mainBundle().infoDictionary()
             _info['CFBundleName'] = 'NMLinux'
             _info['CFBundleDisplayName'] = 'NMLinux'
+            _info['NSLocationWhenInUseUsageDescription'] = (
+                'NMLinux needs Location Services to display Wi-Fi network names.'
+            )
             NSProcessInfo.processInfo().setProcessName_('NMLinux')
+        except Exception:
+            pass
+
+        # Request Location Services for Wi-Fi SSID access (macOS 13+)
+        try:
+            from CoreLocation import CLLocationManager
+            if CLLocationManager.authorizationStatus() == 0:  # notDetermined
+                global _cl_manager  # keep reference to prevent GC before dialog shows
+                _cl_manager = CLLocationManager.alloc().init()
+                _cl_manager.requestWhenInUseAuthorization()
         except Exception:
             pass
 

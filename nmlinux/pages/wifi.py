@@ -19,8 +19,15 @@ from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 from nmlinux.core.theme import color_ok, color_err
 
+_LOCATION_MSG = (
+    "⚠  Wi-Fi names hidden — macOS requires Location Services.  "
+    "Open: System Settings › Privacy & Security › Location Services → enable NMLinux"
+)
+
 
 _YELLOW = '#f9e2af'
+_MACOS_REDACTED = '<redacted>'
+_LOCATION_SENTINEL = '(macos_location_sentinel)'
 
 
 def _parse_terse(line: str) -> list[str]:
@@ -155,13 +162,19 @@ def _parse_sp_security(raw: str) -> str:
 
 def _sp_network_to_entry(net: dict, connected: bool) -> dict:
     ssid  = net.get('_name', '') or '(hidden_sentinel)'
-    bssid = net.get('spairport_network_bssid', '—')
+    location_restricted = (ssid == _MACOS_REDACTED)
+    if location_restricted:
+        ssid = _LOCATION_SENTINEL
+    bssid_raw = net.get('spairport_network_bssid', '—')
+    bssid = '—' if bssid_raw == _MACOS_REDACTED else bssid_raw
 
     rssi = 0
     m = re.search(r'(-\d+)\s*dBm', net.get('spairport_signal_noise', ''))
     if m:
         rssi = int(m.group(1))
     pct = max(0, min(100, 2 * (rssi + 100)))
+    if location_restricted and rssi == 0:
+        pct = 50  # show mid-strength bar when signal is also redacted
 
     chan_raw = net.get('spairport_network_channel', '')
     chan_m   = re.search(r'(\d+)', chan_raw)
@@ -177,16 +190,17 @@ def _sp_network_to_entry(net: dict, connected: bool) -> dict:
     ) + f'  {pct}%'
 
     return {
-        'connected':  connected,
-        'ssid':       ssid,
-        'bssid':      bssid,
-        'chan':        str(chan_num) if chan_num else '—',
-        'freq':        freq,
-        'signal':      str(pct),
-        'signal_pct':  pct,
-        'bar':         bar_str,
-        'security':    security,
-        'mode':        '—',
+        'connected':           connected,
+        'ssid':                ssid,
+        'bssid':               bssid,
+        'chan':                 str(chan_num) if chan_num else '—',
+        'freq':                 freq,
+        'signal':               str(pct),
+        'signal_pct':           pct,
+        'bar':                  bar_str,
+        'security':             security,
+        'mode':                 '—',
+        'location_restricted': location_restricted,
     }
 
 
@@ -305,31 +319,59 @@ def _collect_wifi_macos() -> dict:
 
             ssids.sort(key=lambda x: (not x['connected'], -x['signal_pct']))
             result['ssids'] = ssids
+            result['location_restricted'] = any(
+                s.get('location_restricted') for s in ssids
+            )
             break
 
     except Exception:
         pass
 
-    # Fallback: airport CLI (no Location Services required, macOS 13+)
+    # Fallback: airport CLI (macOS < 26 only; airport removed in macOS 26)
     if not result['ssids']:
-        # Get connected SSID via networksetup if system_profiler didn't find it
-        if not result['connected_ssid']:
-            try:
-                ns_out = subprocess.run(
-                    ['networksetup', '-getairportnetwork', wifi_iface],
-                    capture_output=True, text=True, timeout=4,
-                ).stdout.strip()
-                if 'Current Wi-Fi Network:' in ns_out:
-                    result['connected_ssid'] = ns_out.split(':', 1)[1].strip()
-            except Exception:
-                pass
-
         ssids = _airport_scan(wifi_iface)
         for s in ssids:
             if result['connected_ssid'] and s['ssid'] == result['connected_ssid']:
                 s['connected'] = True
         ssids.sort(key=lambda x: (not x['connected'], -x['signal_pct']))
         result['ssids'] = ssids
+
+    # CoreWLAN overlay: when Location Services is granted, ssid() returns the real name.
+    # Patch redacted entries so the UI shows actual SSIDs without a full re-scan.
+    if result.get('location_restricted'):
+        try:
+            from CoreWLAN import CWWiFiClient
+            client = CWWiFiClient.sharedWiFiClient()
+            cw_iface = client.interface()
+            if cw_iface:
+                cw_ssid = cw_iface.ssid()  # None without LS, real value with LS
+                if cw_ssid:
+                    result['connected_ssid'] = cw_ssid
+                    for s in result['ssids']:
+                        if s['connected']:
+                            s['ssid'] = cw_ssid
+                            s['location_restricted'] = False
+
+                # Patch other networks via full scan
+                networks_set, _ = cw_iface.scanForNetworksWithName_error_(None)
+                if networks_set:
+                    bssid_ssid = {
+                        n.bssid(): n.ssid()
+                        for n in networks_set
+                        if n.bssid() and n.ssid()
+                    }
+                    for s in result['ssids']:
+                        mapped = bssid_ssid.get(s.get('bssid', ''))
+                        if mapped:
+                            s['ssid'] = mapped
+                            s['location_restricted'] = False
+
+                if any(not s.get('location_restricted') for s in result['ssids']):
+                    result['location_restricted'] = any(
+                        s.get('location_restricted') for s in result['ssids']
+                    )
+        except Exception:
+            pass
 
     return result
 
@@ -367,6 +409,15 @@ class WifiPage(QWidget):
         info_row.addStretch(1)
         info_row.addWidget(self._lbl_status)
         layout.addLayout(info_row)
+
+        self._lbl_location = QLabel("")
+        self._lbl_location.setWordWrap(True)
+        self._lbl_location.setStyleSheet(
+            "color: #f9e2af; background: rgba(249,226,175,0.08); "
+            "border-radius: 4px; padding: 6px 10px;"
+        )
+        self._lbl_location.setVisible(False)
+        layout.addWidget(self._lbl_location)
 
         headers = [
             "●",
@@ -419,6 +470,11 @@ class WifiPage(QWidget):
         self._lbl_status.setText(tr("wifi_networks", count=count))
         self._lbl_status.setStyleSheet("")
 
+        location_restricted = data.get('location_restricted', False)
+        self._lbl_location.setVisible(location_restricted)
+        if location_restricted:
+            self._lbl_location.setText(_LOCATION_MSG)
+
         t = self._table
         t.setRowCount(0)
         hidden_label = tr("wifi_hidden")
@@ -433,12 +489,19 @@ class WifiPage(QWidget):
                 dot_item.setForeground(QColor(color_ok()))
             t.setItem(row_idx, _COL_DOT, dot_item)
 
-            ssid_display = hidden_label if ap['ssid'] == '(hidden_sentinel)' else ap['ssid']
+            if ap['ssid'] == _LOCATION_SENTINEL:
+                ssid_display = '— (Location Services)'
+            elif ap['ssid'] == '(hidden_sentinel)':
+                ssid_display = hidden_label
+            else:
+                ssid_display = ap['ssid']
             ssid_item = QTableWidgetItem(ssid_display)
             if ap['connected']:
                 font = ssid_item.font()
                 font.setBold(True)
                 ssid_item.setFont(font)
+            if ap.get('location_restricted'):
+                ssid_item.setForeground(QColor(_YELLOW))
             t.setItem(row_idx, _COL_SSID, ssid_item)
 
             t.setItem(row_idx, _COL_BSSID, QTableWidgetItem(ap['bssid']))

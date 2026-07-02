@@ -99,6 +99,8 @@ cat > "${APP}/Contents/Info.plist" << PLIST
     <key>NSHighResolutionCapable</key>   <true/>
     <key>LSMinimumSystemVersion</key>    <string>12.0</string>
     <key>NSHumanReadableCopyright</key>  <string>GPL-2.0 — thongor77</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>NMLinux needs Location Services to display Wi-Fi network names.</string>
 </dict>
 </plist>
 PLIST

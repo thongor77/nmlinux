@@ -309,6 +309,7 @@ class _DetailWorkerMacos(QThread):
         state_str = 'activated' if has_inet else 'inactive'
 
         ssid     = ''
+        ssid_raw = ''
         security = ''
         # airport CLI removed in macOS 26; networksetup -getairportnetwork broken
         # Use system_profiler which works reliably on all modern macOS versions
@@ -325,7 +326,8 @@ class _DetailWorkerMacos(QThread):
                 if iface_data.get('_name') != dev:
                     continue
                 cur = iface_data.get('spairport_current_network_information', {})
-                ssid = cur.get('_name', '')
+                ssid_raw = cur.get('_name', '')
+                ssid = '' if ssid_raw == '<redacted>' else ssid_raw
                 sec_raw = cur.get('spairport_security_mode', '')
                 if 'wpa3' in sec_raw:
                     security = 'WPA3'
@@ -356,6 +358,8 @@ class _DetailWorkerMacos(QThread):
             lines.append(f'IP6.ADDRESS[1]:                         {ip6}')
         if ssid:
             lines.append(f'802-11-wireless.ssid:                   {ssid}')
+        elif ssid_raw == '<redacted>':
+            lines.append('802-11-wireless.ssid:                   (Location Services required)')
         if security:
             lines.append(f'802-11-wireless-security.key-mgmt:      {security}')
         if mac:

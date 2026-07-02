@@ -46,11 +46,14 @@ class _SmbWorker(QThread):
         except Exception as exc:
             self.error.emit(str(exc))
 
-    def _run_linux(self) -> None:
-        cmd = ["smbclient", "-L", self._host, "-N", "--no-pass"]
+    def _run_linux(self, extra_args: list[str] | None = None) -> None:
+        base = ["smbclient"]
+        if extra_args:
+            base += extra_args
         if self._user:
-            cmd = ["smbclient", "-L", self._host,
-                   "-U", f"{self._user}%{self._password}"]
+            cmd = base + ["-L", self._host, "-U", f"{self._user}%{self._password}"]
+        else:
+            cmd = base + ["-L", self._host, "-N", "--no-pass"]
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
         output = proc.stdout + proc.stderr
 
@@ -70,14 +73,25 @@ class _SmbWorker(QThread):
                     shares.append((m.group(1), m.group(2), m.group(3).strip()))
 
         if not shares and proc.returncode != 0:
-            self.error.emit(tr("smb_err_failed", msg=proc.stderr.strip()[:120]))
+            combined = (proc.stderr + proc.stdout).strip()
+            if any(s in combined for s in (
+                'NT_STATUS_LOGON_FAILURE', 'NT_STATUS_ACCESS_DENIED',
+                'NT_STATUS_ACCOUNT_DISABLED', 'session setup failed',
+                'Authentication error', 'authentication',
+            )):
+                self.error.emit(tr("smb_err_auth"))
+            else:
+                self.error.emit(tr("smb_err_failed", msg=combined[:120]))
             return
         self.result.emit(shares)
 
     def _run_macos(self) -> None:
         # Prefer smbclient (Homebrew) — broader NAS compatibility than smbutil
-        if _which('smbclient'):
-            self._run_linux()
+        smbclient_path = _which('smbclient')
+        if smbclient_path:
+            # Pass -s /dev/null to suppress "Can't load smb.conf" warning when
+            # /opt/homebrew/etc/smb.conf does not exist
+            self._run_linux(extra_args=['-s', '/dev/null'])
             return
         # Fallback: smbutil (built-in, no Homebrew required)
         host = self._host
