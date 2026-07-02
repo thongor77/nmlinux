@@ -166,14 +166,21 @@ def _arp_entry(ip: str) -> tuple[str, str]:
 
 
 def _arp_entry_macos(ip: str) -> tuple[str, str]:
-    """Return (mac_upper, iface) from macOS arp output, or ('', '') if absent."""
+    """Return (mac_upper, iface) from macOS arp output, or ('', '') if absent.
+
+    macOS arp uses short notation (0:11:32:...) — each octet may be 1 or 2 hex digits.
+    We zero-pad each octet so OUI lookup works (needs 'AA:BB:CC' prefix).
+    """
     try:
         proc = subprocess.run(
             ['arp', '-n', ip], capture_output=True, text=True, timeout=2,
         )
-        m = re.search(r'at ([0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}) on (\S+)', proc.stdout)
+        _HEX = r'[0-9a-f]{1,2}'
+        pattern = rf'at ({_HEX}:{_HEX}:{_HEX}:{_HEX}:{_HEX}:{_HEX}) on (\S+)'
+        m = re.search(pattern, proc.stdout, re.IGNORECASE)
         if m:
-            return m.group(1).upper(), m.group(2)
+            mac = ':'.join(o.zfill(2) for o in m.group(1).split(':'))
+            return mac.upper(), m.group(2)
     except Exception:
         pass
     return '', ''
