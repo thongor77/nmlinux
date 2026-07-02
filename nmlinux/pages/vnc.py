@@ -399,6 +399,12 @@ class VncPage(QWidget):
         self._right.setCurrentIndex(_FORM)
         self._f_host.setFocus()
 
+    def set_target(self, ip: str, host: str = '') -> None:
+        self._on_new()
+        self._f_host.setText(ip)
+        if host and host != ip:
+            self._f_name.setText(host)
+
     def _on_save(self) -> None:
         host = self._f_host.text().strip()
         if not host:
