@@ -272,7 +272,7 @@ class _NodeItem(QGraphicsItem):
 
         # Origin highlight — node that triggered navigation from another module
         if self._highlight:
-            painter.setPen(QPen(QColor('#89b4fa'), 3))
+            painter.setPen(QPen(QColor('#f38ba8'), 3))
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawEllipse(QPointF(0, 0), r + 7, r + 7)
 
@@ -886,15 +886,24 @@ class TopologyPage(QWidget):
         self._nodes.clear()
         self._gateway_node = None
 
-        # Inject gateway first so _on_node draws edges automatically
+        # Inject gateway first so _on_node draws edges automatically.
+        # Always inject as 'gateway' type, even if IP Scanner found it,
+        # so _gateway_node is set before host nodes are added.
         _, gateway_ip, _ = _local_network()
-        if gateway_ip and not any(h.get('ip') == gateway_ip for h in hosts):
+        if gateway_ip:
+            gw_data = next((h for h in hosts if h.get('ip') == gateway_ip), {})
             self._on_node({
-                'ip': gateway_ip, 'hostname': '', 'mac': '', 'vendor': '',
-                'type': 'gateway', 'rtt': 0.0,
+                'ip':       gateway_ip,
+                'hostname': gw_data.get('hostname', ''),
+                'mac':      gw_data.get('mac', ''),
+                'vendor':   gw_data.get('vendor', ''),
+                'type':     'gateway',
+                'rtt':      0.0,
             })
 
         for data in hosts:
+            if data.get('ip') == gateway_ip:
+                continue  # already injected as gateway
             self._on_node({
                 'ip':       data.get('ip', ''),
                 'hostname': data.get('hostname', ''),
