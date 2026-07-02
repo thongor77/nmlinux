@@ -323,6 +323,8 @@ class AssetInventoryPage(QWidget):
         ips = [h['ip'] for h in hosts if h.get('ip')]
         if not ips:
             return
+        if self._worker and self._worker.isRunning():
+            return
         # Show a compact summary in the CIDR field (read-only display)
         self._cidr.setText(
             ', '.join(ips[:3]) + (f' … (+{len(ips) - 3})' if len(ips) > 3 else '')
@@ -331,19 +333,20 @@ class AssetInventoryPage(QWidget):
         winrm_creds = self._get_winrm_creds()
         snmp_creds  = self._get_snmp_creds()
         self._clear_results()
+        self._btn_scan.setEnabled(False)
+        self._btn_stop.setEnabled(True)
+        self._progress.setValue(0)
+        self._progress.setVisible(True)
+        self._lbl_status.setText(tr("inv_scanning"))
         self._worker = AssetScanWorker(
             '', ssh_creds, winrm_creds, snmp_creds,
             hosts=ips,
         )
+        del ssh_creds, winrm_creds, snmp_creds
         self._worker.host_found.connect(self._on_host)
         self._worker.progress.connect(self._on_progress)
         self._worker.finished_.connect(self._on_finished)
         self._worker.start()
-        self._progress.setValue(0)
-        self._progress.setVisible(True)
-        self._lbl_status.setText(tr("inv_scanning"))
-        self._btn_scan.setEnabled(False)
-        self._btn_stop.setEnabled(True)
 
     # ── Scan ──────────────────────────────────────────────────────────────────
 
