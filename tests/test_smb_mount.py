@@ -86,13 +86,18 @@ def test_mount_linux_success(monkeypatch, tmp_path):
     assert err == ""
     cmd = mock_run.call_args[0][0]
     assert cmd[0] == "pkexec"
-    assert "mount" in cmd
-    assert "-t" in cmd and "cifs" in cmd
-    assert any(a.startswith("credentials=") for a in cmd)
+    assert cmd[1] == "python3"
+    assert cmd[2].endswith("smb_mount_helper.py")
+    assert "--target" in cmd and "//nas.local/public" in cmd
+    assert "--mountpoint" in cmd
+    assert "--credentials" in cmd
     # credentials file must be cleaned up regardless of outcome
     mock_unlink.assert_called_once_with("/tmp/nmlinux_smb_fake")
 
-def test_mount_linux_retries_with_older_dialect_on_error_95(monkeypatch, tmp_path):
+def test_mount_linux_only_one_pkexec_call_even_with_dialect_retry(monkeypatch, tmp_path):
+    # The dialect-retry fallback happens inside smb_mount_helper.py once
+    # pkexec has elevated it, so only a single pkexec authentication is
+    # ever requested from _mount_linux's point of view.
     import nmlinux.core.smb_mount as smb_mount
     monkeypatch.setattr(smb_mount, "_IS_MACOS", False)
     monkeypatch.setattr(smb_mount, "mount_point_for", lambda h, s: tmp_path / "mnt")
@@ -104,67 +109,12 @@ def test_mount_linux_retries_with_older_dialect_on_error_95(monkeypatch, tmp_pat
          patch("os.chmod"), \
          patch("os.unlink"):
         mock_mkstemp.return_value = (99, "/tmp/nmlinux_smb_fake")
-        mock_run.side_effect = [
-            MagicMock(
-                returncode=1, stdout="",
-                stderr="mount error(95): Operation not supported\n"
-                       "Refer to the mount.cifs(8) manual page.",
-            ),
-            MagicMock(returncode=0, stdout="", stderr=""),
-        ]
+        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
         ok, err = mount("192.168.1.99", "video", "alice", "secret")
 
     assert ok is True
-    assert err == ""
-    assert mock_run.call_count == 2
-    second_cmd = mock_run.call_args_list[1][0][0]
-    assert any("vers=2.0" in a for a in second_cmd)
-
-def test_mount_linux_no_retry_for_unrelated_error(monkeypatch, tmp_path):
-    import nmlinux.core.smb_mount as smb_mount
-    monkeypatch.setattr(smb_mount, "_IS_MACOS", False)
-    monkeypatch.setattr(smb_mount, "mount_point_for", lambda h, s: tmp_path / "mnt")
-
-    with patch("shutil.which", return_value="/usr/sbin/mount.cifs"), \
-         patch("subprocess.run") as mock_run, \
-         patch("tempfile.mkstemp") as mock_mkstemp, \
-         patch("os.fdopen"), \
-         patch("os.chmod"), \
-         patch("os.unlink"):
-        mock_mkstemp.return_value = (99, "/tmp/nmlinux_smb_fake")
-        mock_run.return_value = MagicMock(
-            returncode=1, stdout="", stderr="mount error(13): Permission denied"
-        )
-
-        ok, err = mount("nas.local", "public", "alice", "wrong")
-
-    assert ok is False
-    assert "Permission denied" in err
     assert mock_run.call_count == 1
-
-def test_mount_linux_retry_also_fails(monkeypatch, tmp_path):
-    import nmlinux.core.smb_mount as smb_mount
-    monkeypatch.setattr(smb_mount, "_IS_MACOS", False)
-    monkeypatch.setattr(smb_mount, "mount_point_for", lambda h, s: tmp_path / "mnt")
-
-    with patch("shutil.which", return_value="/usr/sbin/mount.cifs"), \
-         patch("subprocess.run") as mock_run, \
-         patch("tempfile.mkstemp") as mock_mkstemp, \
-         patch("os.fdopen"), \
-         patch("os.chmod"), \
-         patch("os.unlink"):
-        mock_mkstemp.return_value = (99, "/tmp/nmlinux_smb_fake")
-        mock_run.side_effect = [
-            MagicMock(returncode=1, stdout="", stderr="mount error(95): Operation not supported"),
-            MagicMock(returncode=1, stdout="", stderr="mount error(13): Permission denied"),
-        ]
-
-        ok, err = mount("192.168.1.99", "video", "alice", "wrong")
-
-    assert ok is False
-    assert "Permission denied" in err
-    assert mock_run.call_count == 2
 
 def test_mount_linux_pkexec_dismissed_returns_sentinel(monkeypatch, tmp_path):
     import nmlinux.core.smb_mount as smb_mount

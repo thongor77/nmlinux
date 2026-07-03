@@ -11,6 +11,7 @@ import tempfile
 from pathlib import Path
 
 _IS_MACOS = platform.system() == 'Darwin'
+_MOUNT_HELPER = Path(__file__).parent / "smb_mount_helper.py"
 
 
 def _sanitize(name: str) -> str:
@@ -80,31 +81,22 @@ def _mount_linux(
         with os.fdopen(fd, 'w') as f:
             f.write(f"username={user}\npassword={password}\n")
 
-        ok, err = _run_mount_cifs(host, share, cred_path, mountpoint)
-        # errno 95 (ENOTSUPP) is mount.cifs's own signal that the server
-        # doesn't support the default dialect negotiation — common with
-        # older NAS units. Retry once with an older, widely-supported one.
-        if not ok and 'mount error(95)' in err:
-            ok, err = _run_mount_cifs(host, share, cred_path, mountpoint, vers='2.0')
+        # The helper handles the dialect-retry fallback internally so both
+        # attempts happen under a single pkexec authentication.
+        cmd = [
+            "pkexec", "python3", str(_MOUNT_HELPER),
+            "--target", f"//{host}/{share}",
+            "--mountpoint", str(mountpoint),
+            "--credentials", cred_path,
+        ]
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        except FileNotFoundError:
+            return False, "PKEXEC_NOT_FOUND"
+        except subprocess.TimeoutExpired:
+            return False, "Timeout"
     finally:
         os.unlink(cred_path)
-
-    return ok, err
-
-
-def _run_mount_cifs(
-    host: str, share: str, cred_path: str, mountpoint: Path, vers: str | None = None,
-) -> tuple[bool, str]:
-    opts = f"credentials={cred_path}"
-    if vers:
-        opts += f",vers={vers}"
-    cmd = ["pkexec", "mount", "-t", "cifs", "-o", opts, f"//{host}/{share}", str(mountpoint)]
-    try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
-    except FileNotFoundError:
-        return False, "PKEXEC_NOT_FOUND"
-    except subprocess.TimeoutExpired:
-        return False, "Timeout"
 
     # pkexec itself uses 126 (dialog dismissed) / 127 (authorization/other
     # error) — any other non-zero code is mount.cifs's own exit status.
