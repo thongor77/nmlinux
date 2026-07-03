@@ -345,7 +345,21 @@ Works on any x86_64 Linux with glibc 2.17+ (Ubuntu 16.04+, Fedora 26+, Arch, Min
 
 ### Option 5 — macOS
 
-The recommended way is to use the bundled install script — it creates a dedicated venv, installs all Python and pyobjc dependencies automatically, then creates `NMLinux.app` in `~/Applications`:
+**Quickest way — one-liner bootstrap.** Works on a completely bare Mac: installs Xcode Command Line Tools, Homebrew, all system tools, then NMLinux itself. Safe to re-run (updates instead of reinstalling):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/thongor77/nmlinux/main/packaging/bootstrap_macos.sh | bash
+```
+
+Install system-wide (`/Applications`) instead of `~/Applications`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/thongor77/nmlinux/main/packaging/bootstrap_macos.sh | bash -s -- --system
+```
+
+> No Apple Developer account or paid notarization involved — it's the same open-source `install_macos_app.sh` under the hood, just fetched and run for you. The script is plain, readable bash; inspect it before piping to `bash` if you'd rather review first: [`packaging/bootstrap_macos.sh`](packaging/bootstrap_macos.sh).
+
+**Manual install** — if you prefer to run each step yourself, or already have Homebrew:
 
 ```bash
 # 1. Install Homebrew system tools (see Requirements above)
