@@ -49,7 +49,7 @@ from nmlinux.pages.help_page import HelpPage
 from nmlinux.core.host_actions import (
     ACT_PING, ACT_PORT_SCAN, ACT_WHOIS, ACT_DNS,
     ACT_TRACEROUTE, ACT_MTR, ACT_SSH, ACT_RDP,
-    ACT_VNC, ACT_TOPOLOGY, ACT_ASSET,
+    ACT_VNC, ACT_TOPOLOGY, ACT_ASSET, ACT_SMB,
 )
 
 
@@ -522,6 +522,8 @@ class MainWindow(QMainWindow):
             ACT_RDP:        (self._page_index('RdpPage'),
                              lambda p, ip, h, _s: p.set_target(ip, h)),
             ACT_VNC:        (self._page_index('VncPage'),
+                             lambda p, ip, h, _s: p.set_target(ip, h)),
+            ACT_SMB:        (self._page_index('SmbNfsPage'),
                              lambda p, ip, h, _s: p.set_target(ip, h)),
             ACT_TOPOLOGY:   (self._page_index('TopologyPage'),
                              lambda p, ip, h, src: p.load_hosts(

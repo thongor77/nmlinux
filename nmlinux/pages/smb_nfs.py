@@ -246,6 +246,10 @@ class SmbNfsPage(QWidget):
         t.setFrameShape(QFrame.Shape.NoFrame)
         return t
 
+    def set_target(self, ip: str, host: str = '') -> None:
+        self._host_edit.setText(host or ip)
+        self._start()
+
     def showEvent(self, event) -> None:
         super().showEvent(event)
         self._update_cli()

@@ -14,10 +14,12 @@ ACT_RDP        = "rdp"
 ACT_VNC        = "vnc"
 ACT_TOPOLOGY   = "topology"
 ACT_ASSET      = "asset"
+ACT_SMB        = "smb"
 
 _PORT_SSH = 22
 _PORT_RDP = 3389
 _PORT_VNC = 5900
+_PORT_SMB = 445
 
 
 class HostActionMenu(QMenu):
@@ -50,6 +52,7 @@ class HostActionMenu(QMenu):
         self._add(ACT_SSH, "SSH", bold=_PORT_SSH in self._ports)
         self._add(ACT_RDP, "RDP", bold=_PORT_RDP in self._ports)
         self._add(ACT_VNC, "VNC", bold=_PORT_VNC in self._ports)
+        self._add(ACT_SMB, "SMB", bold=_PORT_SMB in self._ports)
 
         self.addSection(tr("ctx_section_inventory"))
         self._add(ACT_TOPOLOGY, tr("ctx_view_topology"))

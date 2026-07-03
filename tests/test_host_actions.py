@@ -12,7 +12,7 @@ from nmlinux.core.host_actions import (
     HostActionMenu,
     ACT_PING, ACT_PORT_SCAN, ACT_WHOIS, ACT_DNS,
     ACT_TRACEROUTE, ACT_MTR, ACT_SSH, ACT_RDP,
-    ACT_VNC, ACT_TOPOLOGY, ACT_ASSET,
+    ACT_VNC, ACT_TOPOLOGY, ACT_ASSET, ACT_SMB,
 )
 
 def test_all_actions_present(qapp):
@@ -24,7 +24,7 @@ def test_all_actions_present(qapp):
             action.trigger()
     assert keys == {ACT_PING, ACT_PORT_SCAN, ACT_WHOIS, ACT_DNS,
                     ACT_TRACEROUTE, ACT_MTR, ACT_SSH, ACT_RDP,
-                    ACT_VNC, ACT_TOPOLOGY, ACT_ASSET}
+                    ACT_VNC, ACT_TOPOLOGY, ACT_ASSET, ACT_SMB}
 
 def test_signal_carries_ip_and_host(qapp):
     received = []
@@ -37,11 +37,12 @@ def test_signal_carries_ip_and_host(qapp):
     assert received and received[0] == ("10.0.0.1", "myhost")
 
 def test_bold_when_port_detected(qapp):
-    menu = HostActionMenu("1.2.3.4", ports=[22, 3389])
+    menu = HostActionMenu("1.2.3.4", ports=[22, 3389, 445])
     bold_labels = {a.text() for a in menu.actions() if not a.isSeparator() and a.font().bold()}
     assert "SSH" in bold_labels
     assert "RDP" in bold_labels
     assert "VNC" not in bold_labels
+    assert "SMB" in bold_labels
 
 def test_no_bold_without_ports(qapp):
     menu = HostActionMenu("1.2.3.4")
