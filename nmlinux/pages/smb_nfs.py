@@ -178,10 +178,10 @@ def _mount_menu_label(mounted: bool) -> str:
 
 
 def _mount_error_message(err: str) -> str:
+    if err == "PKEXEC_AUTH_FAILED":
+        return tr("smb_mount_err_pkexec_fail")
     if any(marker in err for marker in _AUTH_MARKERS):
         return tr("smb_err_auth")
-    if not _IS_MACOS:
-        return tr("smb_mount_err_pkexec_fail")
     return tr("smb_err_failed", msg=err[:120])
 
 

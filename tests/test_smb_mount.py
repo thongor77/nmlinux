@@ -92,6 +92,44 @@ def test_mount_linux_success(monkeypatch, tmp_path):
     # credentials file must be cleaned up regardless of outcome
     mock_unlink.assert_called_once_with("/tmp/nmlinux_smb_fake")
 
+def test_mount_linux_pkexec_dismissed_returns_sentinel(monkeypatch, tmp_path):
+    import nmlinux.core.smb_mount as smb_mount
+    monkeypatch.setattr(smb_mount, "_IS_MACOS", False)
+    monkeypatch.setattr(smb_mount, "mount_point_for", lambda h, s: tmp_path / "mnt")
+
+    with patch("shutil.which", return_value="/usr/sbin/mount.cifs"), \
+         patch("subprocess.run") as mock_run, \
+         patch("tempfile.mkstemp") as mock_mkstemp, \
+         patch("os.fdopen"), \
+         patch("os.chmod"), \
+         patch("os.unlink"):
+        mock_mkstemp.return_value = (99, "/tmp/nmlinux_smb_fake")
+        mock_run.return_value = MagicMock(returncode=126, stdout="", stderr="")
+
+        ok, err = mount("nas.local", "public", "alice", "secret")
+
+    assert ok is False
+    assert err == "PKEXEC_AUTH_FAILED"
+
+def test_mount_linux_pkexec_error_127_returns_sentinel(monkeypatch, tmp_path):
+    import nmlinux.core.smb_mount as smb_mount
+    monkeypatch.setattr(smb_mount, "_IS_MACOS", False)
+    monkeypatch.setattr(smb_mount, "mount_point_for", lambda h, s: tmp_path / "mnt")
+
+    with patch("shutil.which", return_value="/usr/sbin/mount.cifs"), \
+         patch("subprocess.run") as mock_run, \
+         patch("tempfile.mkstemp") as mock_mkstemp, \
+         patch("os.fdopen"), \
+         patch("os.chmod"), \
+         patch("os.unlink"):
+        mock_mkstemp.return_value = (99, "/tmp/nmlinux_smb_fake")
+        mock_run.return_value = MagicMock(returncode=127, stdout="", stderr="")
+
+        ok, err = mount("nas.local", "public", "alice", "secret")
+
+    assert ok is False
+    assert err == "PKEXEC_AUTH_FAILED"
+
 def test_mount_permission_denied_creating_mountpoint_returns_error(monkeypatch, tmp_path):
     import nmlinux.core.smb_mount as smb_mount
     monkeypatch.setattr(smb_mount, "_IS_MACOS", False)

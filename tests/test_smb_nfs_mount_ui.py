@@ -29,9 +29,14 @@ def test_menu_label_mounted():
 def test_error_message_auth_failure():
     assert _mount_error_message("NT_STATUS_LOGON_FAILURE") == tr("smb_err_auth")
 
+def test_error_message_pkexec_sentinel():
+    assert _mount_error_message("PKEXEC_AUTH_FAILED") == tr("smb_mount_err_pkexec_fail")
+
 def test_error_message_generic_linux(monkeypatch):
     monkeypatch.setattr("nmlinux.pages.smb_nfs._IS_MACOS", False)
-    assert _mount_error_message("some random mount error") == tr("smb_mount_err_pkexec_fail")
+    assert _mount_error_message("some random mount error") == tr(
+        "smb_err_failed", msg="some random mount error"
+    )
 
 def test_error_message_generic_macos(monkeypatch):
     monkeypatch.setattr("nmlinux.pages.smb_nfs._IS_MACOS", True)

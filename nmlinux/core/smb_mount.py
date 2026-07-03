@@ -94,6 +94,10 @@ def _mount_linux(
     finally:
         os.unlink(cred_path)
 
+    # pkexec itself uses 126 (dialog dismissed) / 127 (authorization/other
+    # error) — any other non-zero code is mount.cifs's own exit status.
+    if proc.returncode in (126, 127):
+        return False, "PKEXEC_AUTH_FAILED"
     if proc.returncode != 0:
         return False, (proc.stderr or proc.stdout).strip()[:200]
     return True, ""
