@@ -42,7 +42,10 @@ def mount(host: str, share: str, user: str, password: str) -> tuple[bool, str]:
         return False, "MOUNT_CIFS_NOT_FOUND"
 
     mountpoint = mount_point_for(host, share)
-    mountpoint.mkdir(parents=True, exist_ok=True)
+    try:
+        mountpoint.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        return False, str(exc)
 
     if _IS_MACOS:
         return _mount_macos(host, share, user, password, mountpoint)

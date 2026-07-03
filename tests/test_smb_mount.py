@@ -92,6 +92,27 @@ def test_mount_linux_success(monkeypatch, tmp_path):
     # credentials file must be cleaned up regardless of outcome
     mock_unlink.assert_called_once_with("/tmp/nmlinux_smb_fake")
 
+def test_mount_permission_denied_creating_mountpoint_returns_error(monkeypatch, tmp_path):
+    import nmlinux.core.smb_mount as smb_mount
+    monkeypatch.setattr(smb_mount, "_IS_MACOS", False)
+
+    readonly_parent = tmp_path / "readonly"
+    readonly_parent.mkdir()
+    readonly_parent.chmod(0o555)  # no write permission for the owner either
+    try:
+        monkeypatch.setattr(
+            smb_mount, "mount_point_for",
+            lambda h, s: readonly_parent / "192.168.1.99_video",
+        )
+
+        with patch("shutil.which", return_value="/usr/sbin/mount.cifs"):
+            ok, err = mount("192.168.1.99", "video", "alice", "secret")
+    finally:
+        readonly_parent.chmod(0o755)  # allow tmp_path cleanup
+
+    assert ok is False
+    assert "Permission denied" in err
+
 def test_mount_linux_missing_cifs_utils(monkeypatch, tmp_path):
     import nmlinux.core.smb_mount as smb_mount
     monkeypatch.setattr(smb_mount, "_IS_MACOS", False)
