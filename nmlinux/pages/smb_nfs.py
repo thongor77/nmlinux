@@ -14,12 +14,15 @@ def _which(cmd: str) -> str | None:
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView, QFrame, QHBoxLayout, QHeaderView,
-    QLabel, QLineEdit, QPushButton, QTabWidget,
+    QLabel, QLineEdit, QMenu, QPushButton, QTabWidget,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
+from nmlinux.core.smb_mount import (
+    mount, unmount, is_mounted, mount_point_for, has_mount_cifs,
+)
 
 # ── Workers ───────────────────────────────────────────────────────────────────
 
@@ -147,12 +150,48 @@ class _NfsWorker(QThread):
             self.error.emit(str(exc))
 
 
+class _MountWorker(QThread):
+    finished_ok = Signal(bool, str)  # success, error_message
+
+    def __init__(self, action: str, **kwargs) -> None:
+        super().__init__()
+        self._action = action
+        self._kwargs = kwargs
+
+    def run(self) -> None:
+        if self._action == 'mount':
+            ok, err = mount(**self._kwargs)
+        else:
+            ok, err = unmount(**self._kwargs)
+        self.finished_ok.emit(ok, err)
+
+
+_AUTH_MARKERS = (
+    'NT_STATUS_LOGON_FAILURE', 'NT_STATUS_ACCESS_DENIED',
+    'NT_STATUS_ACCOUNT_DISABLED', 'session setup failed',
+    'Authentication error', 'authentication',
+)
+
+
+def _mount_menu_label(mounted: bool) -> str:
+    return tr("smb_mount_ctx_unmount") if mounted else tr("smb_mount_ctx_mount")
+
+
+def _mount_error_message(err: str) -> str:
+    if any(marker in err for marker in _AUTH_MARKERS):
+        return tr("smb_err_auth")
+    if not _IS_MACOS:
+        return tr("smb_mount_err_pkexec_fail")
+    return tr("smb_err_failed", msg=err[:120])
+
+
 # ── Page ──────────────────────────────────────────────────────────────────────
 
 class SmbNfsPage(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self._worker: QThread | None = None
+        self._mount_worker: QThread | None = None
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -219,6 +258,8 @@ class SmbNfsPage(QWidget):
         self._smb_table = self._make_table(
             [tr("smb_col_name"), tr("smb_col_type"), tr("smb_col_comment")]
         )
+        self._smb_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._smb_table.customContextMenuRequested.connect(self._on_smb_context_menu)
         v.addWidget(self._smb_table, 1)
         return w
 
@@ -327,3 +368,63 @@ class SmbNfsPage(QWidget):
         for row, (path, access) in enumerate(exports):
             t.setItem(row, 0, QTableWidgetItem(path))
             t.setItem(row, 1, QTableWidgetItem(access))
+
+    def _on_smb_context_menu(self, pos) -> None:
+        row = self._smb_table.rowAt(pos.y())
+        if row < 0:
+            return
+        name_item = self._smb_table.item(row, 0)
+        if not name_item:
+            return
+        share = name_item.text()
+        host = self._host_edit.text().strip()
+        if not host:
+            return
+
+        mounted = is_mounted(mount_point_for(host, share))
+        menu = QMenu(self)
+        action = menu.addAction(_mount_menu_label(mounted))
+        if mounted:
+            action.triggered.connect(
+                lambda: self._do_unmount(mount_point_for(host, share))
+            )
+        else:
+            action.triggered.connect(lambda: self._do_mount(host, share))
+        menu.exec(self._smb_table.viewport().mapToGlobal(pos))
+
+    def _do_mount(self, host: str, share: str) -> None:
+        if not _IS_MACOS and not has_mount_cifs():
+            self._status.setText(tr("smb_mount_err_no_cifs_utils"))
+            self._status.setStyleSheet("font-size: 12px; color: #f38ba8;")
+            return
+        user = self._user_edit.text().strip()
+        password = self._pass_edit.text()
+        self._mount_worker = _MountWorker(
+            'mount', host=host, share=share, user=user, password=password,
+        )
+        self._mount_worker.finished_ok.connect(
+            lambda ok, err: self._on_mount_done(ok, err, host, share)
+        )
+        self._mount_worker.start()
+
+    def _do_unmount(self, path) -> None:
+        self._mount_worker = _MountWorker('unmount', path=path)
+        self._mount_worker.finished_ok.connect(self._on_unmount_done)
+        self._mount_worker.start()
+
+    def _on_mount_done(self, ok: bool, err: str, host: str, share: str) -> None:
+        if ok:
+            mountpoint = mount_point_for(host, share)
+            self._status.setText(tr("smb_mount_status_mounted", path=str(mountpoint)))
+            self._status.setStyleSheet("font-size: 12px; color: gray;")
+            return
+        self._status.setText(_mount_error_message(err))
+        self._status.setStyleSheet("font-size: 12px; color: #f38ba8;")
+
+    def _on_unmount_done(self, ok: bool, err: str) -> None:
+        if ok:
+            self._status.setText(tr("smb_mount_status_unmounted"))
+            self._status.setStyleSheet("font-size: 12px; color: gray;")
+            return
+        self._status.setText(_mount_error_message(err))
+        self._status.setStyleSheet("font-size: 12px; color: #f38ba8;")
