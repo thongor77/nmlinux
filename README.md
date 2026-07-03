@@ -348,16 +348,18 @@ Works on any x86_64 Linux with glibc 2.17+ (Ubuntu 16.04+, Fedora 26+, Arch, Min
 **Quickest way — one-liner bootstrap.** Works on a completely bare Mac: installs Xcode Command Line Tools, Homebrew, all system tools, then NMLinux itself. Safe to re-run (updates instead of reinstalling):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/thongor77/nmlinux/main/packaging/bootstrap_macos.sh | bash
+curl -fsSL https://raw.githubusercontent.com/thongor77/nmlinux/main/packaging/bootstrap_macos.sh -o /tmp/bootstrap_macos.sh && bash /tmp/bootstrap_macos.sh
 ```
 
 Install system-wide (`/Applications`) instead of `~/Applications`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/thongor77/nmlinux/main/packaging/bootstrap_macos.sh | bash -s -- --system
+curl -fsSL https://raw.githubusercontent.com/thongor77/nmlinux/main/packaging/bootstrap_macos.sh -o /tmp/bootstrap_macos.sh && bash /tmp/bootstrap_macos.sh --system
 ```
 
-> No Apple Developer account or paid notarization involved — it's the same open-source `install_macos_app.sh` under the hood, just fetched and run for you. The script is plain, readable bash; inspect it before piping to `bash` if you'd rather review first: [`packaging/bootstrap_macos.sh`](packaging/bootstrap_macos.sh).
+> No Apple Developer account or paid notarization involved — it's the same open-source `install_macos_app.sh` under the hood, just fetched and run for you. The script is plain, readable bash; feel free to open `/tmp/bootstrap_macos.sh` and read it before running, or check it directly here: [`packaging/bootstrap_macos.sh`](packaging/bootstrap_macos.sh).
+>
+> Download-then-run (rather than piping straight into `bash`) is intentional: on a fresh Mac, the script triggers nested interactive steps (Xcode Command Line Tools installer, Homebrew's own installer asking for your `sudo` password) that read from the terminal — piping the script directly into `bash` can make those nested prompts interfere with the script's own input stream and stop it partway through. Running from a downloaded file avoids that entirely.
 
 **Manual install** — if you prefer to run each step yourself, or already have Homebrew:
 
