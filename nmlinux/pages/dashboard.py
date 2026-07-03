@@ -537,7 +537,7 @@ class DashboardPage(QWidget):
         self._mini_graph = _MiniPingGraph()
         _lat_row = QHBoxLayout()
         _lat_row.setContentsMargins(0, 0, 0, 0)
-        _lat_row.addWidget(QLabel("Latence :"))
+        _lat_row.addWidget(QLabel(tr("dash_lbl_latency") + " :"))
         _lat_row.addWidget(self._mini_graph, 1)
         _gw_vbox.addLayout(_lat_row)
         top = QHBoxLayout()
@@ -556,9 +556,9 @@ class DashboardPage(QWidget):
         vbox.addLayout(bot, 1)
 
         # TLS Watchlist summary card
-        self._box_tls, self._form_tls = _card("TLS Watchlist")
+        self._box_tls, self._form_tls = _card(tr("dash_card_tls"))
         self._lbl_tls = _val("—")
-        self._form_tls.addRow("Statut :", self._lbl_tls)
+        self._form_tls.addRow(tr("dash_lbl_status") + " :", self._lbl_tls)
         vbox.addWidget(self._box_tls)
 
         scroll.setWidget(container)
