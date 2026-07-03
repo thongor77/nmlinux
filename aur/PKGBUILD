@@ -26,6 +26,7 @@ optdepends=(
     'nm-connection-editor: Edit connections from Connection Manager'
     'samba: SMB/NFS browser — SMB share listing (smbclient)'
     'nfs-utils: SMB/NFS browser — NFS export listing (showmount)'
+    'cifs-utils: SMB/NFS browser — mount SMB shares from the right-click menu'
     'openssl: TLS Inspector certificate chain'
     'avahi: Topology — mDNS device type detection (printers, phones, NAS…)'
 )

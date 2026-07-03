@@ -25,6 +25,7 @@ pkgbase = nmlinux
 	optdepends = nm-connection-editor: Edit connections from Connection Manager
 	optdepends = samba: SMB/NFS browser — SMB share listing (smbclient)
 	optdepends = nfs-utils: SMB/NFS browser — NFS export listing (showmount)
+	optdepends = cifs-utils: SMB/NFS browser — mount SMB shares from the right-click menu
 	optdepends = openssl: TLS Inspector certificate chain
 	optdepends = avahi: Topology — mDNS device type detection (printers, phones, NAS…)
 	source = https://github.com/thongor77/nmlinux/archive/refs/tags/v1.7.2.tar.gz

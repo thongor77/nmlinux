@@ -295,6 +295,7 @@ brew install samba          # SMB scan with credentials (smbclient)
 | `vncviewer` | VNC | Arch: `tigervnc` · Debian: `tigervnc-viewer` | optional — falls back to macOS Screen Sharing (`open vnc://`, built-in) |
 | `nm-connection-editor` | Edit connections from Connection Manager | Arch: `nm-connection-editor` | — (System Preferences opens instead) |
 | `traceroute` | Traceroute alternative (tracepath used by default) | Arch: `traceroute` | built-in |
+| `mount.cifs` (`cifs-utils`) | Mount SMB shares from the right-click menu | Arch/Debian: `cifs-utils` | built-in (`mount_smbfs`) |
 
 ### Python
 
