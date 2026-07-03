@@ -49,6 +49,12 @@ NMLinux is a single, unified GUI that brings together 29 network modules in one 
 
 ## Changelog
 
+### v1.7.2 — 2026-07-03
+
+- **macOS install — fixed two bootstrap bugs found on a bare Mac**: `bootstrap_macos.sh` no longer forces `NONINTERACTIVE=1` on the Homebrew installer, which aborted immediately on any fresh admin account instead of prompting for the sudo password; the documented one-liner now downloads the script first instead of piping it directly into `bash`, since nested interactive steps (Xcode CLT installer, Homebrew's own sudo prompt) could interfere with the outer script's own input stream when piped
+- **Universal right-click menu — SMB added**: `SmbNfsPage` was the only target page missing from the inter-module right-click system shipped in v1.7.0; right-clicking a host and choosing SMB now prefills the host field and launches the scan immediately, bold in the menu when port 445 is detected open
+- **i18n — remaining Dashboard strings translated**: the gateway latency label, TLS Watchlist card title and its status row were still hardcoded French; now translated across all 8 interface languages
+
 ### v1.7.1 — 2026-07-02
 
 - **macOS 26 (Tahoe)** — Wi-Fi SSID fixes: switched from `system_profiler` (returns `<redacted>` without Location Services) to **CoreWLAN** as primary data source; app now requests Location Services permission at first launch; Wi-Fi page shows all networks with real names once granted
