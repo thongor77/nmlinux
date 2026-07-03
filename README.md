@@ -277,10 +277,9 @@ brew install nmap mtr curl
 brew install whois          # WHOIS page
 brew install net-snmp       # SNMP page (snmpwalk / snmpget)
 brew install samba          # SMB scan with credentials (smbclient)
-brew install ieee-data      # OUI vendor lookup in IP Scanner
 ```
 
-> macOS ships `ping`, `dig`, `traceroute`, `netstat`, `ifconfig`, `smbutil` and `route` natively. `networksetup` and `scutil` are built-in macOS tools, no install needed.
+> macOS ships `ping`, `dig`, `traceroute`, `netstat`, `ifconfig`, `smbutil` and `route` natively. `networksetup` and `scutil` are built-in macOS tools, no install needed. OUI vendor lookup in IP Scanner needs no install either — the Wireshark `manuf` database is downloaded automatically in the background on first use and cached locally.
 
 ### Optional tools
 
