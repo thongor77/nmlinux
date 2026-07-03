@@ -49,6 +49,11 @@ NMLinux is a single, unified GUI that brings together 29 network modules in one 
 
 ## Changelog
 
+### v1.7.3 — 2026-07-03
+
+- **SMB — mount shares from the right-click menu**: right-click a share in the SMB tab and choose Mount/Unmount to mount it at a stable local path (`~/mnt/<host>_<share>`), usable from the terminal and any other app — not a transient browse view. Session-only (no fstab/systemd persistence), credentials reused from the existing user/password fields. Linux uses `pkexec mount -t cifs` with a restricted-permission credentials file (never exposed via `ps`); macOS uses `mount_smbfs` directly. Automatically retries with an older SMB dialect (`vers=2.0`) when a server rejects the default negotiation (common with older NAS units) — both attempts happen under a single authentication prompt via a dedicated helper process
+- **New optional dependency**: `cifs-utils` (Linux) for SMB mounting; built into macOS
+
 ### v1.7.2 — 2026-07-03
 
 - **macOS install — fixed two bootstrap bugs found on a bare Mac**: `bootstrap_macos.sh` no longer forces `NONINTERACTIVE=1` on the Homebrew installer, which aborted immediately on any fresh admin account instead of prompting for the sudo password; the documented one-liner now downloads the script first instead of piping it directly into `bash`, since nested interactive steps (Xcode CLT installer, Homebrew's own sudo prompt) could interfere with the outer script's own input stream when piped
