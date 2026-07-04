@@ -11,7 +11,8 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton, QComboBox,
     QTableWidget, QTableWidgetItem, QHeaderView,
-    QAbstractItemView,
+    QAbstractItemView, QFrame, QSplitter, QListWidget, QListWidgetItem,
+    QFormLayout, QMessageBox,
 )
 from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt, QThread, Signal
@@ -136,7 +137,7 @@ class _Stats:
     def rtt_max(self)  -> str: return self._fmt(max(self.rtts)) if self.rtts else "—"
 
 
-_C_DOT, _C_HOST, _C_SENT, _C_LOSS, _C_LAST, _C_MIN, _C_AVG, _C_MAX, _C_DEL = range(9)
+_C_DOT, _C_HOST, _C_SENT, _C_LOSS, _C_LAST, _C_MIN, _C_AVG, _C_MAX, _C_SAVE, _C_DEL = range(10)
 
 _GREY  = QColor("#a6adc8")
 
@@ -149,14 +150,89 @@ class PingPage(QWidget):
         self._workers: dict[str, PingWorker] = {}
         self._stats:   dict[str, _Stats]     = {}
         self._rows:    dict[str, int]         = {}
+        self._target_store = _PingTargetStore()
+        self._dir_editing: int | None = None
         self._build_ui()
+        self._refresh_directory_list()
 
     def set_target(self, host: str) -> None:
         self._input.setText(host)
         self._on_add()
 
     def _build_ui(self) -> None:
-        layout = QVBoxLayout(self)
+        root = QHBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setChildrenCollapsible(False)
+        splitter.addWidget(self._build_directory_panel())
+        splitter.addWidget(self._build_monitor_panel())
+        splitter.setSizes([220, 700])
+        root.addWidget(splitter)
+
+    def _build_directory_panel(self) -> QWidget:
+        panel = QFrame()
+        panel.setFrameShape(QFrame.Shape.NoFrame)
+        layout = QVBoxLayout(panel)
+        layout.setContentsMargins(8, 8, 4, 8)
+        layout.setSpacing(4)
+        layout.addWidget(QLabel(tr("ping_dir_title")))
+
+        self._dir_list = QListWidget()
+        self._dir_list.setFrameShape(QFrame.Shape.NoFrame)
+        self._dir_list.currentRowChanged.connect(self._on_directory_select)
+        layout.addWidget(self._dir_list, 1)
+
+        btns = QHBoxLayout()
+        self._dir_btn_add    = QPushButton(tr("ping_dir_add_btn"))
+        self._dir_btn_edit   = QPushButton(tr("ping_dir_edit_btn"))
+        self._dir_btn_delete = QPushButton(tr("ping_dir_delete_btn"))
+        self._dir_btn_add.clicked.connect(self._on_directory_new)
+        self._dir_btn_edit.clicked.connect(self._on_directory_edit)
+        self._dir_btn_delete.clicked.connect(self._on_directory_delete)
+        for b in (self._dir_btn_add, self._dir_btn_edit, self._dir_btn_delete):
+            btns.addWidget(b)
+        layout.addLayout(btns)
+
+        self._dir_form_title = QLabel()
+        self._dir_form_title.setStyleSheet("font-weight: bold;")
+        layout.addWidget(self._dir_form_title)
+
+        form = QFormLayout()
+        form.setSpacing(4)
+        self._dir_f_name = QLineEdit()
+        self._dir_f_name.setPlaceholderText(tr("ping_dir_ph_name"))
+        self._dir_f_host = QLineEdit()
+        self._dir_f_interval = QComboBox()
+        for label, val in [("1 s", 1), ("2 s", 2), ("5 s", 5), ("10 s", 10), ("30 s", 30)]:
+            self._dir_f_interval.addItem(label, val)
+        self._dir_f_interval.setCurrentIndex(1)
+        form.addRow(tr("ping_dir_lbl_name"),     self._dir_f_name)
+        form.addRow(tr("ping_dir_lbl_host"),     self._dir_f_host)
+        form.addRow(tr("ping_dir_lbl_interval"), self._dir_f_interval)
+        layout.addLayout(form)
+
+        act = QHBoxLayout()
+        self._dir_btn_start  = QPushButton(tr("ping_dir_start_btn"))
+        self._dir_btn_save   = QPushButton(tr("ping_dir_save_btn"))
+        self._dir_btn_cancel = QPushButton(tr("ping_dir_cancel_btn"))
+        self._dir_btn_start.setStyleSheet("font-weight: bold;")
+        self._dir_btn_start.clicked.connect(self._on_directory_start)
+        self._dir_btn_save.clicked.connect(self._on_directory_save)
+        self._dir_btn_cancel.clicked.connect(self._on_directory_cancel)
+        act.addWidget(self._dir_btn_start)
+        act.addStretch()
+        act.addWidget(self._dir_btn_cancel)
+        act.addWidget(self._dir_btn_save)
+        layout.addLayout(act)
+
+        self._set_directory_form_mode(view=False)
+        return panel
+
+    def _build_monitor_panel(self) -> QWidget:
+        panel = QWidget()
+        layout = QVBoxLayout(panel)
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(16)
 
@@ -191,15 +267,16 @@ class PingPage(QWidget):
         bar.addWidget(btn_clear)
         layout.addLayout(bar)
 
-        self._table = QTableWidget(0, 9)
+        self._table = QTableWidget(0, 10)
         self._table.setHorizontalHeaderLabels([
             "", tr("ping_col_host"), tr("ping_col_sent"), tr("ping_col_loss"),
-            tr("ping_col_last"), tr("common_min"), tr("ping_col_avg"), tr("common_max"), "",
+            tr("ping_col_last"), tr("common_min"), tr("ping_col_avg"), tr("common_max"), "", "",
         ])
         hdr = self._table.horizontalHeader()
         hdr.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         hdr.setSectionResizeMode(_C_HOST, QHeaderView.ResizeMode.Stretch)
         self._table.setColumnWidth(_C_DOT, 28)
+        self._table.setColumnWidth(_C_SAVE, 28)
         self._table.setColumnWidth(_C_DEL, 36)
 
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -210,6 +287,7 @@ class PingPage(QWidget):
 
         self._table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._table.customContextMenuRequested.connect(self._on_right_click)
+        return panel
 
     def _update_cli(self) -> None:
         bar = get_cli_bar()
@@ -218,6 +296,113 @@ class PingPage(QWidget):
         host = self._input.text().strip()
         interval = self._interval_cb.currentData()
         bar.set_cmd(f'ping -i {interval} {host}' if host else '')
+
+    # ── Directory ────────────────────────────────────────────────────────────
+
+    def _refresh_directory_list(self) -> None:
+        current = self._dir_list.currentRow()
+        self._dir_list.clear()
+        for t in self._target_store.all():
+            label = f"{t.name}  —  {t.host}" if t.name else t.host
+            self._dir_list.addItem(QListWidgetItem(label))
+        if 0 <= current < self._dir_list.count():
+            self._dir_list.setCurrentRow(current)
+
+    def _on_directory_select(self, row: int) -> None:
+        if row < 0:
+            return
+        self._dir_editing = row
+        self._load_directory_form(self._target_store.all()[row])
+        self._set_directory_form_mode(view=True)
+
+    def _on_directory_new(self) -> None:
+        self._dir_editing = None
+        self._dir_list.clearSelection()
+        self._load_directory_form(PingTarget())
+        self._set_directory_form_mode(view=False)
+        self._dir_form_title.setText(tr("ping_dir_form_title_new"))
+        self._dir_f_name.setFocus()
+
+    def _on_directory_edit(self) -> None:
+        if self._dir_editing is None:
+            return
+        self._set_directory_form_mode(view=False)
+        self._dir_form_title.setText(tr("ping_dir_form_title_edit"))
+
+    def _on_directory_delete(self) -> None:
+        row = self._dir_list.currentRow()
+        if row < 0:
+            return
+        t = self._target_store.all()[row]
+        name = t.name or t.host
+        ans = QMessageBox.question(
+            self, tr("ping_dir_dlg_del_title"), tr("ping_dir_dlg_del_msg", name=name),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if ans == QMessageBox.StandardButton.Yes:
+            self._target_store.remove(row)
+            self._dir_editing = None
+            self._refresh_directory_list()
+            self._clear_directory_form()
+
+    def _on_directory_save(self) -> None:
+        host = self._dir_f_host.text().strip()
+        if not host:
+            return
+        t = PingTarget(
+            name     = self._dir_f_name.text().strip(),
+            host     = host,
+            interval = self._dir_f_interval.currentData(),
+        )
+        if self._dir_editing is None:
+            self._target_store.add(t)
+            self._dir_editing = len(self._target_store.all()) - 1
+        else:
+            self._target_store.update(self._dir_editing, t)
+        self._refresh_directory_list()
+        self._dir_list.setCurrentRow(self._dir_editing)
+        self._set_directory_form_mode(view=True)
+
+    def _on_directory_cancel(self) -> None:
+        if self._dir_editing is not None:
+            self._load_directory_form(self._target_store.all()[self._dir_editing])
+            self._set_directory_form_mode(view=True)
+        else:
+            self._clear_directory_form()
+
+    def _on_directory_start(self) -> None:
+        if self._dir_editing is None:
+            return
+        t = self._target_store.all()[self._dir_editing]
+        if t.host in self._workers:
+            return
+        self._add_host(t.host, t.interval)
+        self._set_directory_form_mode(view=True)
+
+    def _load_directory_form(self, t: PingTarget) -> None:
+        self._dir_f_name.setText(t.name)
+        self._dir_f_host.setText(t.host)
+        idx = self._dir_f_interval.findData(t.interval)
+        self._dir_f_interval.setCurrentIndex(idx if idx >= 0 else 1)
+
+    def _clear_directory_form(self) -> None:
+        self._dir_editing = None
+        self._dir_f_name.clear()
+        self._dir_f_host.clear()
+        self._dir_f_interval.setCurrentIndex(1)
+        self._dir_form_title.setText("")
+
+    def _set_directory_form_mode(self, *, view: bool) -> None:
+        self._dir_f_name.setReadOnly(view)
+        self._dir_f_host.setReadOnly(view)
+        self._dir_f_interval.setEnabled(not view)
+        self._dir_btn_start.setVisible(view)
+        self._dir_btn_save.setVisible(not view)
+        self._dir_btn_cancel.setVisible(not view)
+        if view and self._dir_editing is not None:
+            t = self._target_store.all()[self._dir_editing]
+            self._dir_form_title.setText(t.name or t.host)
+            self._dir_btn_start.setEnabled(t.host not in self._workers)
 
     def _on_add(self) -> None:
         host = self._input.text().strip()
