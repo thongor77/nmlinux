@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import time as _time
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
@@ -18,6 +20,61 @@ from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 from nmlinux.core.theme import color_ok, color_err
 from nmlinux.core.host_actions import HostActionMenu
+
+
+_TARGET_STORE_PATH = Path.home() / '.local' / 'share' / 'nmlinux' / 'ping_targets.json'
+
+
+# ── Saved targets directory (data model) ──────────────────────────────────
+
+@dataclass
+class PingTarget:
+    name:     str = ''
+    host:     str = ''
+    interval: int = 2
+
+
+class _PingTargetStore:
+    def __init__(self, path: Path | None = None) -> None:
+        self._path = path or _TARGET_STORE_PATH
+        self._targets: list[PingTarget] = []
+        self._load()
+
+    def _load(self) -> None:
+        if self._path.exists():
+            try:
+                raw = json.loads(self._path.read_text())
+                fields = PingTarget.__dataclass_fields__
+                self._targets = [
+                    PingTarget(**{k: v for k, v in d.items() if k in fields})
+                    for d in raw
+                ]
+            except Exception:
+                self._targets = []
+
+    def _save(self) -> None:
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._path.write_text(
+            json.dumps([asdict(t) for t in self._targets], indent=2, ensure_ascii=False)
+        )
+
+    def all(self) -> list[PingTarget]:
+        return list(self._targets)
+
+    def add(self, target: PingTarget) -> None:
+        self._targets.append(target)
+        self._save()
+
+    def update(self, idx: int, target: PingTarget) -> None:
+        self._targets[idx] = target
+        self._save()
+
+    def remove(self, idx: int) -> None:
+        del self._targets[idx]
+        self._save()
+
+    def has_host(self, host: str) -> bool:
+        return any(t.host == host for t in self._targets)
 
 
 class PingWorker(QThread):
