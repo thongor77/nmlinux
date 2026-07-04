@@ -421,10 +421,18 @@ def _ping(ip: str, timeout: int = 1) -> bool:
 # Common ports for hosts that block ICMP (Windows Firewall default)
 _ALIVE_PORTS = (22, 80, 443, 135, 445, 3389, 5985)
 
-def _is_alive(ip: str, timeout: int = 1) -> bool:
-    if _ping(ip, timeout=timeout):
-        return True
+def _is_alive(ip: str, timeout: int = 1, ping_attempts: int = 2) -> bool:
+    # A single 1s ping can drop under the scanner's own concurrent load, or
+    # miss a Wi-Fi host that's asleep between beacons — retry before giving up.
+    for _ in range(ping_attempts):
+        if _ping(ip, timeout=timeout):
+            return True
     return any(_port_open(ip, p, timeout=1.0) for p in _ALIVE_PORTS)
+
+
+def missing_ips(attempted: list[str], found: set[str]) -> list[str]:
+    """IPs from the last scan that returned no data, in original order."""
+    return [ip for ip in attempted if ip not in found]
 
 
 # ── Per-host orchestration ────────────────────────────────────────────────────

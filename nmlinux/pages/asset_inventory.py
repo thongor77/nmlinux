@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import ipaddress
 import json
 
 from PySide6.QtWidgets import (
@@ -14,7 +15,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
 
 from nmlinux.core.i18n import tr
-from nmlinux.core.asset_collectors import AssetScanWorker, _HAS_WINRM, _CMD_SSHPASS
+from nmlinux.core.asset_collectors import AssetScanWorker, _HAS_WINRM, _CMD_SSHPASS, missing_ips
 
 _COL_IP, _COL_HOST, _COL_PLATFORM, _COL_OS, _COL_CPU, _COL_RAM, _COL_DISK, _COL_UPTIME, _COL_METHOD = range(9)
 
@@ -115,6 +116,8 @@ class AssetInventoryPage(QWidget):
         self._worker: AssetScanWorker | None = None
         self._ssh_rows: list[_SshCredRow]     = []
         self._winrm_rows: list[_WinRmCredRow] = []
+        self._attempted_ips: list[str] = []
+        self._found_ips: set[str]      = set()
         self._build_ui()
 
     # ── Layout ────────────────────────────────────────────────────────────────
@@ -138,10 +141,14 @@ class AssetInventoryPage(QWidget):
         self._btn_stop.setEnabled(False)
         self._btn_clear = QPushButton(tr("inv_clear_btn"))
         self._btn_clear.clicked.connect(self._clear_results)
+        self._btn_refresh_empty = QPushButton()
+        self._btn_refresh_empty.setVisible(False)
+        self._btn_refresh_empty.clicked.connect(self._on_refresh_empty)
         bar.addWidget(self._cidr, 1)
         bar.addWidget(self._btn_scan)
         bar.addWidget(self._btn_stop)
         bar.addWidget(self._btn_clear)
+        bar.addWidget(self._btn_refresh_empty)
         root.addLayout(bar)
 
         # ── Credentials ───────────────────────────────────────────────────────
@@ -292,6 +299,9 @@ class AssetInventoryPage(QWidget):
     def _clear_results(self) -> None:
         self._table.setRowCount(0)
         self._lbl_status.setText("")
+        self._attempted_ips = []
+        self._found_ips = set()
+        self._btn_refresh_empty.setVisible(False)
         for btn in (self._btn_json, self._btn_csv, self._btn_md):
             btn.setVisible(False)
 
@@ -329,26 +339,34 @@ class AssetInventoryPage(QWidget):
         self._cidr.setText(
             ', '.join(ips[:3]) + (f' … (+{len(ips) - 3})' if len(ips) > 3 else '')
         )
-        ssh_creds   = self._get_ssh_creds()
-        winrm_creds = self._get_winrm_creds()
-        snmp_creds  = self._get_snmp_creds()
-        self._clear_results()
+        self._start_scan(ips, clear=True)
+
+    # ── Scan ──────────────────────────────────────────────────────────────────
+
+    def _start_scan(self, ips: list[str], clear: bool) -> None:
+        if self._worker and self._worker.isRunning():
+            return
+        if clear:
+            self._clear_results()
+            self._attempted_ips = ips
         self._btn_scan.setEnabled(False)
         self._btn_stop.setEnabled(True)
+        self._btn_refresh_empty.setVisible(False)
         self._progress.setValue(0)
         self._progress.setVisible(True)
         self._lbl_status.setText(tr("inv_scanning"))
-        self._worker = AssetScanWorker(
-            '', ssh_creds, winrm_creds, snmp_creds,
-            hosts=ips,
-        )
+
+        ssh_creds   = self._get_ssh_creds()
+        winrm_creds = self._get_winrm_creds()
+        snmp_creds  = self._get_snmp_creds()
+
+        self._worker = AssetScanWorker('', ssh_creds, winrm_creds, snmp_creds, hosts=ips)
         del ssh_creds, winrm_creds, snmp_creds
+
         self._worker.host_found.connect(self._on_host)
         self._worker.progress.connect(self._on_progress)
         self._worker.finished_.connect(self._on_finished)
         self._worker.start()
-
-    # ── Scan ──────────────────────────────────────────────────────────────────
 
     def _on_scan(self) -> None:
         cidr = self._cidr.text().strip()
@@ -356,25 +374,17 @@ class AssetInventoryPage(QWidget):
             return
         if self._worker and self._worker.isRunning():
             return
+        try:
+            ips = [str(h) for h in ipaddress.ip_network(cidr, strict=False).hosts()]
+        except ValueError:
+            ips = [cidr]
+        self._start_scan(ips, clear=True)
 
-        self._clear_results()
-        self._btn_scan.setEnabled(False)
-        self._btn_stop.setEnabled(True)
-        self._progress.setValue(0)
-        self._progress.setVisible(True)
-        self._lbl_status.setText(tr("inv_scanning"))
-
-        ssh_creds   = self._get_ssh_creds()
-        winrm_creds = self._get_winrm_creds()
-        snmp_creds  = self._get_snmp_creds()
-
-        self._worker = AssetScanWorker(cidr, ssh_creds, winrm_creds, snmp_creds)
-        del ssh_creds, winrm_creds, snmp_creds
-
-        self._worker.host_found.connect(self._on_host)
-        self._worker.progress.connect(self._on_progress)
-        self._worker.finished_.connect(self._on_finished)
-        self._worker.start()
+    def _on_refresh_empty(self) -> None:
+        missing = missing_ips(self._attempted_ips, self._found_ips)
+        if not missing:
+            return
+        self._start_scan(missing, clear=False)
 
     def _on_stop(self) -> None:
         if self._worker:
@@ -386,6 +396,10 @@ class AssetInventoryPage(QWidget):
         self._lbl_status.setText(f"{done}/{total}")
 
     def _on_host(self, asset: dict) -> None:
+        ip = asset.get('ip', '')
+        if ip:
+            self._found_ips.add(ip)
+
         self._table.setSortingEnabled(False)
         row = self._table.rowCount()
         self._table.insertRow(row)
@@ -418,6 +432,13 @@ class AssetInventoryPage(QWidget):
                 btn.setVisible(True)
         else:
             self._lbl_status.setText(tr("inv_no_results"))
+
+        missing = missing_ips(self._attempted_ips, self._found_ips)
+        if missing:
+            self._btn_refresh_empty.setText(f"↻ {tr('inv_refresh_empty_btn')} ({len(missing)})")
+            self._btn_refresh_empty.setVisible(True)
+        else:
+            self._btn_refresh_empty.setVisible(False)
 
     # ── Export (manual only) ──────────────────────────────────────────────────
 
