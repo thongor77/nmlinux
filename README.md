@@ -1,6 +1,6 @@
-# NMLinux · v1.7.1
+# NMLinux · v1.7.3
 
-[![Version](https://img.shields.io/badge/version-1.7.1-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.7.3-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
