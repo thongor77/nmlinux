@@ -1,6 +1,6 @@
-# NMLinux · v1.7.3
+# NMLinux · v1.7.4
 
-[![Version](https://img.shields.io/badge/version-1.7.3-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.7.4-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -48,6 +48,11 @@ NMLinux is a single, unified GUI that brings together 29 network modules in one 
 ---
 
 ## Changelog
+
+### v1.7.4 — 2026-07-04
+
+- **Asset Inventory — fixed inconsistent scan results**: the liveness check sent a single 1-second-timeout ping with no retry, which could drop a real device under the scanner's own concurrent load (up to 40 hosts probed at once) or when a Wi-Fi host was briefly asleep between beacons — confirmed live against a real subnet that returned different device counts across repeated runs of the same range. The check now retries the ping before falling back to the TCP port probe
+- **Asset Inventory — new "Refresh empty" button**: after a scan, re-scan only the IPs that returned no data instead of the whole range again; newly found hosts are merged into the existing results
 
 ### v1.7.3 — 2026-07-03
 
