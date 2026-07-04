@@ -430,6 +430,15 @@ class PingPage(QWidget):
             item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self._table.setItem(row, col, item)
 
+        btn_save = QPushButton("★")
+        btn_save.setFixedWidth(28)
+        btn_save.setToolTip(tr("ping_dir_save_tooltip"))
+        btn_save.setEnabled(not self._target_store.has_host(host))
+        btn_save.clicked.connect(
+            lambda _checked=False, h=host, i=interval: self._on_save_to_directory(h, i)
+        )
+        self._table.setCellWidget(row, _C_SAVE, btn_save)
+
         btn = QPushButton("✕")
         btn.setFixedWidth(28)
         btn.clicked.connect(lambda _checked=False, h=host: self._on_remove(h))
@@ -439,6 +448,17 @@ class PingPage(QWidget):
         worker.pinged.connect(self._on_ping_result)
         self._workers[host] = worker
         worker.start()
+
+    def _on_save_to_directory(self, host: str, interval: int) -> None:
+        if self._target_store.has_host(host):
+            return
+        self._target_store.add(PingTarget(name='', host=host, interval=interval))
+        self._refresh_directory_list()
+        row = self._rows.get(host)
+        if row is not None:
+            btn = self._table.cellWidget(row, _C_SAVE)
+            if btn:
+                btn.setEnabled(False)
 
     def _on_remove(self, host: str) -> None:
         w = self._workers.pop(host, None)
