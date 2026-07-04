@@ -1,6 +1,6 @@
-# NMLinux · v1.7.4
+# NMLinux · v1.7.5
 
-[![Version](https://img.shields.io/badge/version-1.7.4-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.7.5-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -48,6 +48,11 @@ NMLinux is a single, unified GUI that brings together 29 network modules in one 
 ---
 
 ## Changelog
+
+### v1.7.5 — 2026-07-04
+
+- **Ping Monitor — saved targets directory**: a new left-hand panel lets you save ping targets (name, host, interval) to a persistent list, so hosts being monitored survive an app restart instead of having to be retyped. A ★ button on each actively-monitored row saves that host to the directory at any point during the session — no need to have planned ahead before the app closes unexpectedly
+- **Ping Monitor — "Start monitoring"**: select a saved target and start monitoring it with one click, reusing its saved interval
 
 ### v1.7.4 — 2026-07-04
 
