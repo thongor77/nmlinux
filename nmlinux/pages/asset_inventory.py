@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QPushButton, QGroupBox, QFormLayout, QComboBox,
     QTableWidget, QTableWidgetItem, QHeaderView,
     QAbstractItemView, QProgressBar, QFileDialog,
-    QScrollArea,
+    QScrollArea, QMenu,
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
@@ -245,6 +245,8 @@ class AssetInventoryPage(QWidget):
         self._table.setAlternatingRowColors(True)
         self._table.setSortingEnabled(True)
         root.addWidget(self._table, 1)
+        self._table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._table.customContextMenuRequested.connect(self._on_table_context_menu)
 
         # ── Export ────────────────────────────────────────────────────────────
         export_row = QHBoxLayout()
@@ -401,6 +403,31 @@ class AssetInventoryPage(QWidget):
             if item and item.text() == ip:
                 return r
         return -1
+
+    def _selected_ips(self) -> list[str]:
+        ips: list[str] = []
+        for idx in self._table.selectionModel().selectedRows():
+            item = self._table.item(idx.row(), _COL_IP)
+            if item and item.text() and item.text() not in ips:
+                ips.append(item.text())
+        return ips
+
+    def _on_table_context_menu(self, pos) -> None:
+        row = self._table.rowAt(pos.y())
+        if row < 0:
+            return
+        selected_rows = {idx.row() for idx in self._table.selectionModel().selectedRows()}
+        if row not in selected_rows:
+            self._table.selectRow(row)
+
+        ips = self._selected_ips()
+        if not ips:
+            return
+
+        menu = QMenu(self)
+        action = menu.addAction(tr("inv_ctx_refresh"))
+        action.triggered.connect(lambda: self._start_scan(ips, clear=False))
+        menu.exec(self._table.viewport().mapToGlobal(pos))
 
     def _on_host(self, asset: dict) -> None:
         ip = asset.get('ip', '')
