@@ -395,14 +395,23 @@ class AssetInventoryPage(QWidget):
         self._progress.setValue(done)
         self._lbl_status.setText(f"{done}/{total}")
 
+    def _find_row_by_ip(self, ip: str) -> int:
+        for r in range(self._table.rowCount()):
+            item = self._table.item(r, _COL_IP)
+            if item and item.text() == ip:
+                return r
+        return -1
+
     def _on_host(self, asset: dict) -> None:
         ip = asset.get('ip', '')
         if ip:
             self._found_ips.add(ip)
 
         self._table.setSortingEnabled(False)
-        row = self._table.rowCount()
-        self._table.insertRow(row)
+        row = self._find_row_by_ip(ip) if ip else -1
+        if row == -1:
+            row = self._table.rowCount()
+            self._table.insertRow(row)
 
         method = asset.get('method', '?')
         error  = asset.get('error', '')
