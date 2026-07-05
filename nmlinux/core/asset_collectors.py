@@ -168,12 +168,16 @@ def _do_collect_ssh(ip: str, creds: dict, timeout: int) -> dict:
 
 def _collect_ssh(ip: str, creds_list: list[dict], timeout: int) -> dict:
     """Try each credential set in order; return data from the first that connects."""
+    has_creds = False
     for creds in creds_list:
         if not creds.get('user'):
             continue
+        has_creds = True
         if _ssh_connects(ip, creds, timeout):
             return _do_collect_ssh(ip, creds, timeout)
-    return {}
+    if not has_creds:
+        return {}
+    return {'method': 'SSH', 'error': 'SSH auth failed'}
 
 
 # ── WinRM collection ──────────────────────────────────────────────────────────

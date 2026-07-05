@@ -52,3 +52,28 @@ def test_missing_ips_preserves_attempted_order():
     attempted = ['10.0.0.3', '10.0.0.1', '10.0.0.2']
     found = {'10.0.0.1'}
     assert ac.missing_ips(attempted, found) == ['10.0.0.3', '10.0.0.2']
+
+
+# ── _collect_ssh auth-failure feedback ──────────────────────────────────────
+
+def test_collect_ssh_returns_error_when_creds_rejected(monkeypatch):
+    monkeypatch.setattr(ac, '_ssh_connects', lambda ip, creds, timeout: False)
+    creds = [{'user': 'admin', 'password': 'wrong'}]
+    assert ac._collect_ssh('10.0.0.5', creds, 5) == {
+        'method': 'SSH', 'error': 'SSH auth failed',
+    }
+
+
+def test_collect_ssh_returns_empty_when_no_creds_configured(monkeypatch):
+    monkeypatch.setattr(ac, '_ssh_connects', lambda ip, creds, timeout: False)
+    assert ac._collect_ssh('10.0.0.5', [{}], 5) == {}
+
+
+def test_collect_ssh_succeeds_returns_collected_data(monkeypatch):
+    monkeypatch.setattr(ac, '_ssh_connects', lambda ip, creds, timeout: True)
+    monkeypatch.setattr(
+        ac, '_do_collect_ssh',
+        lambda ip, creds, timeout: {'method': 'SSH', 'os': 'Ubuntu'},
+    )
+    creds = [{'user': 'admin', 'password': 'right'}]
+    assert ac._collect_ssh('10.0.0.5', creds, 5) == {'method': 'SSH', 'os': 'Ubuntu'}
