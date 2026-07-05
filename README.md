@@ -1,6 +1,6 @@
-# NMLinux · v1.7.5
+# NMLinux · v1.7.6
 
-[![Version](https://img.shields.io/badge/version-1.7.5-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.7.6-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -48,6 +48,11 @@ NMLinux is a single, unified GUI that brings together 29 network modules in one 
 ---
 
 ## Changelog
+
+### v1.7.6 — 2026-07-05
+
+- **Asset Inventory — right-click refresh**: right-click one or more already-scanned rows (multi-select supported) and choose "Refresh selected" to rescan just those hosts in place, instead of rerunning a full network scan
+- **Asset Inventory — SSH auth-failure feedback**: a rejected SSH login now shows "SSH auth failed" instead of failing silently, without losing the Nmap-detected hostname/OS baseline — confirmed against a real Synology NAS where DSM's Auto Block rejected a correct password after other configured credential sets were tried first
 
 ### v1.7.5 — 2026-07-04
 
