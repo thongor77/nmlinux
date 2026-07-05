@@ -35,6 +35,26 @@ def test_find_row_by_ip_returns_minus_one_when_absent(qapp):
     assert page._find_row_by_ip('10.0.0.9') == -1
 
 
+def test_on_host_ssh_error_keeps_method_and_appends_to_os(qapp):
+    page = AssetInventoryPage()
+    page._on_host({
+        'ip': '10.0.0.99', 'hostname': 'nas', 'platform': 'Linux',
+        'os': '', 'method': 'Nmap', 'ssh_error': 'SSH auth failed',
+    })
+    assert page._table.item(0, _COL_METHOD).text() == 'Nmap'
+    assert page._table.item(0, _COL_OS).text() == 'SSH auth failed'
+
+
+def test_on_host_ssh_error_appended_alongside_existing_os_text(qapp):
+    page = AssetInventoryPage()
+    page._on_host({
+        'ip': '10.0.0.99', 'hostname': 'nas', 'platform': 'Linux',
+        'os': 'Synology DSM', 'method': 'Nmap', 'ssh_error': 'SSH auth failed',
+    })
+    assert page._table.item(0, _COL_METHOD).text() == 'Nmap'
+    assert page._table.item(0, _COL_OS).text() == 'Synology DSM (SSH auth failed)'
+
+
 def test_table_context_menu_policy_set(qapp):
     page = AssetInventoryPage()
     assert page._table.contextMenuPolicy() == Qt.ContextMenuPolicy.CustomContextMenu

@@ -59,9 +59,7 @@ def test_missing_ips_preserves_attempted_order():
 def test_collect_ssh_returns_error_when_creds_rejected(monkeypatch):
     monkeypatch.setattr(ac, '_ssh_connects', lambda ip, creds, timeout: False)
     creds = [{'user': 'admin', 'password': 'wrong'}]
-    assert ac._collect_ssh('10.0.0.5', creds, 5) == {
-        'method': 'SSH', 'error': 'SSH auth failed',
-    }
+    assert ac._collect_ssh('10.0.0.5', creds, 5) == {'ssh_error': 'SSH auth failed'}
 
 
 def test_collect_ssh_returns_empty_when_no_creds_configured(monkeypatch):
@@ -77,3 +75,23 @@ def test_collect_ssh_succeeds_returns_collected_data(monkeypatch):
     )
     creds = [{'user': 'admin', 'password': 'right'}]
     assert ac._collect_ssh('10.0.0.5', creds, 5) == {'method': 'SSH', 'os': 'Ubuntu'}
+
+
+# ── collect_host keeps Nmap data when SSH auth fails ────────────────────────
+
+def test_collect_host_keeps_nmap_data_when_ssh_auth_fails(monkeypatch):
+    monkeypatch.setattr(ac, '_is_alive', lambda ip, timeout=1: True)
+    monkeypatch.setattr(ac, '_nmap_detect', lambda ip, timeout=5: {
+        'ip': ip, 'hostname': 'nas.local', 'platform': 'Linux', 'os': '', 'method': 'Nmap',
+    })
+    monkeypatch.setattr(ac, '_port_open', lambda ip, port, timeout=1.5: port == 22)
+    monkeypatch.setattr(
+        ac, '_collect_ssh',
+        lambda ip, creds, timeout: {'ssh_error': 'SSH auth failed'},
+    )
+
+    result = ac.collect_host('10.0.0.5', [{'user': 'admin', 'password': 'wrong'}], [], {})
+
+    assert result['method'] == 'Nmap'
+    assert result['hostname'] == 'nas.local'
+    assert result['ssh_error'] == 'SSH auth failed'

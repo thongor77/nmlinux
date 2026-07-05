@@ -440,8 +440,13 @@ class AssetInventoryPage(QWidget):
             row = self._table.rowCount()
             self._table.insertRow(row)
 
-        method = asset.get('method', '?')
-        error  = asset.get('error', '')
+        method    = asset.get('method', '?')
+        error     = asset.get('error', '')
+        ssh_error = asset.get('ssh_error', '')
+
+        os_text = error or asset.get('os', '')
+        if ssh_error:
+            os_text = f'{os_text} ({ssh_error})' if os_text else ssh_error
 
         color_map = {'SSH': QColor('#60a5fa'), 'WinRM': QColor('#a78bfa'), 'SNMP': QColor('#34d399')}
         c_method = color_map.get(method)
@@ -449,7 +454,7 @@ class AssetInventoryPage(QWidget):
         self._table.setItem(row, _COL_IP,       _item(asset.get('ip', '')))
         self._table.setItem(row, _COL_HOST,     _item(asset.get('hostname', '')))
         self._table.setItem(row, _COL_PLATFORM, _item(asset.get('platform', '?')))
-        self._table.setItem(row, _COL_OS,       _item(error or asset.get('os', '')))
+        self._table.setItem(row, _COL_OS,       _item(os_text))
         self._table.setItem(row, _COL_CPU,      _item(asset.get('cpu', '')))
         self._table.setItem(row, _COL_RAM,      _item(asset.get('ram', '')))
         self._table.setItem(row, _COL_DISK,     _item(asset.get('disk', '')))

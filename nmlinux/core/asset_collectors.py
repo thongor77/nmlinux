@@ -177,7 +177,7 @@ def _collect_ssh(ip: str, creds_list: list[dict], timeout: int) -> dict:
             return _do_collect_ssh(ip, creds, timeout)
     if not has_creds:
         return {}
-    return {'method': 'SSH', 'error': 'SSH auth failed'}
+    return {'ssh_error': 'SSH auth failed'}
 
 
 # ── WinRM collection ──────────────────────────────────────────────────────────
