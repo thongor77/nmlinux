@@ -1,8 +1,8 @@
 # Roadmap NMLinux
 
-## Version courante : v1.6.4 (2026-06-28)
+## Version courante : v1.7.6 (2026-07-05)
 
-29 modules, 8 langues UI, aide contextuelle 8 langues × 27 modules, compatibilité Linux + macOS partielle, Asset Inventory (SSH/WinRM/SNMP), AppImage + macOS .app.
+29 modules, 8 langues UI, aide contextuelle 8 langues × 27 modules, compatibilité Linux + macOS (macOS 26 inclus), Asset Inventory (SSH/WinRM/SNMP), liens inter-modules (clic droit → Ping/DNS/Whois/Port Scanner/SSH/RDP/VNC/Asset Inventory/Topology), montage SMB/NFS, AppImage + macOS .app.
 
 ---
 
@@ -10,7 +10,12 @@
 
 Ces idées ont été discutées et validées — elles ne sont pas encore implémentées.
 
-### Liens inter-modules
+### ~~Liens inter-modules~~ — LIVRÉ en v1.7.0
+
+> Implémenté en v1.7.0 (2026-07-02). Voir historique ci-dessous pour référence.
+
+<details>
+<summary>Spécification originale (archivée)</summary>
 
 **Principe général :** pattern Signal → MainWindow → `set_target()` déjà posé par TLS Watchlist → sidebar. Couplage nul entre les pages elles-mêmes.
 
@@ -33,9 +38,16 @@ Ces idées ont été discutées et validées — elles ne sont pas encore implé
 - `PortScannerPage` : `set_target(ip: str)` — prefill le champ host + focus
 - `MainWindow._build_stack` : connecte le signal + appelle `navigate_to(idx_port_scanner)`
 
+</details>
+
 ---
 
-### SMB/NFS — montage depuis l'interface
+### ~~SMB/NFS — montage depuis l'interface~~ — LIVRÉ en v1.7.3
+
+> Implémenté en v1.7.3 (2026-07-03). Voir historique ci-dessous pour référence.
+
+<details>
+<summary>Spécification originale (archivée)</summary>
 
 Actuellement nmlinux liste les partages (smbclient / showmount) sans pouvoir monter.
 
@@ -46,6 +58,8 @@ Actuellement nmlinux liste les partages (smbclient / showmount) sans pouvoir mon
 - **Unmount** : détecter si unit systemd active → `systemctl disable --now` + cleanup, sinon `umount` direct
 - **NFS** : `pkexec mount -t nfs host:/export /mount/point`
 - **UI** : bouton "Monter" sur la ligne sélectionnée, dialogue choix du point de montage (session / persistant), liste des montages actifs avec bouton "Démonter"
+
+</details>
 
 ---
 
@@ -200,3 +214,10 @@ Le module Firewall est actuellement en lecture seule (affichage nft/iptables/pf)
 | v1.6.1 | 2026-06-25 | Fix écho terminal SSH (echo PTY géré par ssh, DT-14) |
 | v1.6.2 | 2026-06-28 | Fix macOS menu bar "Python" → NSBundle.infoDictionary patch |
 | v1.6.4 | 2026-06-28 | Fix macOS menu bar : fallback AppKit robuste, stabilisation |
+| v1.7.0 | 2026-07-02 | Liens inter-modules (IP Scanner/Nmap/Topology → Ping/DNS/Whois/Port Scanner/SSH/RDP/VNC/Asset Inventory via `HostActionMenu`), Dashboard : mini-graph ping gateway + résumé TLS Watchlist |
+| v1.7.1 | 2026-07-02 | Compat macOS 26 : CoreWLAN pour SSID Wi-Fi (Location Services), fix crash à la fermeture, script bootstrap one-liner |
+| v1.7.2 | 2026-07-03 | SMB ajouté au menu contextuel universel, i18n Dashboard complet |
+| v1.7.3 | 2026-07-03 | SMB/NFS : montage/démontage via `pkexec` (session + persistant via unit systemd) |
+| v1.7.4 | 2026-07-04 | Fix scans Asset Inventory instables, bouton "Relancer sur les IP vides" |
+| v1.7.5 | 2026-07-04 | Ping Monitor : répertoire de cibles sauvegardées (ajout/relance depuis les lignes actives) |
+| v1.7.6 | 2026-07-05 | Asset Inventory : clic-droit "Actualiser la sélection", feedback échec d'authentification SSH au lieu d'un fallback silencieux |
