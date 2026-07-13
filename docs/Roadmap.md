@@ -2,7 +2,7 @@
 
 ## Version courante : v1.7.6 (2026-07-05)
 
-29 modules, 8 langues UI, aide contextuelle 8 langues × 27 modules, compatibilité Linux + macOS (macOS 26 inclus), Asset Inventory (SSH/WinRM/SNMP), liens inter-modules (clic droit → Ping/DNS/Whois/Port Scanner/SSH/RDP/VNC/Asset Inventory/Topology), montage SMB/NFS, AppImage + macOS .app.
+29 modules, 8 langues UI, aide contextuelle 8 langues × 28 modules (File Transfer non couvert), compatibilité Linux + macOS (macOS 26 inclus), Asset Inventory (SSH/WinRM/SNMP), liens inter-modules (clic droit → Ping/DNS/Whois/Port Scanner/SSH/RDP/VNC/Asset Inventory/Topology), montage SMB/NFS, AppImage + macOS .app.
 
 ---
 
