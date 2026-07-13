@@ -90,16 +90,16 @@ Types : A, AAAA, MX, TXT, NS, CNAME, PTR, SOA, ANY. Reverse lookup automatique d
 
 ---
 
-## 7 · Ping (`pages/ping.py` — 245 lignes)
+## 7 · Ping (`pages/ping.py` — 529 lignes)
 
 | Champ | Valeur |
 |-------|--------|
 | Backend | `ping` (ICMP) |
 | Worker | Oui (un worker par hôte) |
-| Persistence | — |
+| Persistence | `~/.local/share/nmlinux/ping_targets.json` (v1.7.5) |
 | Export | — |
 
-Multi-hôtes simultanés. Intervalle 1–30s. Statistiques RTT min/avg/max, perte %.
+Multi-hôtes simultanés. Intervalle 1–30s. Statistiques RTT min/avg/max, perte %. Répertoire de cibles sauvegardées (`PingTarget` + `_PingTargetStore`) : sauvegarder une ligne active depuis le monitoring, relancer depuis le répertoire.
 
 ---
 
@@ -169,16 +169,17 @@ Affiche : CN, SANs, issuer, validité (vert/orange <30j/rouge expiré), serial, 
 
 ---
 
-## 13 · SMB / NFS (`pages/smb_nfs.py` — 271 lignes)
+## 13 · SMB / NFS (`pages/smb_nfs.py` — 430 lignes)
 
 | Champ | Valeur |
 |-------|--------|
-| Backend | `smbclient -L` (SMB), `showmount -e` (NFS) |
+| Backend | `smbclient -L` (SMB), `showmount -e` (NFS), `mount.cifs`/`mount -t nfs` (`core/smb_mount.py`) |
 | Worker | Oui |
 | Persistence | — |
 | Export | — |
+| Root | Oui (`pkexec` pour monter/démonter, v1.7.3) |
 
-Deux onglets. SMB : identifiants optionnels (utilisateur + mot de passe). NFS : export path + access list.
+Deux onglets. SMB : identifiants optionnels (utilisateur + mot de passe). NFS : export path + access list. Clic droit sur une ligne SMB → monter/démonter (`core/smb_mount.py`) : session `pkexec mount.cifs`, retry automatique avec un dialecte SMB plus ancien sur `ENOTSUPP`, authentification `pkexec` unique. Dépendance optionnelle `cifs-utils`.
 
 ---
 
@@ -353,7 +354,21 @@ Magic Packet : 6× `0xFF` + 16× adresse MAC. Broadcast configurable. Carnet d'h
 
 ---
 
-## 27 · Topology (`pages/topology.py` — 609 lignes)
+## 27 · File Transfer (`pages/file_transfer.py` — 336 lignes)
+
+| Champ | Valeur |
+|-------|--------|
+| Backend | Serveur TFTP (`core/tftp_helper.py` via `QProcess`) ou serveur HTTP GET/POST (`core/http_server.py`, `HTTPServer` stdlib dans un `QThread`) |
+| Worker | Oui (`_HttpThread`), `QProcess` pour le mode TFTP |
+| Persistence | — |
+| Export | — |
+| Root | Optionnel (port TFTP 69 privilégié → lancement en root via `pkexec`) |
+
+Sert des fichiers pour l'échange de configuration avec des équipements réseau. Deux protocoles au choix (radio buttons), port configurable, racine de fichiers sélectionnable. Journal des transferts (horodatage, direction, fichier, client, taille, statut).
+
+---
+
+## 28 · Topology (`pages/topology.py` — 609 lignes)
 
 | Champ | Valeur |
 |-------|--------|
@@ -362,7 +377,20 @@ Magic Packet : 6× `0xFF` + 16× adresse MAC. Broadcast configurable. Carnet d'h
 | Persistence | — |
 | Export | — |
 
-`QGraphicsScene` + `QGraphicsView`. Nœuds déplaçables (`ItemIsMovable`). Icônes dessinées : routeur (rect + antennes) / moniteur (écran + pied) / tour PC (rect + power). 1 ou 2 couronnes concentriques (seuil : 12 nœuds). Tooltip : hostname + IP + MAC + fabricant. `FullViewportUpdate` obligatoire (DashLine artifacts sinon).
+`QGraphicsScene` + `QGraphicsView`. Nœuds déplaçables (`ItemIsMovable`). Icônes dessinées : routeur (rect + antennes) / moniteur (écran + pied) / tour PC (rect + power). 1 ou 2 couronnes concentriques (seuil : 12 nœuds). Tooltip : hostname + IP + MAC + fabricant. `FullViewportUpdate` obligatoire (DashLine artifacts sinon). Source pour les liens inter-modules (clic droit sur nœud → Ping / Port Scanner / SSH / RDP / VNC, v1.7.0).
+
+---
+
+## 29 · Asset Inventory (`pages/asset_inventory.py` — 518 lignes, `core/asset_collectors.py` — 543 lignes)
+
+| Champ | Valeur |
+|-------|--------|
+| Backend | Détection passive `nmap -O -sV` ; collecte active SSH (`ptyprocess`/`sshpass`), WinRM (`pywinrm`, optionnel), SNMP (`snmpget`) |
+| Worker | `AssetScanWorker` |
+| Persistence | — (zéro persistance : tout en RAM, effacé à la fermeture) |
+| Export | JSON / CSV / Markdown (à la demande explicite) |
+
+Inspiré de LanSweeper mais sans base de données ni agents. Scan CIDR → par hôte, collecte selon la méthode disponible (sans credentials ou avec, appliqués par protocole ou par hôte). Tableau : IP / Hostname / Plateforme / OS / CPU / RAM / Disques / Uptime / Méthode. Clic droit sur une sélection de lignes → "Actualiser la sélection" (rescan ciblé, dédoublonnage par IP, v1.7.6). Échec d'authentification SSH affiché explicitement (`SSH auth failed`) au lieu d'un fallback silencieux vers les données Nmap seules (v1.7.6), sans écraser la méthode/OS déjà détectés. Credentials jamais stockés, jamais logués, effacés (`del`) après usage.
 
 ---
 
