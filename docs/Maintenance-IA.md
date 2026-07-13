@@ -255,8 +255,20 @@ pytest tests/ -v
 | `test_rdp_core.py` | `build_rdp_args()`, `RdpStore`, `RdpConnection` | 14 |
 | `test_vnc_core.py` | `build_vnc_args()`, `VncStore`, `VncConnection` | 13 |
 | `test_ssh_keys.py` | `_parse_keygen_line()`, `_scan_keys()`, `_keygen_args()` | 10 |
+| `test_command_palette.py` | Fuzzy search, navigation clavier | 10 |
+| `test_export_manager.py` | `ExportDialog`, formats JSON/MD/TXT/PDF | 12 |
+| `test_file_transfer_core.py` | Serveur HTTP GET/POST, helper TFTP | 16 |
+| `test_smb_mount.py` | `mount()`/`unmount()` Linux + macOS | 21 |
+| `test_smb_mount_helper.py` | Détection montage, points de montage | 6 |
+| `test_smb_mount_i18n.py` | Clés i18n montage SMB (8 langues) | 9 |
+| `test_smb_nfs_mount_ui.py` | Menu contextuel clic droit `SmbNfsPage` | 11 |
+| `test_asset_collectors.py` | `_collect_ssh`/`_collect_winrm`/`_collect_snmp`, détection Nmap | 10 |
+| `test_asset_inventory.py` | `AssetInventoryPage` : dédoublonnage, menu contextuel rescan | 11 |
+| `test_asset_inventory_i18n.py` | Clés i18n Asset Inventory (8 langues) | 8 |
+| `test_host_actions.py` | `HostActionMenu`, détection port ouvert | 4 |
+| `test_ping_targets.py` | `PingTarget`, `_PingTargetStore` | 7 |
 
-**Pas de tests Qt (widgets).** Le CLAUDE.md disait "No test suite exists" — c'était vrai avant v1.3.0. Il existe maintenant 37 tests sur la logique pure.
+**162 tests au total.** Logique pure pour la majorité ; `test_asset_inventory.py`, `test_host_actions.py` et `test_smb_nfs_mount_ui.py` instancient une `QApplication` de session (fixture `qapp`) pour exercer de vrais widgets Qt (menus contextuels, tables). Le CLAUDE.md disait "No test suite exists" — c'était vrai avant v1.3.0.
 
 ---
 

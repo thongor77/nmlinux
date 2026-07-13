@@ -13,7 +13,7 @@ Chaque décision est documentée avec son contexte, le choix retenu et les alter
 **Raisons :**
 - Avalonia sur Linux avec GPU NVIDIA/AMD Wayland produisait des artefacts de rendu bloquants.
 - Qt est le framework natif KDE ; PySide6 s'intègre naturellement au thème système (Breeze).
-- Python permet d'itérer rapidement sur 27 modules sans compilateur.
+- Python permet d'itérer rapidement sur 29 modules sans compilateur.
 - Pas de dépendance à un runtime .NET supplémentaire pour l'utilisateur Linux.
 
 **Retour de BornToBeRoot (mai 2026) :** "Cross-platform is on my roadmap for NETworkManager, but WPF being Windows-only is the main blocker. The heavy part is porting the entire UI to something like Avalonia — quite a lot of work, even with AI assistance." → Confirmation que nmlinux reste indépendant.
