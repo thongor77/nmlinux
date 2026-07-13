@@ -28,7 +28,7 @@ Avant de terminer :
 ```
 docs/
 ├── Architecture.md        — structure du code, patterns, dépendances
-├── Carte-des-Modules.md   — 27 modules : backend, worker, persistence, export
+├── Carte-des-Modules.md   — 29 modules : backend, worker, persistence, export
 ├── Decisions-Techniques.md— pourquoi le code est comme il est (DT-01 à DT-13)
 ├── Roadmap.md             — fonctionnalités livrées et candidates
 ├── Maintenance-IA.md      — recettes : nouveau module, i18n, injection, release
@@ -109,7 +109,7 @@ nmlinux
 # Build wheel (le sdist échoue — symlink dans aur/)
 python -m build --wheel --no-isolation
 
-# Tests (37 tests, logique pure, pas de Qt)
+# Tests (162 tests ; 3 fichiers instancient une QApplication de session — asset_inventory, host_actions, smb_nfs_mount_ui)
 pytest tests/ -v
 ```
 
@@ -126,8 +126,10 @@ Détails complets dans `docs/Architecture.md`.
 - `theme.py` — `is_dark()`, `color_ok()`, `color_err()` : appeler à la création des widgets, jamais au chargement du module. Surcharger `changeEvent(ApplicationPaletteChange)` + `update()` sur les widgets avec dessin custom.
 - `cli_bar.py` — `get_cli_bar().set_cmd(cmd)` : dans `_update_cli()`, branché sur `showEvent` et les changements de paramètres.
 - `settings.py` — singleton `AppSettings`. Accès via `.language`, **pas** `.get()`.
-- `help_content.py` — `get_help(label)` : aide contextuelle 8 langues × 27 modules.
+- `help_content.py` — `get_help(label)` : aide contextuelle 8 langues × 28 modules (File Transfer non couvert — trou à combler).
 - `icons.py` — `themed_icon(*names)` : 21 SVG Lucide bundlés, couleur `#60a5fa`, aucun thème système requis.
+- `host_actions.py` — `HostActionMenu` : menu contextuel générique (clic droit sur une ligne IP/hostname) pour les liens inter-modules — `action_chosen = Signal(action_key, ip, host)`, ports SSH/RDP/VNC/SMB détectés en gras.
+- `asset_collectors.py` — collecte Asset Inventory : `_nmap_detect` (passif), `_collect_ssh`/`_collect_winrm`/`_collect_snmp` (actif, credentials jamais stockés).
 
 Pattern page standard :
 
@@ -187,9 +189,11 @@ result += "\n    },"     # MOD_CLOSE — ferme le module
 Obligatoires : `networkmanager` (nmcli), `iproute2` (ip), `iputils` (ping/tracepath)
 
 Optionnelles : `nmap`, `whois`, `net-snmp`, `bind` (dig), `traceroute`, `python-hwdata`,
-`nm-connection-editor`, `samba` (smbclient), `nfs-utils` (showmount), `openssl`,
-`xfreerdp`/`xfreerdp3`, `vncviewer` (TigerVNC), `mtr`, `curl`, `wakeonlan`,
-`openssh` (ssh-keygen), `pkexec` (polkit)
+`nm-connection-editor`, `samba` (smbclient), `cifs-utils` (mount.cifs, montage SMB),
+`nfs-utils` (showmount), `openssl`, `xfreerdp`/`xfreerdp3`, `vncviewer` (TigerVNC),
+`mtr`, `curl`, `wakeonlan`, `openssh` (ssh-keygen), `pkexec` (polkit),
+`sshpass` (auth SSH par mot de passe dans Asset Inventory), `pywinrm` (`pip install pywinrm`,
+collecte WinRM dans Asset Inventory)
 
 ---
 
@@ -219,4 +223,6 @@ AUR : compte `magetriste`, clé `~/.ssh/id_aur`. GitHub : compte `thongor77`.
 | `~/.local/share/nmlinux/vnc_connections.json` | Connexions VNC (format v2) |
 | `~/.local/share/nmlinux/wol_hosts.json` | Hôtes Wake on LAN |
 | `~/.local/share/nmlinux/speedtest_history.json` | 5 derniers tests de débit |
+| `~/.local/share/nmlinux/ping_targets.json` | Répertoire de cibles Ping Monitor (`PingTarget`, v1.7.5) |
+| `~/.config/nmlinux/tls_watchlist.json` | Certificats surveillés par TLS Watchlist (chemin `~/.config`, pas `~/.local/share` — historique) |
 | `~/.local/share/applications/nmlinux.desktop` | Entrée menu application |

@@ -2,26 +2,30 @@
 
 ## Vue d'ensemble
 
-NMLinux est une application de bureau Linux mono-processus, mono-fenêtre, construite avec Python 3.11+ et PySide6 (Qt 6). Elle regroupe 27 outils réseau dans une interface à sidebar unique.
+NMLinux est une application de bureau Linux mono-processus, mono-fenêtre, construite avec Python 3.11+ et PySide6 (Qt 6). Elle regroupe 29 outils réseau dans une interface à sidebar unique.
 
 ```
 nmlinux/
 ├── main.py            — point d'entrée, QApplication, détection thème icônes
 ├── window.py          — MainWindow, sidebar QListWidget, QStackedWidget
-├── core/              — logique partagée, sans dépendance Qt sauf cli_bar et icons
+├── core/              — logique partagée, sans dépendance Qt sauf cli_bar, icons, host_actions
 │   ├── i18n.py        — tr(key, **kwargs) : 8 langues, ~720 clés chacune
 │   ├── settings.py    — AppSettings dataclass, persistence JSON singleton
 │   ├── theme.py       — is_dark(), color_ok(), color_err()
 │   ├── icons.py       — themed_icon(*names) : Lucide SVG bundlés
 │   ├── cli_bar.py     — CliBar singleton : barre CLI pédagogique globale
-│   ├── help_content.py— get_help(label) : aide contextuelle 8 langues × 27 modules
+│   ├── help_content.py— get_help(label) : aide contextuelle 8 langues × 28 modules (File Transfer non couvert)
+│   ├── host_actions.py— HostActionMenu : menu contextuel générique pour les liens inter-modules (v1.7.0)
+│   ├── asset_collectors.py — AssetScanWorker + _collect_ssh/_collect_winrm/_collect_snmp (Asset Inventory)
+│   ├── smb_mount.py   — mount()/unmount() SMB/NFS via pkexec (Linux + macOS)
+│   ├── export_dialog.py — ExportDialog générique (JSON/MD/TXT/PDF) réutilisé par plusieurs pages
 │   ├── ssh.py         — SshGroup, SshConnection, SshStore, build_ssh_args()
 │   ├── rdp.py         — RdpGroup, RdpConnection, RdpStore, build_rdp_args()
 │   ├── vnc.py         — VncGroup, VncConnection, VncStore, build_vnc_args()
 │   └── terminal.py    — SshWorker(QThread) : PTY via ptyprocess, émet bytes bruts
 ├── pages/             — un QWidget par module
 │   ├── terminal_view.py — TerminalView : pyte.HistoryScreen + QPainter
-│   └── [27 pages]
+│   └── [29 pages]
 └── assets/
     ├── icons/         — 21 SVG Lucide (couleur #60a5fa appliquée au runtime)
     └── world.geojson  — Natural Earth 110m pour la carte Traceroute
@@ -31,7 +35,7 @@ nmlinux/
 
 `window.py` déclare `_TOOLS` : liste de tuples `(icon_names, label, PageClass, tooltip)`. Chaque entrée génère automatiquement un item dans la sidebar et une page dans le `QStackedWidget`.
 
-Ordre des 27 modules dans `_TOOLS` :
+Ordre des 29 modules dans `_TOOLS` :
 
 | # | Label | Classe |
 |---|-------|--------|
@@ -61,11 +65,19 @@ Ordre des 27 modules dans `_TOOLS` :
 | 24 | Speed Test | SpeedTestPage |
 | 25 | Bandwidth | BandwidthPage |
 | 26 | Wake on LAN | WolPage |
-| 27 | Topology | TopologyPage |
+| 27 | File Transfer | FileTransferPage |
+| 28 | Topology | TopologyPage |
+| 29 | Asset Inventory | AssetInventoryPage |
 
 Settings et About sont hors `_TOOLS`, ajoutés manuellement dans `MainWindow._build_ui()` aux indices `len(_TOOLS)` et `len(_TOOLS) + 1`.
 
 La sidebar affiche également un badge `?` par entrée (via `_NavHintDelegate`). Un clic sur `?` remplace la page active par `HelpPage` (index `len(_TOOLS) + 2`).
+
+## Liens inter-modules (v1.7.0)
+
+`core/host_actions.py` fournit `HostActionMenu(QMenu)`, un menu contextuel générique instancié par toute page affichant une table d'IP/hostnames (IP Scanner, Nmap, Topology, Asset Inventory, …). Il émet `action_chosen = Signal(action_key, ip, host)` avec `action_key` parmi les constantes `ACT_*` (`ping`, `port_scan`, `whois`, `dns`, `traceroute`, `mtr`, `ssh`, `rdp`, `vnc`, `topology`, `asset`, `smb`). Les entrées SSH/RDP/VNC/SMB apparaissent en gras quand le port correspondant (22/3389/5900/445) est détecté ouvert.
+
+`MainWindow` connecte ce signal à un routeur central qui appelle `set_target(ip)` sur la page cible (pattern déjà posé par TLS Watchlist → sidebar) puis `navigate_to(idx)`. Couplage nul entre les pages elles-mêmes — toute la logique de routage vit dans `window.py`.
 
 ## Pattern standard d'une page
 
@@ -142,6 +154,9 @@ Toutes les données utilisateur sont dans `~/.local/share/nmlinux/` :
 | `vnc_connections.json` | Groupes + connexions VNC v2 |
 | `wol_hosts.json` | Hôtes Wake on LAN |
 | `speedtest_history.json` | Historique 5 derniers tests de débit |
+| `ping_targets.json` | Répertoire de cibles Ping Monitor (`PingTarget`, v1.7.5) |
+
+Un fichier échappe à ce répertoire pour des raisons historiques : `~/.config/nmlinux/tls_watchlist.json` (certificats surveillés par TLS Watchlist, `core/tls_watchlist.py`).
 
 Format JSON v2 pour SSH/RDP/VNC : `{version: 2, groups: [...], connections: [...]}`. Rétrocompatibilité v1 (liste plate) dans `SshStore.load()`.
 
@@ -152,12 +167,15 @@ Format JSON v2 pour SSH/RDP/VNC : `{version: 2, groups: [...], connections: [...
 | `PySide6 >= 6.6` | Framework Qt (inclut QtSvg) |
 | `ptyprocess >= 0.7` | PTY pour le terminal SSH |
 | `pyte` | Émulateur VT100/xterm pour le terminal |
+| `tftpy >= 0.8` | Serveur TFTP pour File Transfer |
+
+Optionnel, non déclaré dans `pyproject.toml` (import protégé par `try/except`) : `pywinrm` — collecte WinRM dans Asset Inventory (`pip install pywinrm`).
 
 ## Dépendances système
 
 Obligatoires : `networkmanager` (nmcli), `iproute2` (ip), `iputils` (ping, tracepath)
 
-Optionnelles : `nmap`, `whois`, `net-snmp`, `bind` (dig), `traceroute`, `python-hwdata`, `nm-connection-editor`, `samba` (smbclient), `nfs-utils` (showmount), `openssl`, `xfreerdp` / `xfreerdp3`, `vncviewer` (TigerVNC), `mtr`, `curl`, `wakeonlan`, `ssh-keygen` (openssh), `pkexec` (polkit)
+Optionnelles : `nmap`, `whois`, `net-snmp`, `bind` (dig), `traceroute`, `python-hwdata`, `nm-connection-editor`, `samba` (smbclient), `cifs-utils` (mount.cifs, montage SMB), `nfs-utils` (showmount), `openssl`, `xfreerdp` / `xfreerdp3`, `vncviewer` (TigerVNC), `mtr`, `curl`, `wakeonlan`, `ssh-keygen` (openssh), `pkexec` (polkit), `sshpass` (auth SSH par mot de passe dans Asset Inventory)
 
 ## Lancement
 
