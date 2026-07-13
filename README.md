@@ -19,6 +19,23 @@ NMLinux is a single, unified GUI that brings together 29 network modules in one 
 
 ---
 
+## Development process
+
+NMLinux is built with AI assistance — [Claude Code](https://claude.ai/code), specifically — and that's not hidden anywhere in this repo. Almost every serious software project today uses AI somewhere in its pipeline, whether it says so or not. So "was AI involved" isn't the interesting question. The interesting question is: does anything catch it when the AI gets something wrong?
+
+Here's what does, if you'd rather check than take my word for it:
+
+- **162 tests** — `pytest tests/ -v`. Pure logic plus a handful of real Qt widget tests (menus, tables), no mocking away the interesting parts.
+- **[`docs/Decisions-Techniques.md`](docs/Decisions-Techniques.md)** — every non-obvious technical call, the alternatives that got rejected, and the bugs (including AI-introduced ones) that were found and fixed, with the reasoning written down.
+- **[`docs/Architecture.md`](docs/Architecture.md)** and **[`docs/Carte-des-Modules.md`](docs/Carte-des-Modules.md)** — the actual structure of the code, kept in sync with what ships.
+- An **i18n consistency check** run before every release to catch missing translation keys across the 8 supported languages.
+
+None of that exists because AI can't be trusted. It exists because nothing should ship without a process that checks it — hand-written code included. Judge the output and how it's verified, not the tool that helped write it.
+
+Found a bug anyway? That's useful, not embarrassing — [open an issue](https://github.com/thongor77/nmlinux/issues).
+
+---
+
 ## Community
 
 **[GitHub Discussions](https://github.com/thongor77/nmlinux/discussions) are open** — share feedback, report ideas, ask questions, or just say hello. The author has 30+ years in infrastructure and operations, and built this tool because good, free, and simple software should exist for Linux too.
