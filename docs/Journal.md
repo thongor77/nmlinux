@@ -73,3 +73,27 @@ Ce fichier reprend les jalons techniques essentiels.
 ## 2026-06-25 — v1.6.1
 
 - **Fix terminal SSH — écho distant** : sur VM Ubuntu 26.04 fraîche, le clavier semblait « mort » après l'auth (frappes envoyées au shell distant mais jamais ré-affichées). `SshWorker` forçait l'écho off (`echo=False` + `_kill_echo()`), et ssh propageait ce « no echo » au pty distant via les modes du `pty-req`. Fix : spawn `echo=True`, suppression de `_kill_echo()`/`_echo_checks` — on laisse ssh gérer les modes, comme un vrai émulateur. Voir DT-14.
+
+## 2026-07-02 — v1.7.0 + v1.7.1
+
+- **Liens inter-modules** : `HostActionMenu` + pattern `set_target()`/`source` généralisé à IP Scanner, Nmap, Topology, Ping, DNS, Whois, Port Scanner, SSH, RDP, VNC et Asset Inventory — clic droit sur un hôte déclenche l'action et navigue vers le module cible.
+- Dashboard : mini-graph de ping vers la gateway (réutilise le moteur QPainter de Bandwidth Monitor) + résumé TLS Watchlist.
+- Suppression des dernières références à BornToBeRoot/NETworkManager dans le code et la doc.
+- **Compat macOS 26** : passage à CoreWLAN pour le SSID Wi-Fi (Location Services désormais requises), fix crash à la fermeture (relâchement de la référence `CLLocationManager`), fix parsing MAC ARP (octets courts non zéro-paddés), auto-download de la base OUI + hostname mDNS via `dns-sd`.
+- Script bootstrap macOS en one-liner : téléchargement puis exécution locale, au lieu d'un pipe direct `curl | bash`.
+
+## 2026-07-03 — v1.7.2 + v1.7.3
+
+- SMB ajouté au menu contextuel universel (clic droit sur un hôte).
+- i18n Dashboard complété (latence, carte TLS, statut) — dernières chaînes non traduites.
+- **Montage SMB/NFS depuis l'interface** : `mount()`/`unmount()` Linux + macOS, clic droit sur l'onglet SMB, montage persistant via unit systemd `.mount`, authentification `pkexec` unique (au lieu de deux appels), retry automatique avec un dialecte SMB plus ancien sur erreur `ENOTSUPP`, fix crash si le point de montage ne peut être créé. Dépendance optionnelle `cifs-utils`.
+
+## 2026-07-04 — v1.7.4 + v1.7.5
+
+- Fix scans Asset Inventory instables ; ajout d'un bouton "Relancer sur les IP vides".
+- Ping Monitor : répertoire de cibles sauvegardées (`PingTarget` + `_PingTargetStore`), bouton pour sauvegarder une cible active depuis une ligne en cours, i18n 8 langues.
+
+## 2026-07-05 — v1.7.6
+
+- Asset Inventory : clic droit pour rescanner une sélection de lignes en place (dédoublonnage par IP au lieu d'ajouter une nouvelle ligne à chaque rescan).
+- Échec d'authentification SSH désormais affiché dans le tableau (`SSH auth failed`) au lieu d'un fallback silencieux vers les seules données Nmap ; correctif de suivi pour ne pas laisser cet échec écraser la méthode/OS déjà détectés par Nmap.
