@@ -1,8 +1,8 @@
 # Roadmap NMLinux
 
-## Version courante : v1.7.6 (2026-07-05)
+## Version courante : v1.7.8 (2026-07-14)
 
-29 modules, 8 langues UI, aide contextuelle 8 langues × 28 modules (File Transfer non couvert), compatibilité Linux + macOS (macOS 26 inclus), Asset Inventory (SSH/WinRM/SNMP), liens inter-modules (clic droit → Ping/DNS/Whois/Port Scanner/SSH/RDP/VNC/Asset Inventory/Topology), montage SMB/NFS, AppImage + macOS .app.
+29 modules, 8 langues UI (i18n complet, dont le trou allemand speed_*/mtr_*/fw_* comblé en v1.7.8), aide contextuelle 8 langues × 28 modules (File Transfer non couvert), compatibilité Linux + macOS (macOS 26 inclus), Asset Inventory (SSH/WinRM/SNMP), liens inter-modules (clic droit → Ping/DNS/Whois/Port Scanner/SSH/RDP/VNC/Asset Inventory/Topology), montage SMB/NFS, Speed Test avec onglet LAN (iperf3), AppImage + macOS .app.
 
 ---
 
@@ -10,9 +10,9 @@
 
 Ces idées ont été discutées et validées — elles ne sont pas encore implémentées.
 
-### ~~iperf3 — nouvel onglet dans Speed Test~~ — IMPLÉMENTÉ, en attente de release
+### ~~iperf3 — nouvel onglet dans Speed Test~~ — LIVRÉ en v1.7.8
 
-> Code livré le 2026-07-14 (`pages/speedtest.py` : onglet LAN, `Iperf3Worker`, `Iperf3Server`/`_Iperf3ServerStore`, `assets/iperf3_public_servers.json`). Pas encore de version taguée — voir `docs/Maintenance-IA.md` §Release quand une release sera faite.
+> Implémenté et livré en v1.7.8 (2026-07-14) : `pages/speedtest.py` (onglet LAN, `Iperf3Worker`, `Iperf3Server`/`_Iperf3ServerStore`), `assets/iperf3_public_servers.json`. Release GitHub + AUR à jour : https://github.com/thongor77/nmlinux/releases/tag/v1.7.8. Voir historique ci-dessous pour référence.
 
 Suite à la feature request GitHub #6 (`loren2018tw`, 2026-07-08). Discussion : https://github.com/thongor77/nmlinux/issues/6
 

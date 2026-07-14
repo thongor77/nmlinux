@@ -97,3 +97,9 @@ Ce fichier reprend les jalons techniques essentiels.
 
 - Asset Inventory : clic droit pour rescanner une sélection de lignes en place (dédoublonnage par IP au lieu d'ajouter une nouvelle ligne à chaque rescan).
 - Échec d'authentification SSH désormais affiché dans le tableau (`SSH auth failed`) au lieu d'un fallback silencieux vers les seules données Nmap ; correctif de suivi pour ne pas laisser cet échec écraser la méthode/OS déjà détectés par Nmap.
+
+## 2026-07-14 — v1.7.8
+
+- **Speed Test — onglet LAN (iperf3)** : suite à la feature request GitHub #6 (`loren2018tw`), nouveau test de débit point-à-point via `iperf3` (client uniquement), en complément du test internet existant. Choix entre une liste de 26 serveurs publics bundlée par pays et des serveurs personnalisés sauvegardés. TCP/UDP, IPv4/IPv6/auto, sens (reverse = download). Voir DT-15.
+- Découverte et correction en passant d'un trou i18n préexistant : le bloc allemand n'avait aucune clé `speed_*`/`mtr_*`/`fw_*` (56 clés), comblées dans le même commit.
+- Nouvelle dépendance optionnelle : `iperf3`.
