@@ -1,6 +1,6 @@
-# NMLinux · v1.7.6
+# NMLinux · v1.7.8
 
-[![Version](https://img.shields.io/badge/version-1.7.6-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.7.8-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -65,6 +65,11 @@ Found a bug anyway? That's useful, not embarrassing — [open an issue](https://
 ---
 
 ## Changelog
+
+### v1.7.8 — 2026-07-14
+
+- **Speed Test — new LAN (iperf3) tab**: alongside the existing internet speed test, a new tab runs client-only `iperf3` tests against either a bundled public server list (26 countries) or a saved custom server (e.g. an internal org server). Supports TCP/UDP, IPv4/IPv6/auto, and reverse (download) direction, with jitter/loss shown for UDP tests. Suggested by [issue #6](https://github.com/thongor77/nmlinux/issues/6)
+- **New optional dependency**: `iperf3` — install to enable the LAN tab; the tab shows a banner and stays disabled otherwise
 
 ### v1.7.6 — 2026-07-05
 
@@ -333,6 +338,7 @@ brew install samba          # SMB scan with credentials (smbclient)
 | `nm-connection-editor` | Edit connections from Connection Manager | Arch: `nm-connection-editor` | — (System Preferences opens instead) |
 | `traceroute` | Traceroute alternative (tracepath used by default) | Arch: `traceroute` | built-in |
 | `mount.cifs` (`cifs-utils`) | Mount SMB shares from the right-click menu | Arch/Debian: `cifs-utils` | built-in (`mount_smbfs`) |
+| `iperf3` | Speed Test — LAN tab | Arch: `iperf3` · Debian/Ubuntu: `iperf3` | `brew install iperf3` |
 
 ### Python
 
