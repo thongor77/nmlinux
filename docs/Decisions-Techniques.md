@@ -181,3 +181,23 @@ result += "\n    },"     # MOD_CLOSE — ferme le module
 **Alternatives rejetées :**
 - Garder `echo=False` et forcer l'écho distant autrement : impossible proprement, le seul canal côté client est justement les modes propagés par le `pty-req`.
 - L'ancien `_kill_echo()` visait un faux « double-écho » : le bug de caractères dupliqués (commit `5fe69b8`) venait des redraws ZLE de ZSH dans l'ancien renderer QPlainTextEdit, pas de termios. Avec pyte il n'existe plus.
+
+---
+
+## DT-15 — iperf3 : client uniquement, onglet Speed Test (pas un module)
+
+**Contexte :** Feature request GitHub issue #6 (`loren2018tw`) demandant le support d'iperf3 pour mesurer le débit LAN, complémentaire au Speed Test internet existant (DT-08). Cas d'usage confirmés : serveur fixe interne à une organisation, liste de serveurs publics par pays, comparaison IPv4/IPv6.
+
+**Décision :**
+- **Client seulement** (`iperf3 -c ... -J`) — pas de mode serveur (nmlinux n'écoute jamais en `iperf3 -s`).
+- **Second onglet dans le module Speed Test existant** (`Internet` / `LAN`), pas un nouveau module dans la sidebar.
+- Deux sources de serveur : liste publique bundlée en lecture seule (`assets/iperf3_public_servers.json`, 26 pays, sourcée depuis `R0GGER/public-iperf3-servers`) et serveurs personnalisés sauvegardés (`~/.local/share/nmlinux/iperf3_servers.json`, même pattern dataclass que `PingTarget`).
+
+**Raisons :**
+- iperf3 mesure un débit LAN point-à-point (nécessite une cible qui écoute), fondamentalement différent du test internet actuel (curl vers Cloudflare) — mais reste un « test de débit », donc un onglet du même module plutôt qu'un concept séparé dans la sidebar.
+- Faire écouter nmlinux en permanence (mode serveur) change la surface sécurité/pare-feu de l'app d'une façon que le mode client ne fait pas — mérite sa propre spec si un besoin concret émerge, pas une extension improvisée du scope initial.
+- La demande explicite ("liste par pays", "IPv4 vs IPv6") vient directement du auteur de la feature request — pas un choix arbitraire.
+
+**Alternatives rejetées :**
+- Nouveau module `IperfPage` dans la sidebar : rejeté, aurait dupliqué toute la logique de cartes/worker/CLI bar déjà présente dans Speed Test pour un concept très proche.
+- Implémenter le mode serveur dès la v1 : reporté, pas de demande concrète au-delà de la suggestion initiale, complexité (pare-feu, port persistant) disproportionnée sans cas d'usage validé.

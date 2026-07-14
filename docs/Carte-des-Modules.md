@@ -315,16 +315,18 @@ Sources : `/etc/nftables.conf`, `/etc/iptables/iptables.rules`, `/etc/iptables/i
 
 ---
 
-## 24 · Speed Test (`pages/speedtest.py` — 605 lignes)
+## 24 · Speed Test (`pages/speedtest.py` — 1065 lignes)
 
 | Champ | Valeur |
 |-------|--------|
-| Backend | `curl` + `speed.cloudflare.com`, `ping 1.1.1.1` |
-| Worker | Oui |
-| Persistence | `~/.local/share/nmlinux/speedtest_history.json` (5 derniers) |
+| Backend | Onglet Internet : `curl` + `speed.cloudflare.com`, `ping 1.1.1.1`. Onglet LAN : `iperf3 -c ... -J` (client uniquement) |
+| Worker | Oui (`SpeedTestWorker` + `Iperf3Worker`, un `QThread` par onglet) |
+| Persistence | `~/.local/share/nmlinux/speedtest_history.json` (5 derniers, onglet Internet) · `~/.local/share/nmlinux/iperf3_servers.json` (serveurs LAN personnalisés) |
 | Export | — |
 
-Download 25 MB, Upload ~10 MB, Ping. Graphique line chart DL/UL horodaté.
+**Onglet Internet** : Download 25 MB, Upload ~10 MB, Ping. Graphique line chart DL/UL horodaté.
+
+**Onglet LAN (iperf3)** : mesure de débit contre un serveur iperf3 choisi dans une liste publique bundlée par pays (`assets/iperf3_public_servers.json`, 26 pays) ou un serveur personnalisé sauvegardé. Options TCP/UDP, IPv4/IPv6/auto, sens (reverse = download), durée (5/10/20/30s). Cartes Envoyé/Reçu (+ Gigue/Perte en UDP). Client uniquement — pas de mode serveur (voir DT-15).
 
 ---
 

@@ -193,7 +193,7 @@ Optionnelles : `nmap`, `whois`, `net-snmp`, `bind` (dig), `traceroute`, `python-
 `nfs-utils` (showmount), `openssl`, `xfreerdp`/`xfreerdp3`, `vncviewer` (TigerVNC),
 `mtr`, `curl`, `wakeonlan`, `openssh` (ssh-keygen), `pkexec` (polkit),
 `sshpass` (auth SSH par mot de passe dans Asset Inventory), `pywinrm` (`pip install pywinrm`,
-collecte WinRM dans Asset Inventory)
+collecte WinRM dans Asset Inventory), `iperf3` (onglet LAN de Speed Test, client uniquement — DT-15)
 
 ---
 

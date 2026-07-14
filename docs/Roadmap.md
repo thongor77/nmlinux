@@ -10,6 +10,23 @@
 
 Ces idées ont été discutées et validées — elles ne sont pas encore implémentées.
 
+### ~~iperf3 — nouvel onglet dans Speed Test~~ — IMPLÉMENTÉ, en attente de release
+
+> Code livré le 2026-07-14 (`pages/speedtest.py` : onglet LAN, `Iperf3Worker`, `Iperf3Server`/`_Iperf3ServerStore`, `assets/iperf3_public_servers.json`). Pas encore de version taguée — voir `docs/Maintenance-IA.md` §Release quand une release sera faite.
+
+Suite à la feature request GitHub #6 (`loren2018tw`, 2026-07-08). Discussion : https://github.com/thongor77/nmlinux/issues/6
+
+**Décision (2026-07-14) :**
+- **Client seulement** dans un premier temps — mode serveur (nmlinux comme cible iperf3 pour un autre poste du LAN) reporté en idée future, pas encore spécifié.
+- **Second onglet dans Speed Test** ("Internet" / "LAN"), pas un nouveau module — cohérent avec le fait qu'iperf3 est un complément du Speed Test actuel (curl + Cloudflare, DT-08), pas un remplacement.
+
+**Cas d'usage confirmés par Loren :**
+- Serveur iperf3 fixe interne à son organisation (test de débit "upper-layer")
+- Liste intégrée de serveurs iperf3 publics par pays (voir ex. https://github.com/R0GGER/public-iperf3-servers) pour tester le débit international
+- Comparaison de débit IPv4 vs IPv6
+
+**Non tranché — à spécifier avant implémentation :** UI exacte de l'onglet LAN (saisie serveur manuel + liste de serveurs publics ? sélection pays ?), format d'affichage des résultats (débit seul ou aussi jitter/perte pour UDP), dépendance système `iperf3` à ajouter à la section 7 du CLAUDE.md.
+
 ### ~~Liens inter-modules~~ — LIVRÉ en v1.7.0
 
 > Implémenté en v1.7.0 (2026-07-02). Voir historique ci-dessous pour référence.

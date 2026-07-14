@@ -9,25 +9,31 @@ import shutil
 import subprocess
 import tempfile
 from collections import deque
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QEvent, QThread, Signal
 from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen, QPalette
 from PySide6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QProgressBar,
-    QPushButton, QSizePolicy, QVBoxLayout, QWidget,
+    QButtonGroup, QCheckBox, QComboBox, QFrame, QHBoxLayout, QLabel,
+    QLineEdit, QProgressBar, QPushButton, QRadioButton, QSizePolicy,
+    QTabWidget, QVBoxLayout, QWidget,
 )
 
 from nmlinux.core.cli_bar import get_cli_bar
 from nmlinux.core.i18n import tr
 from nmlinux.core.theme import color_ok, color_err
 
-_CMD_CURL  = shutil.which('curl')
-_CMD_PING  = shutil.which('ping')
+_CMD_CURL   = shutil.which('curl')
+_CMD_PING   = shutil.which('ping')
+_CMD_IPERF3 = shutil.which('iperf3')
 
 _HISTORY_FILE = Path.home() / '.local' / 'share' / 'nmlinux' / 'speedtest_history.json'
 _PERSIST_MAX  = 5
+
+_IPERF3_SERVERS_STORE_PATH  = Path.home() / '.local' / 'share' / 'nmlinux' / 'iperf3_servers.json'
+_IPERF3_PUBLIC_SERVERS_PATH = Path(__file__).resolve().parent.parent / 'assets' / 'iperf3_public_servers.json'
 
 _DL_URL  = 'https://speed.cloudflare.com/__down?bytes=25000000'   # 25 MB
 _UL_URL  = 'https://speed.cloudflare.com/__up'
@@ -159,6 +165,86 @@ class SpeedTestWorker(QThread):
         finally:
             if tmpfile and os.path.exists(tmpfile):
                 os.unlink(tmpfile)
+
+    def stop(self) -> None:
+        self._stop = True
+        if self._proc and self._proc.poll() is None:
+            self._proc.terminate()
+        self.wait(10000)
+
+
+# ── iperf3 worker (LAN tab) ─────────────────────────────────────────────────
+
+class Iperf3Worker(QThread):
+    result_ready = Signal(dict)
+    error        = Signal(str)
+    finished     = Signal()
+
+    def __init__(self, host: str, port: int, *, udp: bool, ip_mode: str,
+                 reverse: bool, duration: int) -> None:
+        super().__init__()
+        self._host     = host
+        self._port     = port
+        self._udp      = udp
+        self._ip_mode  = ip_mode      # 'auto' | '4' | '6'
+        self._reverse  = reverse
+        self._duration = duration
+        self._proc: subprocess.Popen | None = None
+        self._stop = False
+
+    def run(self) -> None:
+        args = [_CMD_IPERF3, '-c', self._host, '-p', str(self._port),
+                '-J', '-t', str(self._duration)]
+        if self._udp:
+            args.append('-u')
+        if self._ip_mode in ('4', '6'):
+            args.append(f'-{self._ip_mode}')
+        if self._reverse:
+            args.append('-R')
+
+        try:
+            self._proc = subprocess.Popen(
+                args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            )
+            stdout, stderr = self._proc.communicate(timeout=self._duration + 15)
+            self._proc = None
+            if self._stop:
+                return
+            try:
+                data = json.loads(stdout)
+            except (json.JSONDecodeError, TypeError):
+                self.error.emit(stderr.strip() or tr("speed_lan_err_connect"))
+                return
+            if 'error' in data:
+                self.error.emit(str(data['error']))
+                return
+            self.result_ready.emit(self._parse(data))
+        except subprocess.TimeoutExpired:
+            self.error.emit(tr("speed_lan_err_connect"))
+        except Exception as exc:
+            self.error.emit(str(exc))
+        finally:
+            self.finished.emit()
+
+    def _parse(self, data: dict) -> dict:
+        end = data.get('end', {})
+        result: dict = {
+            'sent_mbps': 0.0, 'received_mbps': 0.0,
+            'jitter_ms': None, 'loss_pct': None,
+        }
+        if self._udp:
+            summ = end.get('sum', {})
+            mbps = summ.get('bits_per_second', 0.0) / 1_000_000
+            result['sent_mbps']     = mbps
+            result['received_mbps'] = mbps
+            result['jitter_ms']     = summ.get('jitter_ms')
+            result['loss_pct']      = summ.get('lost_percent')
+        else:
+            sent = end.get('sum_sent', {})
+            recv = end.get('sum_received', {})
+            result['sent_mbps']     = sent.get('bits_per_second', 0.0) / 1_000_000
+            result['received_mbps'] = recv.get('bits_per_second', 0.0) / 1_000_000
+        return result
 
     def stop(self) -> None:
         self._stop = True
@@ -387,9 +473,64 @@ def _nice(v: float) -> float:
     return v
 
 
+# ── iperf3 saved servers (data model) ───────────────────────────────────────
+
+@dataclass
+class Iperf3Server:
+    name: str = ''
+    host: str = ''
+    port: int = 5201
+
+
+class _Iperf3ServerStore:
+    def __init__(self, path: Path | None = None) -> None:
+        self._path = path or _IPERF3_SERVERS_STORE_PATH
+        self._servers: list[Iperf3Server] = []
+        self._load()
+
+    def _load(self) -> None:
+        if self._path.exists():
+            try:
+                raw = json.loads(self._path.read_text())
+                fields = Iperf3Server.__dataclass_fields__
+                self._servers = [
+                    Iperf3Server(**{k: v for k, v in d.items() if k in fields})
+                    for d in raw
+                ]
+            except Exception:
+                self._servers = []
+
+    def _save(self) -> None:
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._path.write_text(
+            json.dumps([asdict(s) for s in self._servers], indent=2, ensure_ascii=False)
+        )
+
+    def all(self) -> list[Iperf3Server]:
+        return list(self._servers)
+
+    def add(self, server: Iperf3Server) -> None:
+        self._servers.append(server)
+        self._save()
+
+    def remove(self, idx: int) -> None:
+        del self._servers[idx]
+        self._save()
+
+
+def _load_public_servers() -> list[dict]:
+    try:
+        data = json.loads(_IPERF3_PUBLIC_SERVERS_PATH.read_text(encoding='utf-8'))
+        if isinstance(data, list):
+            return data
+    except Exception:
+        pass
+    return []
+
+
 # ── Page ──────────────────────────────────────────────────────────────────────
 
-class SpeedTestPage(QWidget):
+class _InternetSpeedTab(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self._worker: SpeedTestWorker | None = None
@@ -603,3 +744,322 @@ class SpeedTestPage(QWidget):
             self._lbl_status.setText("")
             self._lbl_summary.setText(summary)
             self._lbl_summary.setVisible(True)
+
+
+# ── LAN tab (iperf3) ─────────────────────────────────────────────────────────
+
+class _LanSpeedTab(QWidget):
+    def __init__(self) -> None:
+        super().__init__()
+        self._worker: Iperf3Worker | None = None
+        self._store = _Iperf3ServerStore()
+        self._public_servers = _load_public_servers()
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(12)
+
+        if not _CMD_IPERF3:
+            banner = QLabel(tr("speed_lan_err_no_cmd"))
+            banner.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            banner.setStyleSheet(
+                "color: palette(mid); font-size: 13px; padding: 24px;"
+            )
+            banner.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            layout.addWidget(banner)
+            return
+
+        # ── Server selection ────────────────────────────────────────────────
+        radio_row = QHBoxLayout()
+        self._radio_public = QRadioButton(tr("speed_lan_server_public"))
+        self._radio_custom = QRadioButton(tr("speed_lan_server_custom"))
+        self._radio_public.setChecked(True)
+        mode_group = QButtonGroup(self)
+        mode_group.addButton(self._radio_public)
+        mode_group.addButton(self._radio_custom)
+        self._radio_public.toggled.connect(self._on_mode_toggled)
+        radio_row.addWidget(self._radio_public)
+        radio_row.addWidget(self._radio_custom)
+        radio_row.addStretch(1)
+        layout.addLayout(radio_row)
+
+        public_row = QHBoxLayout()
+        public_row.addWidget(QLabel(tr("speed_lan_lbl_country")))
+        self._combo_country = QComboBox()
+        self._combo_country.currentIndexChanged.connect(self._on_country_changed)
+        public_row.addWidget(self._combo_country)
+        public_row.addWidget(QLabel(tr("speed_lan_lbl_server")))
+        self._combo_public_server = QComboBox()
+        public_row.addWidget(self._combo_public_server, 1)
+        layout.addLayout(public_row)
+
+        custom_row = QHBoxLayout()
+        custom_row.addWidget(QLabel(tr("speed_lan_lbl_host")))
+        self._edit_host = QLineEdit()
+        custom_row.addWidget(self._edit_host, 1)
+        custom_row.addWidget(QLabel(tr("speed_lan_lbl_port")))
+        self._edit_port = QLineEdit("5201")
+        self._edit_port.setFixedWidth(70)
+        custom_row.addWidget(self._edit_port)
+        self._btn_save_server = QPushButton(tr("speed_lan_btn_save_server"))
+        self._btn_save_server.clicked.connect(self._on_save_server)
+        custom_row.addWidget(self._btn_save_server)
+        layout.addLayout(custom_row)
+
+        saved_row = QHBoxLayout()
+        saved_row.addWidget(QLabel(tr("speed_lan_lbl_saved")))
+        self._combo_saved = QComboBox()
+        self._combo_saved.currentIndexChanged.connect(self._on_saved_selected)
+        saved_row.addWidget(self._combo_saved, 1)
+        self._btn_delete_server = QPushButton(tr("speed_lan_btn_delete_server"))
+        self._btn_delete_server.clicked.connect(self._on_delete_server)
+        saved_row.addWidget(self._btn_delete_server)
+        layout.addLayout(saved_row)
+
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setFrameShadow(QFrame.Shadow.Sunken)
+        layout.addWidget(sep)
+
+        # ── Options ──────────────────────────────────────────────────────────
+        opt_row = QHBoxLayout()
+        self._radio_tcp = QRadioButton(tr("speed_lan_protocol_tcp"))
+        self._radio_udp = QRadioButton(tr("speed_lan_protocol_udp"))
+        self._radio_tcp.setChecked(True)
+        proto_group = QButtonGroup(self)
+        proto_group.addButton(self._radio_tcp)
+        proto_group.addButton(self._radio_udp)
+        opt_row.addWidget(self._radio_tcp)
+        opt_row.addWidget(self._radio_udp)
+        opt_row.addSpacing(16)
+
+        self._radio_ip_auto = QRadioButton(tr("speed_lan_ip_auto"))
+        self._radio_ip_v4   = QRadioButton(tr("speed_lan_ip_v4"))
+        self._radio_ip_v6   = QRadioButton(tr("speed_lan_ip_v6"))
+        self._radio_ip_auto.setChecked(True)
+        ip_group = QButtonGroup(self)
+        for rb in (self._radio_ip_auto, self._radio_ip_v4, self._radio_ip_v6):
+            ip_group.addButton(rb)
+            opt_row.addWidget(rb)
+        opt_row.addStretch(1)
+        layout.addLayout(opt_row)
+
+        opt_row2 = QHBoxLayout()
+        self._chk_reverse = QCheckBox(tr("speed_lan_lbl_reverse"))
+        opt_row2.addWidget(self._chk_reverse)
+        opt_row2.addSpacing(16)
+        opt_row2.addWidget(QLabel(tr("speed_lan_lbl_duration")))
+        self._combo_duration = QComboBox()
+        self._combo_duration.addItems(["5", "10", "20", "30"])
+        self._combo_duration.setCurrentText("10")
+        opt_row2.addWidget(self._combo_duration)
+        opt_row2.addStretch(1)
+        layout.addLayout(opt_row2)
+
+        # ── Toolbar ──────────────────────────────────────────────────────────
+        bar = QHBoxLayout()
+        self._btn_start = QPushButton(tr("speed_start_btn"))
+        self._btn_start.setFixedWidth(140)
+        self._btn_start.clicked.connect(self._on_start)
+        bar.addWidget(self._btn_start)
+
+        self._btn_stop = QPushButton(tr("speed_stop_btn"))
+        self._btn_stop.setFixedWidth(100)
+        self._btn_stop.setEnabled(False)
+        self._btn_stop.clicked.connect(self._on_stop)
+        bar.addWidget(self._btn_stop)
+
+        bar.addSpacing(12)
+        self._lbl_status = QLabel("")
+        bar.addWidget(self._lbl_status, 1)
+        layout.addLayout(bar)
+
+        self._progress = QProgressBar()
+        self._progress.setRange(0, 0)
+        self._progress.setFixedHeight(4)
+        self._progress.setTextVisible(False)
+        self._progress.setVisible(False)
+        layout.addWidget(self._progress)
+
+        # ── Metric cards ─────────────────────────────────────────────────────
+        cards_row = QHBoxLayout()
+        self._card_sent     = _MetricCard(tr("speed_lan_lbl_sent"), "Mbit/s")
+        self._card_received = _MetricCard(tr("speed_lan_lbl_received"), "Mbit/s")
+        self._card_jitter   = _MetricCard(tr("speed_lan_lbl_jitter"), "ms")
+        self._card_loss     = _MetricCard(tr("speed_lan_lbl_loss"), "%")
+        for card in (self._card_sent, self._card_received, self._card_jitter, self._card_loss):
+            cards_row.addWidget(card)
+        layout.addLayout(cards_row)
+        self._card_jitter.setVisible(False)
+        self._card_loss.setVisible(False)
+
+        layout.addStretch(1)
+
+        self._populate_countries()
+        self._refresh_saved_list()
+        self._on_mode_toggled()
+
+    # ── Server selection helpers ────────────────────────────────────────────
+
+    def _populate_countries(self) -> None:
+        countries = sorted({s['country'] for s in self._public_servers})
+        self._combo_country.clear()
+        self._combo_country.addItems(countries)
+
+    def _on_country_changed(self) -> None:
+        country = self._combo_country.currentText()
+        self._combo_public_server.clear()
+        for s in self._public_servers:
+            if s['country'] == country:
+                self._combo_public_server.addItem(s['name'], s)
+
+    def _on_mode_toggled(self) -> None:
+        public = self._radio_public.isChecked()
+        self._combo_country.setEnabled(public)
+        self._combo_public_server.setEnabled(public)
+        self._edit_host.setEnabled(not public)
+        self._edit_port.setEnabled(not public)
+        self._btn_save_server.setEnabled(not public)
+
+    def _refresh_saved_list(self) -> None:
+        self._combo_saved.blockSignals(True)
+        self._combo_saved.clear()
+        self._combo_saved.addItem("", None)
+        for s in self._store.all():
+            self._combo_saved.addItem(f"{s.name} ({s.host}:{s.port})", s)
+        self._combo_saved.blockSignals(False)
+
+    def _on_saved_selected(self) -> None:
+        server = self._combo_saved.currentData()
+        if server is not None:
+            self._radio_custom.setChecked(True)
+            self._edit_host.setText(server.host)
+            self._edit_port.setText(str(server.port))
+
+    def _on_save_server(self) -> None:
+        host = self._edit_host.text().strip()
+        if not host:
+            return
+        try:
+            port = int(self._edit_port.text().strip() or 5201)
+        except ValueError:
+            port = 5201
+        self._store.add(Iperf3Server(name=host, host=host, port=port))
+        self._refresh_saved_list()
+
+    def _on_delete_server(self) -> None:
+        idx = self._combo_saved.currentIndex() - 1   # first entry is blank
+        if idx >= 0:
+            self._store.remove(idx)
+            self._refresh_saved_list()
+
+    def _selected_target(self) -> tuple[str, int] | None:
+        if self._radio_public.isChecked():
+            data = self._combo_public_server.currentData()
+            if not data:
+                return None
+            return data['host'], int(data['port'])
+        host = self._edit_host.text().strip()
+        if not host:
+            return None
+        try:
+            port = int(self._edit_port.text().strip() or 5201)
+        except ValueError:
+            port = 5201
+        return host, port
+
+    # ── Control ──────────────────────────────────────────────────────────────
+
+    def _on_start(self) -> None:
+        target = self._selected_target()
+        if not target:
+            self._lbl_status.setText(tr("speed_lan_no_server_selected"))
+            return
+        host, port = target
+        self._stop_worker()
+        for card in (self._card_sent, self._card_received, self._card_jitter, self._card_loss):
+            card.reset()
+
+        udp      = self._radio_udp.isChecked()
+        ip_mode  = '4' if self._radio_ip_v4.isChecked() else ('6' if self._radio_ip_v6.isChecked() else 'auto')
+        reverse  = self._chk_reverse.isChecked()
+        duration = int(self._combo_duration.currentText())
+
+        cmd_parts = ['iperf3', '-c', host, '-p', str(port), '-t', str(duration)]
+        if udp:
+            cmd_parts.append('-u')
+        if ip_mode in ('4', '6'):
+            cmd_parts.append(f'-{ip_mode}')
+        if reverse:
+            cmd_parts.append('-R')
+        bar = get_cli_bar()
+        if bar:
+            bar.set_cmd(' '.join(cmd_parts))
+
+        self._worker = Iperf3Worker(host, port, udp=udp, ip_mode=ip_mode,
+                                     reverse=reverse, duration=duration)
+        self._worker.result_ready.connect(self._on_result)
+        self._worker.error.connect(self._on_error)
+        self._worker.finished.connect(self._on_finished)
+
+        self._card_jitter.setVisible(udp)
+        self._card_loss.setVisible(udp)
+        self._btn_start.setEnabled(False)
+        self._btn_stop.setEnabled(True)
+        self._progress.setVisible(True)
+        self._lbl_status.setText(tr("speed_lan_status_running"))
+        self._worker.start()
+
+    def _on_stop(self) -> None:
+        self._stop_worker()
+        self._lbl_status.setText(tr("speed_lan_status_stop"))
+
+    def _stop_worker(self) -> None:
+        if self._worker:
+            try:
+                self._worker.result_ready.disconnect()
+                self._worker.error.disconnect()
+                self._worker.finished.disconnect()
+            except Exception:
+                pass
+            self._worker.stop()
+            self._worker = None
+        self._btn_start.setEnabled(bool(_CMD_IPERF3))
+        self._btn_stop.setEnabled(False)
+        self._progress.setVisible(False)
+
+    # ── Signals ──────────────────────────────────────────────────────────────
+
+    def _on_result(self, result: dict) -> None:
+        self._card_sent.set_value(result['sent_mbps'], _BLUE_LINE.name())
+        self._card_received.set_value(result['received_mbps'], _ORA_LINE.name())
+        if result['jitter_ms'] is not None:
+            self._card_jitter.set_value(result['jitter_ms'])
+        if result['loss_pct'] is not None:
+            self._card_loss.set_value(result['loss_pct'])
+        self._lbl_status.setText(tr(
+            "speed_lan_status_done",
+            sent=f"{result['sent_mbps']:.1f}",
+            received=f"{result['received_mbps']:.1f}",
+        ))
+
+    def _on_error(self, msg: str) -> None:
+        self._lbl_status.setText(tr("common_error_prefix", msg=msg))
+
+    def _on_finished(self) -> None:
+        self._stop_worker()
+
+
+# ── Page ──────────────────────────────────────────────────────────────────────
+
+class SpeedTestPage(QWidget):
+    def __init__(self) -> None:
+        super().__init__()
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        tabs = QTabWidget()
+        tabs.addTab(_InternetSpeedTab(), tr("speed_internet_tab_label"))
+        tabs.addTab(_LanSpeedTab(), tr("speed_lan_tab_label"))
+        layout.addWidget(tabs)
