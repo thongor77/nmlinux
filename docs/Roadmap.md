@@ -1,8 +1,8 @@
 # Roadmap NMLinux
 
-## Version courante : v1.7.8 (2026-07-14)
+## Version courante : v1.7.9 (2026-08-02)
 
-29 modules, 8 langues UI (i18n complet, dont le trou allemand speed_*/mtr_*/fw_* comblé en v1.7.8), aide contextuelle 8 langues × 28 modules (File Transfer non couvert), compatibilité Linux + macOS (macOS 26 inclus), Asset Inventory (SSH/WinRM/SNMP), liens inter-modules (clic droit → Ping/DNS/Whois/Port Scanner/SSH/RDP/VNC/Asset Inventory/Topology), montage SMB/NFS, Speed Test avec onglet LAN (iperf3), AppImage + macOS .app.
+29 modules, 8 langues UI (i18n complet, dont le trou allemand speed_*/mtr_*/fw_* comblé en v1.7.8), aide contextuelle 8 langues × 28 modules (File Transfer non couvert), compatibilité Linux + macOS (macOS 26 inclus), Asset Inventory (SSH/WinRM/SNMP), liens inter-modules (clic droit → Ping/DNS/Whois/Port Scanner/SSH/RDP/VNC/Asset Inventory/Topology), montage SMB/NFS, Speed Test avec onglet LAN (iperf3), terminal SSH avec sessions multiples en onglets + copier/coller (v1.7.9), AppImage + macOS .app.
 
 ---
 
@@ -238,3 +238,4 @@ Le module Firewall est actuellement en lecture seule (affichage nft/iptables/pf)
 | v1.7.4 | 2026-07-04 | Fix scans Asset Inventory instables, bouton "Relancer sur les IP vides" |
 | v1.7.5 | 2026-07-04 | Ping Monitor : répertoire de cibles sauvegardées (ajout/relance depuis les lignes actives) |
 | v1.7.6 | 2026-07-05 | Asset Inventory : clic-droit "Actualiser la sélection", feedback échec d'authentification SSH au lieu d'un fallback silencieux |
+| v1.7.9 | 2026-08-02 | Terminal SSH : sélection souris + copier/coller (Ctrl+Maj+C/V, menu clic droit), sessions multiples en onglets (DT-16) |

@@ -103,3 +103,9 @@ Ce fichier reprend les jalons techniques essentiels.
 - **Speed Test — onglet LAN (iperf3)** : suite à la feature request GitHub #6 (`loren2018tw`), nouveau test de débit point-à-point via `iperf3` (client uniquement), en complément du test internet existant. Choix entre une liste de 26 serveurs publics bundlée par pays et des serveurs personnalisés sauvegardés. TCP/UDP, IPv4/IPv6/auto, sens (reverse = download). Voir DT-15.
 - Découverte et correction en passant d'un trou i18n préexistant : le bloc allemand n'avait aucune clé `speed_*`/`mtr_*`/`fw_*` (56 clés), comblées dans le même commit.
 - Nouvelle dépendance optionnelle : `iperf3`.
+
+## 2026-08-02 — v1.7.9
+
+- **Terminal SSH — copier/coller** : signalé par l'utilisateur, aucune sélection de texte à la souris n'existait dans `TerminalView` — copier était donc totalement impossible. Ajout de la sélection glisser-cliquer (surlignage), `Ctrl+Maj+C` pour copier, menu contextuel clic droit (Copier/Coller). `Ctrl+Maj+V` (déjà présent) inchangé.
+- **Terminal SSH — sessions multiples en onglets** : signalé par l'utilisateur, reconnecter une connexion enregistrée tuait la session active sans en rouvrir une nouvelle fonctionnelle. Cause : `SshPage` ne portait qu'une seule session globale. Refonte en `QTabWidget` (`_SshSessionTab`) — chaque connexion, même vers le même hôte, ouvre désormais un nouvel onglet indépendant au lieu de remplacer la session active. Voir DT-16.
+- Release GitHub (wheel + AppImage) : https://github.com/thongor77/nmlinux/releases/tag/v1.7.9. AUR non mise à jour cette fois — dépôt en maintenance.
