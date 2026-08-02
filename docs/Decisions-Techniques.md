@@ -201,3 +201,20 @@ result += "\n    },"     # MOD_CLOSE — ferme le module
 **Alternatives rejetées :**
 - Nouveau module `IperfPage` dans la sidebar : rejeté, aurait dupliqué toute la logique de cartes/worker/CLI bar déjà présente dans Speed Test pour un concept très proche.
 - Implémenter le mode serveur dès la v1 : reporté, pas de demande concrète au-delà de la suggestion initiale, complexité (pare-feu, port persistant) disproportionnée sans cas d'usage validé.
+
+---
+
+## DT-16 — Terminal SSH : sessions multiples en onglets (vs session unique)
+
+**Contexte :** Signalé par l'utilisateur : reconnecter une connexion enregistrée (double-clic sur le même élément de l'arbre, ou une deuxième connexion pendant qu'une session tournait déjà) tuait la session active sans jamais rouvrir de terminal fonctionnel. Cause racine : `SshPage` ne portait qu'un seul `SshWorker`/`TerminalView` global (page `_TERMINAL` unique) — toute nouvelle connexion arrêtait d'abord l'ancienne session avant d'en démarrer une nouvelle sur le même widget. Un test isolé (cycle stop/start du `SshWorker` seul, hors GUI) a confirmé que le mécanisme bas niveau fonctionnait correctement ; le vrai problème était l'absence de support multi-session, pas un bug de threading.
+
+**Décision :** Remplacer le widget terminal unique par un `QTabWidget` (`SshPage._term_tabs`). Chaque connexion — via double-clic, bouton « Se connecter » ou menu contextuel — ouvre systématiquement un **nouvel onglet** (`_SshSessionTab`), jamais un remplacement. Un onglet encapsule son propre `SshWorker` + `TerminalView` + en-tête (statut, nom, bouton Déconnecter). Fermer un onglet (bouton x) arrête son worker et le retire ; fermer la page (`closeEvent`) arrête tous les workers actifs.
+
+**Raisons :**
+- Usage réel attendu : plusieurs sessions simultanées, y compris vers le même hôte (ex. un terminal pour un `tail -f`, un autre pour l'administration).
+- Isole l'échec/la fin d'une session (code de sortie, erreur réseau) des autres sessions ouvertes.
+- Conserve `SshWorker`/`TerminalView` inchangés (`core/terminal.py`, `pages/terminal_view.py`) — seule `SshPage` change de structure.
+
+**Alternatives rejetées :**
+- Dédupliquer par connexion (un seul onglet par `conn.id`, réutilisé si déjà ouvert) : rejeté, empêche d'ouvrir deux sessions vers le même hôte, cas d'usage explicitement voulu.
+- Fenêtres séparées par session (multi-fenêtrage Qt) : rejeté, plus lourd à intégrer avec la sidebar/l'arbre de connexions existants qu'un `QTabWidget` dans la page actuelle.

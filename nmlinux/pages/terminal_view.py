@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pyte
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QKeyEvent, QPainter
-from PySide6.QtWidgets import QApplication, QScrollBar, QWidget
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QKeyEvent, QMouseEvent, QPainter
+from PySide6.QtWidgets import QApplication, QMenu, QScrollBar, QWidget
 
 # ── Colour palette ──────────────────────────────────────────────────────────
 
@@ -139,6 +139,12 @@ class TerminalView(QWidget):
         self._vbar.valueChanged.connect(self._on_scroll_changed)
         self._at_bottom = True
 
+        # Mouse selection (absolute row index into history+live buffer, column)
+        self._sel_start: tuple[int, int] | None = None
+        self._sel_end:   tuple[int, int] | None = None
+        self._selecting = False
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
+
     # ── Public API ──────────────────────────────────────────────────────────
 
     def set_writer(self, fn: 'Callable[[bytes], None] | None') -> None:
@@ -156,6 +162,8 @@ class TerminalView(QWidget):
         self._vbar.setValue(0)
         self._vbar.blockSignals(False)
         self._at_bottom = True
+        self._sel_start = None
+        self._sel_end = None
         self.update()
 
     # ── Scrollbar ───────────────────────────────────────────────────────────
@@ -200,6 +208,10 @@ class TerminalView(QWidget):
         scroll_offset = self._vbar.maximum() - self._vbar.value()
         viewport_start = hist_size - scroll_offset
 
+        sel_range = None
+        if self._sel_start is not None and self._sel_end is not None:
+            (sr0, sc0), (sr1, sc1) = sorted([self._sel_start, self._sel_end])
+
         for y in range(self._screen.lines):
             abs_idx = viewport_start + y
             if abs_idx < 0:
@@ -208,6 +220,12 @@ class TerminalView(QWidget):
                 row = hist[abs_idx]
             else:
                 row = self._screen.buffer.get(abs_idx - hist_size, {})
+
+            row_sel = None
+            if self._sel_start is not None and self._sel_end is not None and sr0 <= abs_idx <= sr1:
+                start_c = sc0 if abs_idx == sr0 else 0
+                end_c   = sc1 if abs_idx == sr1 else self._screen.columns - 1
+                row_sel = (start_c, end_c)
 
             for x in range(self._screen.columns):
                 cell = row.get(x)
@@ -219,7 +237,9 @@ class TerminalView(QWidget):
                 bg = _qcolor(cell.fg if rev else cell.bg, _DEFAULT_BG)
                 rx = x * self._cw
                 ry = y * self._ch
-                if bg != _DEFAULT_BG:
+                if row_sel and row_sel[0] <= x <= row_sel[1]:
+                    p.fillRect(rx, ry, self._cw, self._ch, QColor(137, 180, 250, 110))
+                elif bg != _DEFAULT_BG:
                     p.fillRect(rx, ry, self._cw, self._ch, bg)
                 if char != ' ':
                     p.setFont(self._font_bold if getattr(cell, 'bold', False)
@@ -272,6 +292,8 @@ class TerminalView(QWidget):
                 txt = QApplication.clipboard().text()
                 if txt:
                     self._writer(txt.encode('utf-8'))
+            elif key == Qt.Key.Key_C:
+                self._copy_selection()
             return
 
         if mods == Qt.KeyboardModifier.ControlModifier:
@@ -292,3 +314,73 @@ class TerminalView(QWidget):
         txt = event.text()
         if txt:
             self._writer(b'\x7f' if txt == '\x08' else txt.encode('utf-8'))
+
+    # ── Mouse selection ─────────────────────────────────────────────────────
+
+    def _pixel_to_cell(self, pos) -> tuple[int, int]:
+        hist_size = len(self._screen.history.top)
+        scroll_offset = self._vbar.maximum() - self._vbar.value()
+        viewport_start = hist_size - scroll_offset
+        col = max(0, min(int(pos.x()) // self._cw, self._screen.columns - 1))
+        row = viewport_start + int(pos.y()) // self._ch
+        return row, col
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:        # noqa: N802
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._sel_start = self._pixel_to_cell(event.position())
+            self._sel_end = self._sel_start
+            self._selecting = True
+            self.update()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:         # noqa: N802
+        if self._selecting:
+            self._sel_end = self._pixel_to_cell(event.position())
+            self.update()
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:      # noqa: N802
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._selecting = False
+            if self._sel_start == self._sel_end:
+                self._sel_start = None
+                self._sel_end = None
+                self.update()
+        super().mouseReleaseEvent(event)
+
+    def _selected_text(self) -> str:
+        if self._sel_start is None or self._sel_end is None:
+            return ''
+        (r0, c0), (r1, c1) = sorted([self._sel_start, self._sel_end])
+        hist = self._screen.history.top
+        hist_size = len(hist)
+        lines: list[str] = []
+        for r in range(max(r0, 0), r1 + 1):
+            row = hist[r] if r < hist_size else self._screen.buffer.get(r - hist_size, {})
+            start_c = c0 if r == r0 else 0
+            end_c   = c1 if r == r1 else self._screen.columns - 1
+            chars = [
+                (row.get(x).data if row.get(x) and row.get(x).data else ' ')
+                for x in range(start_c, end_c + 1)
+            ]
+            lines.append(''.join(chars).rstrip())
+        return '\n'.join(lines)
+
+    def _copy_selection(self) -> None:
+        text = self._selected_text()
+        if text:
+            QApplication.clipboard().setText(text)
+
+    def contextMenuEvent(self, event) -> None:                    # noqa: N802
+        menu = QMenu(self)
+        act_copy = menu.addAction("Copier")
+        act_copy.setEnabled(bool(self._selected_text()))
+        act_paste = menu.addAction("Coller")
+        act_paste.setEnabled(self._writer is not None)
+        act = menu.exec(event.globalPos())
+        if act == act_copy:
+            self._copy_selection()
+        elif act == act_paste and self._writer is not None:
+            txt = QApplication.clipboard().text()
+            if txt:
+                self._writer(txt.encode('utf-8'))

@@ -223,16 +223,20 @@ Pas de dépendance système. 1 à 5 requêtes moyennées. Affiche : offset, dél
 
 ---
 
-## 17 · SSH (`pages/ssh.py` — 678 lignes)
+## 17 · SSH (`pages/ssh.py` — 760 lignes)
 
 | Champ | Valeur |
 |-------|--------|
 | Backend | `ssh` via PTY (`ptyprocess`), pyte VT100 |
-| Worker | `SshWorker(QThread)` dans `core/terminal.py` |
+| Worker | `SshWorker(QThread)` dans `core/terminal.py`, un par session |
 | Persistence | `~/.local/share/nmlinux/ssh_connections.json` (v2) |
 | Export | — |
 
 Carnet d'adresses hiérarchique (groupes/sous-groupes). Auth clé ou mot de passe. Scrollback 2000 lignes. Toutes séquences VT100/xterm.
+
+Sessions multiples en onglets (`QTabWidget`, `_SshSessionTab`) — chaque connexion (même vers le même hôte) ouvre un nouvel onglet avec son propre `SshWorker`/`TerminalView`, sans jamais remplacer une session existante. Voir DT-16.
+
+Sélection de texte à la souris dans le terminal + copier (`Ctrl+Maj+C`) / coller (`Ctrl+Maj+V`) / menu contextuel clic droit.
 
 ---
 

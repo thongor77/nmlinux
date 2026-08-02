@@ -3,7 +3,7 @@ from __future__ import annotations
 from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QFormLayout,
     QTreeWidget, QTreeWidgetItem,
-    QStackedWidget,
+    QStackedWidget, QTabWidget,
     QLabel, QLineEdit, QSpinBox, QPushButton, QTextEdit,
     QFrame, QGroupBox, QSplitter, QFileDialog,
     QMessageBox, QToolButton, QApplication,
@@ -27,6 +27,81 @@ _FORM     = 2
 _TERMINAL = 3
 
 
+# ── One SSH session — worker + terminal view + per-tab header ──────────────
+
+class _SshSessionTab(QWidget):
+    """A single connected (or disconnected) SSH session, embedded as one tab."""
+
+    def __init__(self, conn: SshConnection) -> None:
+        super().__init__()
+        self.conn = conn
+        self._worker: SshWorker | None = None
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        header = QFrame()
+        header.setFrameShape(QFrame.Shape.StyledPanel)
+        h_row = QHBoxLayout(header)
+        h_row.setContentsMargins(12, 6, 12, 6)
+        self.dot = QLabel("●")
+        self.dot.setStyleSheet(f"color: {color_ok()}; font-size: 16px;")
+        self.label = QLabel(f"{self.conn.display_name}  —  {self.conn.subtitle}")
+        self.label.setStyleSheet("font-weight: bold;")
+        btn_disc = QPushButton(QIcon.fromTheme("network-disconnect"), " Déconnecter")
+        btn_disc.clicked.connect(self.stop)
+        h_row.addWidget(self.dot)
+        h_row.addWidget(self.label, 1)
+        h_row.addWidget(btn_disc)
+        layout.addWidget(header)
+
+        self.term_view = TerminalView()
+        layout.addWidget(self.term_view, 1)
+
+    def start(self) -> None:
+        worker = SshWorker(build_ssh_args(self.conn))
+        self._worker = worker
+        worker.output.connect(self.term_view.feed)
+        worker.exited.connect(self._on_exited)
+        self.term_view.set_writer(worker.write)
+        self.term_view.resize_pty.connect(worker.resize)
+        self.term_view.reset_screen()
+        self.dot.setStyleSheet(f"color: {color_ok()}; font-size: 16px;")
+        self.term_view.setFocus()
+        worker.start()
+
+    def _on_exited(self, code: int) -> None:
+        self._worker = None
+        self.dot.setStyleSheet(f"color: {color_err()}; font-size: 16px;")
+        self.term_view.feed(
+            f"\r\n\r\n── Session terminée (code {code}) ──\r\n".encode('utf-8')
+        )
+
+    def stop(self) -> None:
+        w = self._worker
+        if w is None:
+            return
+        try:
+            w.output.disconnect()
+            w.exited.disconnect()
+        except Exception:
+            pass
+        try:
+            self.term_view.resize_pty.disconnect(w.resize)
+        except Exception:
+            pass
+        self.term_view.set_writer(None)
+        w.stop()
+        self._worker = None
+        self.dot.setStyleSheet(f"color: {color_err()}; font-size: 16px;")
+
+    def is_running(self) -> bool:
+        return self._worker is not None
+
+
 # ── SSH page ───────────────────────────────────────────────────────────────
 
 class SshPage(QWidget):
@@ -35,7 +110,6 @@ class SshPage(QWidget):
         self._store       = SshStore()
         self._groups, self._connections = self._store.load()
         self._editing_id: str | None = None
-        self._worker: SshWorker | None = None
 
         self._build_ui()
         self._refresh_list()
@@ -220,29 +294,11 @@ class SshPage(QWidget):
         return w
 
     def _build_terminal(self) -> QWidget:
-        w = QWidget()
-        layout = QVBoxLayout(w)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-
-        header = QFrame()
-        header.setFrameShape(QFrame.Shape.StyledPanel)
-        h_row = QHBoxLayout(header)
-        h_row.setContentsMargins(12, 6, 12, 6)
-        self._term_dot   = QLabel("●")
-        self._term_dot.setStyleSheet(f"color: {color_ok()}; font-size: 16px;")
-        self._term_label = QLabel()
-        self._term_label.setStyleSheet("font-weight: bold;")
-        btn_disc = QPushButton(QIcon.fromTheme("network-disconnect"), " Déconnecter")
-        btn_disc.clicked.connect(self._on_disconnect)
-        h_row.addWidget(self._term_dot)
-        h_row.addWidget(self._term_label, 1)
-        h_row.addWidget(btn_disc)
-        layout.addWidget(header)
-
-        self._term_view = TerminalView()
-        layout.addWidget(self._term_view, 1)
-        return w
+        self._term_tabs = QTabWidget()
+        self._term_tabs.setTabsClosable(True)
+        self._term_tabs.setMovable(True)
+        self._term_tabs.tabCloseRequested.connect(self._on_tab_close_requested)
+        return self._term_tabs
 
     # ── Tree helpers ───────────────────────────────────────────────────────
 
@@ -649,51 +705,33 @@ class SshPage(QWidget):
     # ── Slots — terminal ───────────────────────────────────────────────────
 
     def _start_session(self, conn: SshConnection) -> None:
-        self._stop_worker()
-        worker = SshWorker(build_ssh_args(conn))
-        self._worker = worker
-        worker.output.connect(self._term_view.feed)
-        worker.exited.connect(self._on_term_exited)
-        self._term_view.set_writer(worker.write)
-        self._term_view.resize_pty.connect(worker.resize)
-        self._term_view.reset_screen()
-
-        self._term_label.setText(f"{conn.display_name}  —  {conn.subtitle}")
-        self._term_dot.setStyleSheet(f"color: {color_ok()}; font-size: 16px;")
+        """Open a brand-new tab and session for `conn` — never replaces an
+        existing tab, so several sessions (even to the same host) can run
+        side by side."""
+        tab = _SshSessionTab(conn)
+        idx = self._term_tabs.addTab(tab, conn.display_name)
+        self._term_tabs.setTabToolTip(idx, conn.subtitle)
+        self._term_tabs.setCurrentIndex(idx)
         self._right.setCurrentIndex(_TERMINAL)
-        self._term_view.setFocus()
-        worker.start()
+        tab.start()
 
-    def _on_term_exited(self, code: int) -> None:
-        self._worker = None
-        self._term_dot.setStyleSheet(f"color: {color_err()}; font-size: 16px;")
-        self._term_view.feed(
-            f"\r\n\r\n── Session terminée (code {code}) ──\r\n".encode('utf-8')
-        )
+    def _on_tab_close_requested(self, index: int) -> None:
+        tab = self._term_tabs.widget(index)
+        if tab is not None:
+            tab.stop()
+        self._term_tabs.removeTab(index)
+        if self._term_tabs.count() == 0:
+            conn = self._current_conn()
+            if conn:
+                self._show_detail(conn)
+            else:
+                self._right.setCurrentIndex(_EMPTY)
 
-    def _on_disconnect(self) -> None:
-        self._stop_worker()
-        conn = self._current_conn()
-        if conn:
-            self._show_detail(conn)
-        else:
-            self._right.setCurrentIndex(_EMPTY)
-
-    def _stop_worker(self) -> None:
-        w = self._worker
-        if w is not None:
-            try:
-                w.output.disconnect()
-                w.exited.disconnect()
-            except Exception:
-                pass
-            try:
-                self._term_view.resize_pty.disconnect(w.resize)
-            except Exception:
-                pass
-            self._term_view.set_writer(None)
-            w.stop()
-            self._worker = None
+    def _stop_all_sessions(self) -> None:
+        for i in range(self._term_tabs.count()):
+            tab = self._term_tabs.widget(i)
+            if tab is not None:
+                tab.stop()
 
     def _export(self) -> None:
         from PySide6.QtWidgets import QMessageBox
@@ -718,5 +756,5 @@ class SshPage(QWidget):
             QMessageBox.information(self, "Export", f"Saved to:\n{filepath}")
 
     def closeEvent(self, event) -> None:  # type: ignore[override]
-        self._stop_worker()
+        self._stop_all_sessions()
         super().closeEvent(event)
