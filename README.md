@@ -1,6 +1,6 @@
-# NMLinux · v1.7.8
+# NMLinux · v1.7.9
 
-[![Version](https://img.shields.io/badge/version-1.7.8-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.7.9-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -65,6 +65,11 @@ Found a bug anyway? That's useful, not embarrassing — [open an issue](https://
 ---
 
 ## Changelog
+
+### v1.7.9 — 2026-08-02
+
+- **SSH terminal — copy/paste**: select text with the mouse (click-drag, highlighted), copy with `Ctrl+Shift+C` or the right-click menu; paste with `Ctrl+Shift+V` (existing). Copying was previously impossible — no text selection existed at all
+- **SSH terminal — multiple simultaneous sessions**: the SSH page now opens each connection in its own tab instead of a single shared session. Reconnecting to a saved connection — even the same one twice — used to kill the active session without opening a working replacement; now every connect action opens a new, independent tab
 
 ### v1.7.8 — 2026-07-14
 
