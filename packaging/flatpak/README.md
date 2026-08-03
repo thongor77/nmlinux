@@ -87,6 +87,29 @@ flatpak-builder --user --install --force-clean build-dir io.github.thongor77.NML
 flatpak run io.github.thongor77.NMLinux
 ```
 
+## Distribuer — bundle `.flatpak` pour GitHub Releases
+
+Pas de Flathub pour l'instant (voir plus haut : `--filesystem=home` +
+`flatpak-spawn --host` sont exactement ce que la review Flathub resserre en
+priorité — chantier à part si un jour visé). Reste modeste : un fichier
+`.flatpak` unique joint à chaque release GitHub, comme le wheel et
+l'AppImage déjà distribués.
+
+```bash
+bash packaging/flatpak/build-bundle.sh
+# → dist/NMLinux-X.Y.Z-x86_64.flatpak
+```
+
+Le bundle embarque `--runtime-repo=https://flathub.org/repo/flathub.flatpakrepo` :
+côté utilisateur, `flatpak install NMLinux-X.Y.Z-x86_64.flatpak` propose
+d'ajouter Flathub et d'y récupérer `org.kde.Platform`/`io.qt.PySide.BaseApp`
+automatiquement s'ils ne sont pas déjà installés — pas besoin d'un dépôt
+ostree séparé à héberger. Intégré à la procédure de release complète dans
+`docs/Maintenance-IA.md` §Release.
+
+Validé en conditions réelles (2026-08-03) : build → `flatpak install --user`
+depuis le fichier `.flatpak` → `flatpak run` sans erreur.
+
 ## Dépannage
 
 - **Un module (`nmap`, `mtr`, `xfreerdp`…) répond "introuvable" alors qu'il

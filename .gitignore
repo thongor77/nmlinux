@@ -13,4 +13,5 @@ packaging/AppDir/
 packaging/appimagetool-x86_64.AppImage
 packaging/flatpak/build-dir/
 packaging/flatpak/.flatpak-builder/
+packaging/flatpak/repo/
 packaging/flatpak/*.flatpak
