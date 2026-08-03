@@ -1,6 +1,6 @@
-# NMLinux · v1.7.10
+# NMLinux · v1.7.11
 
-[![Version](https://img.shields.io/badge/version-1.7.10-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.7.11-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -65,6 +65,10 @@ Found a bug anyway? That's useful, not embarrassing — [open an issue](https://
 ---
 
 ## Changelog
+
+### v1.7.11 — 2026-08-03
+
+- **Flatpak packaging (KDE Linux)**: a local build manifest under `packaging/flatpak/` targets KDE Linux and other Flatpak-only distros. Host CLI tools nmlinux shells out to (`nmcli`, `pkexec`, `mount.cifs`, `ssh`, `nmap`, …) are bridged via `flatpak-spawn --host` shims on `PATH` instead of sandboxing each one individually; PySide6 comes from Flathub's `io.qt.PySide.BaseApp` rather than the PyPI wheel. Not published on Flathub — a single `.flatpak` bundle is built with `packaging/flatpak/build-bundle.sh` and attached to each release instead, the same way the AppImage already is
 
 ### v1.7.10 — 2026-08-03
 

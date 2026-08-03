@@ -1,8 +1,8 @@
 # Roadmap NMLinux
 
-## Version courante : v1.7.9 (2026-08-02)
+## Version courante : v1.7.11 (2026-08-03)
 
-29 modules, 8 langues UI (i18n complet, dont le trou allemand speed_*/mtr_*/fw_* comblé en v1.7.8), aide contextuelle 8 langues × 28 modules (File Transfer non couvert), compatibilité Linux + macOS (macOS 26 inclus), Asset Inventory (SSH/WinRM/SNMP), liens inter-modules (clic droit → Ping/DNS/Whois/Port Scanner/SSH/RDP/VNC/Asset Inventory/Topology), montage SMB/NFS, Speed Test avec onglet LAN (iperf3), terminal SSH avec sessions multiples en onglets + copier/coller (v1.7.9), AppImage + macOS .app.
+29 modules, 8 langues UI (i18n complet, dont le trou allemand speed_*/mtr_*/fw_* comblé en v1.7.8), aide contextuelle 8 langues × 28 modules (File Transfer non couvert), compatibilité Linux + macOS (macOS 26 inclus), Asset Inventory (SSH/WinRM/SNMP), liens inter-modules (clic droit → Ping/DNS/Whois/Port Scanner/SSH/RDP/VNC/Asset Inventory/Topology), montage SMB/NFS, Speed Test avec onglet LAN (iperf3), terminal SSH avec sessions multiples en onglets + copier/coller (v1.7.9), fix taille PTY perdue au démarrage (v1.7.10), packaging Flatpak local pour KDE Linux (v1.7.11), AppImage + macOS .app.
 
 ---
 
@@ -10,11 +10,12 @@
 
 Ces idées ont été discutées et validées — elles ne sont pas encore implémentées.
 
-### ~~Packaging Flatpak (KDE Linux)~~ — build local validé (2026-08-03)
+### ~~Packaging Flatpak (KDE Linux)~~ — LIVRÉ en v1.7.11
 
 - Manifest local (pas Flathub) dans `packaging/flatpak/` — cible KDE Linux, distro immuable où Flatpak est le seul canal d'installation sérieux (AUR couvre Arch, `flake.nix` couvre NixOS).
 - Approche : `flatpak-spawn --host` shimmé sur le `PATH` pour chaque binaire système appelé (`nmcli`, `pkexec`, `mount.cifs`, `ssh`, …), runtime `org.kde.Platform//6.11` + `io.qt.PySide.BaseApp//6.11` pour PySide6 — voir DT-18.
-- État : build `flatpak-builder --user --install` réussi de bout en bout, app lancée (`flatpak run io.github.thongor77.NMLinux`) sans erreur. Reste à valider en conditions réelles sur KDE Linux (pas seulement Arch avec flatpak-builder installé manuellement) et à tester les modules qui dépendent des shims host-bin (SMB, SSH, pkexec) en usage réel.
+- Distribution restée modeste (pas Flathub — sa review resserre en priorité exactement `--filesystem=home` + `flatpak-spawn --host`) : un bundle `.flatpak` unique (`packaging/flatpak/build-bundle.sh`) joint à chaque release GitHub, comme l'AppImage.
+- Validé en conditions réelles : build → `flatpak install --user` depuis le fichier `.flatpak` → `flatpak run` sans erreur. Reste à tester les modules qui dépendent des shims host-bin (SMB, SSH, pkexec) en usage réel sur KDE Linux.
 
 ### ~~iperf3 — nouvel onglet dans Speed Test~~ — LIVRÉ en v1.7.8
 
