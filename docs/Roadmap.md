@@ -239,3 +239,4 @@ Le module Firewall est actuellement en lecture seule (affichage nft/iptables/pf)
 | v1.7.5 | 2026-07-04 | Ping Monitor : répertoire de cibles sauvegardées (ajout/relance depuis les lignes actives) |
 | v1.7.6 | 2026-07-05 | Asset Inventory : clic-droit "Actualiser la sélection", feedback échec d'authentification SSH au lieu d'un fallback silencieux |
 | v1.7.9 | 2026-08-02 | Terminal SSH : sélection souris + copier/coller (Ctrl+Maj+C/V, menu clic droit), sessions multiples en onglets (DT-16) |
+| v1.7.10 | 2026-08-03 | Fix terminal SSH : taille PTY perdue au démarrage (race condition), corrigeait un affichage résiduel dans les apps plein écran distantes (DT-17) |

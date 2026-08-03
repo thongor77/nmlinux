@@ -1,6 +1,6 @@
-# NMLinux · v1.7.9
+# NMLinux · v1.7.10
 
-[![Version](https://img.shields.io/badge/version-1.7.9-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.7.10-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -65,6 +65,10 @@ Found a bug anyway? That's useful, not embarrassing — [open an issue](https://
 ---
 
 ## Changelog
+
+### v1.7.10 — 2026-08-03
+
+- **SSH terminal — fix**: fixed a race condition where the PTY could start at the wrong (default 24×80) size if the terminal widget's actual size wasn't known yet when the session launched, silently dropping the resize request. This desynced remote full-screen apps (e.g. Claude Code CLI, htop, vim) from the real window size, causing stale/leftover text at the bottom of the screen that only cleared as new output scrolled past it. Reported by the user; reproduced with a real interactive session
 
 ### v1.7.9 — 2026-08-02
 
