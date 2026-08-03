@@ -234,3 +234,24 @@ Cause racine : `SshPage._start_session()` fait `addTab(...)` puis `tab.start()` 
 **Alternatives rejetées :**
 - Retarder `tab.start()` après un `QTimer.singleShot(0, ...)` ou un `processEvents()` pour laisser le layout se faire avant de spawner : rejeté, ne garantit toujours pas que le thread worker ait fini `PtyProcess.spawn()` avant le premier `resizeEvent` (juste réduit la fenêtre de course sans l'éliminer).
 - Passer `rows`/`cols` explicites à `SshWorker` depuis `_SshSessionTab.start()` : rejeté seul, la taille du widget au moment de `start()` n'est pas fiable (onglet tout juste ajouté, pas encore layouté) — n'aurait fait que déplacer le problème.
+
+---
+
+## DT-18 — Flatpak local (KDE Linux) : `flatpak-spawn --host` plutôt que sandboxer chaque outil
+
+**Contexte :** Demande d'un manifest Flatpak local pour KDE Linux (distro immuable où Flatpak est le seul canal d'installation sérieux — contrairement à Arch/AUR ou NixOS/`flake.nix`, déjà couverts). nmlinux shelle vers ~30 binaires système (`nmcli`, `ip`, `pkexec`, `ssh`, `mount.cifs`, `nmap`, `xfreerdp`, `smbclient`, …) qui doivent agir sur le vrai NetworkManager, le vrai `/etc/hosts`, les vrais montages — pas de D-Bus direct depuis le code Python (`QtDBus` listé en hidden-import PyInstaller mais jamais utilisé).
+
+**Décision :** Runtime `org.kde.Platform//6.11` + base `io.qt.PySide.BaseApp//6.11` (Flathub, `BASEAPP_REMOVE_WEBENGINE=1`/`BASEAPP_DISABLE_NUMPY=1` — nmlinux n'utilise ni l'un ni l'autre). `flatpak-pip-generator` refuse explicitement de générer un module pip pour PySide6 (« Please use the baseapp https://github.com/flathub/io.qt.PySide.BaseApp ») : PySide6 depuis PyPI est un wheel énorme qui embarque son propre Qt, alors que le BaseApp le compile contre le Qt du runtime KDE — c'est le chemin que l'écosystème Flathub a construit pour ce problème précis, pas la peine de le refaire à la main. Seuls `ptyprocess`, `pyte`, `tftpy` et `hatchling` (backend de build) passent par un module `python3-requirements` généré par ce même outil. Chaque binaire hôte appelé par nmlinux est shimmé via un script générique (`packaging/flatpak/host-bin/host-spawn`, symlinké sous chaque nom) qui fait `exec flatpak-spawn --host "$(basename "$0")" "$@"`, placé en tête du `PATH` de l'app (`--env=PATH=/app/bin/host-bin:...`). Le code Python de nmlinux n'a aucune conscience du sandbox.
+
+Corollaire découvert en implémentant : un chemin de fichier passé à une commande relayée ainsi doit être visible depuis l'espace de noms de montage de l'**hôte** — le `/tmp` privé du sandbox ne l'est pas. Trois call sites construisaient des chemins invisibles côté hôte : `smb_mount.py` (fichier credentials temporaire + `_MOUNT_HELPER` sous `/app`), `file_transfer.py` (`tftp_helper.py` sous `/app`, mode root), `hosts.py` (fichier temporaire avant `pkexec cp` vers `/etc/hosts`). `nmlinux/core/flatpak_shim.py` redirige ces trois cas vers `$XDG_CACHE_HOME/nmlinux/tmp` — le seul répertoire que Flatpak fait pointer vers un vrai chemin hôte (`~/.var/app/<id>/cache`) — no-op hors Flatpak (`FLATPAK_ID` absent de l'environnement).
+
+**Raisons :**
+- Sandboxer individuellement chaque outil d'administration système (montage SMB, polkit, scan raw socket) demanderait des permissions si larges (`--device=all`, `--filesystem=host`, D-Bus system par service) qu'elles videraient le sandbox de son sens — ces outils sont par nature hors du modèle de menace que Flatpak sandbox.
+- `flatpak-spawn --host` est le pattern déjà utilisé par des apps d'administration/dev connues (GNOME Builder, VS Code Flatpak) pour ce même besoin.
+- Aucune réécriture des ~30 call sites `subprocess.run(["nmcli", ...])` existants : la résolution `PATH` fait tout le travail.
+- `--filesystem=home` reste volontairement large pour ce premier passage (pas de portail `FileChooser` ciblé) — acceptable pour un manifest local non soumis à Flathub, à resserrer si publication un jour envisagée.
+
+**Alternatives rejetées :**
+- `org.freedesktop.Platform` + PySide6 installé via `flatpak-pip-generator` : tenté en premier, rejeté — l'outil lui-même refuse ce cas (wheel PySide6 non géré) et redirige vers le BaseApp ; l'aurait-il accepté que ça aurait dupliqué Qt (une copie dans le runtime freedesktop minimal — en fait absente — et une dans le wheel) pour un résultat plus fragile que le BaseApp maintenu par Flathub.
+- Réécrire chaque call site pour préfixer `flatpak-spawn --host` explicitement dans le code Python : rejeté, couplerait ~30 fichiers au fait de tourner ou non sous Flatpak alors que le shim PATH résout ça avec zéro changement de logique métier.
+- Bundler les outils système eux-mêmes dans le Flatpak (nmap, mtr, cifs-utils…) : rejeté, dupliquerait des paquets déjà présents sur l'hôte et cassé pour tout ce qui doit agir sur l'état réel de l'hôte (montages, `/etc/hosts`, NetworkManager) plutôt que dans un espace de noms isolé.

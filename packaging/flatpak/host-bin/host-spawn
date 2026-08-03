@@ -1,0 +1,6 @@
+#!/bin/sh
+# Generic shim: every name in this directory is a symlink to this file.
+# nmlinux shells out to plain binary names (nmcli, ip, pkexec, ssh, ...);
+# none of those exist inside the sandbox, so each name is bounced to the
+# real binary on the host via flatpak-spawn. See packaging/flatpak/README.md.
+exec flatpak-spawn --host "$(basename "$0")" "$@"

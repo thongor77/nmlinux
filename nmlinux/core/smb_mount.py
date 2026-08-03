@@ -10,6 +10,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from nmlinux.core.flatpak_shim import host_visible_path, host_visible_tmp_dir
+
 _IS_MACOS = platform.system() == 'Darwin'
 _MOUNT_HELPER = Path(__file__).parent / "smb_mount_helper.py"
 
@@ -75,7 +77,7 @@ def unmount(path: Path) -> tuple[bool, str]:
 def _mount_linux(
     host: str, share: str, user: str, password: str, mountpoint: Path,
 ) -> tuple[bool, str]:
-    fd, cred_path = tempfile.mkstemp(prefix='nmlinux_smb_')
+    fd, cred_path = tempfile.mkstemp(prefix='nmlinux_smb_', dir=host_visible_tmp_dir())
     try:
         os.chmod(cred_path, 0o600)
         with os.fdopen(fd, 'w') as f:
@@ -84,7 +86,7 @@ def _mount_linux(
         # The helper handles the dialect-retry fallback internally so both
         # attempts happen under a single pkexec authentication.
         cmd = [
-            "pkexec", "python3", str(_MOUNT_HELPER),
+            "pkexec", "python3", str(host_visible_path(_MOUNT_HELPER)),
             "--target", f"//{host}/{share}",
             "--mountpoint", str(mountpoint),
             "--credentials", cred_path,

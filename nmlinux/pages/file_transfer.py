@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from nmlinux.core.flatpak_shim import host_visible_path
 from nmlinux.core.http_server import get_local_ips, make_handler
 from nmlinux.core.i18n import tr
 from nmlinux.core.theme import color_ok, color_err
@@ -257,11 +258,12 @@ class FileTransferPage(QWidget):
             return
         rdir = self._f_root.text().strip() or str(Path.home())
 
-        helper_args = [str(_HELPER), "--port", str(port), "--root", rdir]
         if as_root:
+            helper_args = [str(host_visible_path(_HELPER)), "--port", str(port), "--root", rdir]
             prog = "pkexec"
             args = ["python3"] + helper_args
         else:
+            helper_args = [str(_HELPER), "--port", str(port), "--root", rdir]
             prog = "python3"
             args = helper_args
 

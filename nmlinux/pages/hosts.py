@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from nmlinux.core.flatpak_shim import host_visible_tmp_dir
 from nmlinux.core.i18n import tr
 
 _HOSTS_FILE = "/etc/hosts"
@@ -300,7 +301,7 @@ class HostsPage(QWidget):
         content = "\n".join(lines) + "\n"
 
         try:
-            fd, tmppath = tempfile.mkstemp(suffix=".hosts")
+            fd, tmppath = tempfile.mkstemp(suffix=".hosts", dir=host_visible_tmp_dir())
             with os.fdopen(fd, "w") as f:
                 f.write(content)
 

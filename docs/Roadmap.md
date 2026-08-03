@@ -10,6 +10,12 @@
 
 Ces idées ont été discutées et validées — elles ne sont pas encore implémentées.
 
+### ~~Packaging Flatpak (KDE Linux)~~ — build local validé (2026-08-03)
+
+- Manifest local (pas Flathub) dans `packaging/flatpak/` — cible KDE Linux, distro immuable où Flatpak est le seul canal d'installation sérieux (AUR couvre Arch, `flake.nix` couvre NixOS).
+- Approche : `flatpak-spawn --host` shimmé sur le `PATH` pour chaque binaire système appelé (`nmcli`, `pkexec`, `mount.cifs`, `ssh`, …), runtime `org.kde.Platform//6.11` + `io.qt.PySide.BaseApp//6.11` pour PySide6 — voir DT-18.
+- État : build `flatpak-builder --user --install` réussi de bout en bout, app lancée (`flatpak run io.github.thongor77.NMLinux`) sans erreur. Reste à valider en conditions réelles sur KDE Linux (pas seulement Arch avec flatpak-builder installé manuellement) et à tester les modules qui dépendent des shims host-bin (SMB, SSH, pkexec) en usage réel.
+
 ### ~~iperf3 — nouvel onglet dans Speed Test~~ — LIVRÉ en v1.7.8
 
 > Implémenté et livré en v1.7.8 (2026-07-14) : `pages/speedtest.py` (onglet LAN, `Iperf3Worker`, `Iperf3Server`/`_Iperf3ServerStore`), `assets/iperf3_public_servers.json`. Release GitHub + AUR à jour : https://github.com/thongor77/nmlinux/releases/tag/v1.7.8. Voir historique ci-dessous pour référence.
