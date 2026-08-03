@@ -218,3 +218,19 @@ result += "\n    },"     # MOD_CLOSE — ferme le module
 **Alternatives rejetées :**
 - Dédupliquer par connexion (un seul onglet par `conn.id`, réutilisé si déjà ouvert) : rejeté, empêche d'ouvrir deux sessions vers le même hôte, cas d'usage explicitement voulu.
 - Fenêtres séparées par session (multi-fenêtrage Qt) : rejeté, plus lourd à intégrer avec la sidebar/l'arbre de connexions existants qu'un `QTabWidget` dans la page actuelle.
+
+## DT-17 — Terminal SSH : taille PTY perdue si `resize()` arrive avant le spawn (SIGWINCH manqué)
+
+**Contexte :** Signalé par l'utilisateur : dans une app plein écran côté distant (ex. Claude Code CLI, htop, vim), en arrivant en bas de l'écran l'affichage semblait « revenir en haut » sans effacer le texte du bas, qui ne se nettoyait que progressivement en continuant à taper/défiler. Redimensionner la fenêtre de l'app faisait disparaître le phénomène — indice déterminant.
+
+Cause racine : `SshPage._start_session()` fait `addTab(...)` puis `tab.start()` de façon synchrone, sans laisser Qt traiter le layout de l'onglet fraîchement ajouté. `_SshSessionTab.start()` construit `SshWorker(build_ssh_args(conn))` **sans** passer `rows`/`cols` → il démarre avec les défauts du constructeur (24×80), qui matchent le `pyte.HistoryScreen(80, 24)` créé à l'`__init__` de `TerminalView`. Peu après, une fois que Qt traite le layout en attente, `TerminalView.resizeEvent` calcule la vraie taille du widget (souvent différente de 24×80) et émet `resize_pty`, câblé à `SshWorker.resize()`. Mais `worker.start()` (démarrage du `QThread`) est asynchrone : `ptyprocess.PtyProcess.spawn()` tourne sur le thread du worker et peut ne pas avoir encore assigné `self._proc` au moment où `resize()` s'exécute sur le thread principal. Ancien code : `resize()` ne faisait rien si `self._proc` était `None` — la taille demandée était silencieusement perdue, sans jamais être réappliquée. Résultat : le PTY reste bloqué à 24×80 côté noyau (`TIOCSWINSZ`) alors que `pyte`/`TerminalView` affichent la vraie taille (plus grande) — l'app distante calcule son défilement/repositionnement de curseur sur de mauvaises dimensions, d'où les résidus visuels. Redimensionner la fenêtre déclenche un nouveau `resizeEvent` → un nouveau `resize_pty.emit()` → cette fois `self._proc` existe → `setwinsize()` réussit → SIGWINCH livré → l'app distante se recale.
+
+**Décision :** `SshWorker` mémorise la dernière taille demandée dans `self._pending_size`, y compris quand `self._proc` n'existe pas encore. Juste après `ptyprocess.PtyProcess.spawn()` dans `run()`, si `_pending_size` est défini, on applique `setwinsize()` immédiatement — aucune taille demandée avant le spawn n'est plus perdue.
+
+**Raisons :**
+- Corrige la cause racine (race condition) plutôt que de contourner par un délai/sleep arbitraire avant `worker.start()`.
+- Reste localisé à `core/terminal.py`, aucun changement de `TerminalView`/`SshPage` nécessaire.
+
+**Alternatives rejetées :**
+- Retarder `tab.start()` après un `QTimer.singleShot(0, ...)` ou un `processEvents()` pour laisser le layout se faire avant de spawner : rejeté, ne garantit toujours pas que le thread worker ait fini `PtyProcess.spawn()` avant le premier `resizeEvent` (juste réduit la fenêtre de course sans l'éliminer).
+- Passer `rows`/`cols` explicites à `SshWorker` depuis `_SshSessionTab.start()` : rejeté seul, la taille du widget au moment de `start()` n'est pas fiable (onglet tout juste ajouté, pas encore layouté) — n'aurait fait que déplacer le problème.

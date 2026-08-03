@@ -21,6 +21,9 @@ class SshWorker(QThread):
         self._rows  = rows
         self._cols  = cols
         self._proc: ptyprocess.PtyProcess | None = None
+        # Size requested via resize() before the PTY exists yet (see DT-17) —
+        # applied as soon as spawn() returns, so it's never silently dropped.
+        self._pending_size: tuple[int, int] | None = None
 
     def run(self) -> None:
         code = -1
@@ -36,6 +39,11 @@ class SshWorker(QThread):
             self._proc = ptyprocess.PtyProcess.spawn(
                 self._args, echo=True, dimensions=(self._rows, self._cols), env=_env
             )
+            if self._pending_size is not None:
+                try:
+                    self._proc.setwinsize(*self._pending_size)
+                except Exception:
+                    pass
 
             while self._proc.isalive():
                 try:
@@ -58,6 +66,7 @@ class SshWorker(QThread):
             self._proc.write(data)
 
     def resize(self, rows: int, cols: int) -> None:
+        self._pending_size = (rows, cols)
         if self._proc and self._proc.isalive():
             try:
                 self._proc.setwinsize(rows, cols)
