@@ -30,6 +30,6 @@ pkgbase = nmlinux
 	optdepends = avahi: Topology — mDNS device type detection (printers, phones, NAS…)
 	optdepends = iperf3: Speed Test — LAN tab
 	source = https://github.com/thongor77/nmlinux/archive/refs/tags/v1.7.12.tar.gz
-	sha256sums = 6a8256bf1513ce6834bd11d8010ea508496291b51130d7d33001057ce62e9ebc
+	sha256sums = 54f084a62289a0bf98d45b53edae2e64b37c8ae6489b808958d27d962948815d
 
 pkgname = nmlinux
