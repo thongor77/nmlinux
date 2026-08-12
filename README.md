@@ -1,6 +1,6 @@
-# NMLinux · v1.7.11
+# NMLinux · v1.7.12
 
-[![Version](https://img.shields.io/badge/version-1.7.11-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.7.12-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -66,9 +66,15 @@ Found a bug anyway? That's useful, not embarrassing — [open an issue](https://
 
 ## Changelog
 
+### v1.7.12 — 2026-08-12
+
+- **Traceroute — fix**: under Flatpak (v1.7.11, see below — now removed), `traceroute` always resolved on `PATH` via the host shim even when the host had no real `traceroute` binary installed, so the worker never fell back to `tracepath` and the trace finished instantly with no hops and no error shown. It now falls back to `tracepath` whenever `traceroute` produces no parseable output at all, regardless of *why* it failed.
+- **SSH terminal — askpass fix**: when `DISPLAY`/`WAYLAND_DISPLAY` are set (any GUI session) and ssh doesn't have a clean tty, it can try `$SSH_ASKPASS` for the password prompt instead of the embedded terminal — silently failing auth if no askpass helper is installed. `SSH_ASKPASS_REQUIRE=never` now forces password prompts to always go through the terminal itself.
+- **Flatpak packaging removed**: the local KDE Linux manifest shipped in v1.7.11 is discontinued. Investigating the SSH password-prompt bug above surfaced a kernel-level limitation: a process relayed via `flatpak-spawn --host` can never become the controlling-terminal owner of the forwarded pty (`TIOCSCTTY` refused with `EPERM` — a different, unrelated session already owns it; this is an intentional kernel security boundary, not a bug). The only working around (`script`, allocating a fresh pty) fixes the password prompt but breaks live terminal-resize propagation for that session — judged a worse trade-off than not shipping Flatpak at all. AUR and the AppImage are the supported Linux install paths going forward.
+
 ### v1.7.11 — 2026-08-03
 
-- **Flatpak packaging (KDE Linux)**: a local build manifest under `packaging/flatpak/` targets KDE Linux and other Flatpak-only distros. Host CLI tools nmlinux shells out to (`nmcli`, `pkexec`, `mount.cifs`, `ssh`, `nmap`, …) are bridged via `flatpak-spawn --host` shims on `PATH` instead of sandboxing each one individually; PySide6 comes from Flathub's `io.qt.PySide.BaseApp` rather than the PyPI wheel. Not published on Flathub — a single `.flatpak` bundle is built with `packaging/flatpak/build-bundle.sh` and attached to each release instead, the same way the AppImage already is
+- **Flatpak packaging (KDE Linux)**: a local build manifest under `packaging/flatpak/` targets KDE Linux and other Flatpak-only distros. Host CLI tools nmlinux shells out to (`nmcli`, `pkexec`, `mount.cifs`, `ssh`, `nmap`, …) are bridged via `flatpak-spawn --host` shims on `PATH` instead of sandboxing each one individually; PySide6 comes from Flathub's `io.qt.PySide.BaseApp` rather than the PyPI wheel. Not published on Flathub — a single `.flatpak` bundle is built with `packaging/flatpak/build-bundle.sh` and attached to each release instead, the same way the AppImage already is. **Discontinued in v1.7.12 — see above.**
 
 ### v1.7.10 — 2026-08-03
 

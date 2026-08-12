@@ -77,17 +77,24 @@ class TracerouteWorker(QThread):
         super().__init__()
         self._target = target
         self._proc: subprocess.Popen | None = None
+        self._stopped = False
 
     def run(self) -> None:
         if _CMD_TRACEROUTE:
-            self._run_traceroute()
+            # In the Flatpak sandbox `traceroute` always resolves (host-bin
+            # shim), even when the host has no real traceroute binary — the
+            # spawn then fails silently (no parseable output). Fall back to
+            # tracepath in that case rather than reporting a dead run.
+            got_output = self._run_traceroute()
+            if not got_output and not self._stopped and _CMD_TRACEPATH:
+                self._run_tracepath()
         elif _CMD_TRACEPATH:
             self._run_tracepath()
         else:
             self.error.emit(tr("trace_err_no_cmd"))
-            self.finished.emit()
+        self.finished.emit()
 
-    def _run_traceroute(self) -> None:
+    def _run_traceroute(self) -> bool:
         try:
             self._proc = subprocess.Popen(
                 [_CMD_TRACEROUTE, '-w', '2', '-q', '3', self._target],
@@ -114,10 +121,10 @@ class TracerouteWorker(QThread):
                         seen.add(num)
                         self.star_found.emit(num)
             self._proc.wait()
+            return bool(seen)
         except Exception as exc:
             self.error.emit(str(exc))
-        finally:
-            self.finished.emit()
+            return True
 
     def _run_tracepath(self) -> None:
         try:
@@ -147,10 +154,9 @@ class TracerouteWorker(QThread):
             self._proc.wait()
         except Exception as exc:
             self.error.emit(str(exc))
-        finally:
-            self.finished.emit()
 
     def stop(self) -> None:
+        self._stopped = True
         if self._proc and self._proc.poll() is None:
             self._proc.terminate()
         self.wait(3000)

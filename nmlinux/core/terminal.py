@@ -30,6 +30,15 @@ class SshWorker(QThread):
         try:
             _env = dict(os.environ)
             _env.setdefault('TERM', 'xterm-256color')
+            # Force password prompts into the embedded pty instead of a GUI
+            # askpass popup — with DISPLAY/WAYLAND_DISPLAY inherited from this
+            # Qt app, ssh may otherwise try $SSH_ASKPASS, which isn't wired
+            # up, so auth fails outright even with a correct password.
+            # Supported since OpenSSH 8.4. Under Flatpak this env var doesn't
+            # reach the real host-side ssh (flatpak-spawn doesn't forward the
+            # sandbox environment) — that path is fixed at the shim level in
+            # packaging/flatpak/host-bin/host-spawn instead.
+            _env['SSH_ASKPASS_REQUIRE'] = 'never'
             # echo=True keeps the local PTY in normal mode so ssh propagates
             # ECHO-on to the remote pty (SSH pty-req carries the local tty modes).
             # ssh then switches the local side to raw for the session, so there is

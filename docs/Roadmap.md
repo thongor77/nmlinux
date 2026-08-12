@@ -1,8 +1,8 @@
 # Roadmap NMLinux
 
-## Version courante : v1.7.11 (2026-08-03)
+## Version courante : v1.7.12 (2026-08-12)
 
-29 modules, 8 langues UI (i18n complet, dont le trou allemand speed_*/mtr_*/fw_* comblé en v1.7.8), aide contextuelle 8 langues × 28 modules (File Transfer non couvert), compatibilité Linux + macOS (macOS 26 inclus), Asset Inventory (SSH/WinRM/SNMP), liens inter-modules (clic droit → Ping/DNS/Whois/Port Scanner/SSH/RDP/VNC/Asset Inventory/Topology), montage SMB/NFS, Speed Test avec onglet LAN (iperf3), terminal SSH avec sessions multiples en onglets + copier/coller (v1.7.9), fix taille PTY perdue au démarrage (v1.7.10), packaging Flatpak local pour KDE Linux (v1.7.11), AppImage + macOS .app.
+29 modules, 8 langues UI (i18n complet, dont le trou allemand speed_*/mtr_*/fw_* comblé en v1.7.8), aide contextuelle 8 langues × 28 modules (File Transfer non couvert), compatibilité Linux + macOS (macOS 26 inclus), Asset Inventory (SSH/WinRM/SNMP), liens inter-modules (clic droit → Ping/DNS/Whois/Port Scanner/SSH/RDP/VNC/Asset Inventory/Topology), montage SMB/NFS, Speed Test avec onglet LAN (iperf3), terminal SSH avec sessions multiples en onglets + copier/coller (v1.7.9), fix taille PTY perdue au démarrage (v1.7.10), fix fallback traceroute→tracepath sur échec silencieux + fix prompt mot de passe SSH masqué par un askpass cassé (v1.7.12, DT-19/DT-20), AppImage + macOS .app. Packaging Flatpak local livré en v1.7.11 puis retiré en v1.7.12 (limitation noyau — voir ci-dessous et DT-21).
 
 ---
 
@@ -10,12 +10,14 @@
 
 Ces idées ont été discutées et validées — elles ne sont pas encore implémentées.
 
-### ~~Packaging Flatpak (KDE Linux)~~ — LIVRÉ en v1.7.11
+### ~~Packaging Flatpak (KDE Linux)~~ — LIVRÉ en v1.7.11, RETIRÉ en v1.7.12
+
+> Livré en v1.7.11 (manifest local `packaging/flatpak/`, shim `flatpak-spawn --host`, voir DT-18), retiré en v1.7.12 après découverte d'une limitation noyau bloquante : le terminal SSH intégré ne peut pas demander de mot de passe dans une session relayée via `flatpak-spawn --host`, parce que le process hôte ne peut jamais devenir propriétaire du terminal contrôlant (`TIOCSCTTY` refusé — EPERM, restriction de sécurité du noyau, pas un bug de configuration). Le contournement testé (`script` pour allouer un nouveau pty) répare le mot de passe mais casse la propagation du redimensionnement en direct — compromis jugé pire que le problème. Voir DT-21. AUR et AppImage redeviennent les canaux d'installation Linux de référence ; le manifest local n'existe plus dans le dépôt.
 
 - Manifest local (pas Flathub) dans `packaging/flatpak/` — cible KDE Linux, distro immuable où Flatpak est le seul canal d'installation sérieux (AUR couvre Arch, `flake.nix` couvre NixOS).
 - Approche : `flatpak-spawn --host` shimmé sur le `PATH` pour chaque binaire système appelé (`nmcli`, `pkexec`, `mount.cifs`, `ssh`, …), runtime `org.kde.Platform//6.11` + `io.qt.PySide.BaseApp//6.11` pour PySide6 — voir DT-18.
 - Distribution restée modeste (pas Flathub — sa review resserre en priorité exactement `--filesystem=home` + `flatpak-spawn --host`) : un bundle `.flatpak` unique (`packaging/flatpak/build-bundle.sh`) joint à chaque release GitHub, comme l'AppImage.
-- Validé en conditions réelles : build → `flatpak install --user` depuis le fichier `.flatpak` → `flatpak run` sans erreur. Reste à tester les modules qui dépendent des shims host-bin (SMB, SSH, pkexec) en usage réel sur KDE Linux.
+- Validé en conditions réelles : build → `flatpak install --user` depuis le fichier `.flatpak` → `flatpak run` sans erreur, **et confirmé par l'utilisateur sur KDE Linux immuable** (la cible réelle) — installation, montage de deux partages SMB (valide le correctif `flatpak_shim.py` : credentials temp file + `smb_mount_helper.py` relocalisés sous `$XDG_CACHE_HOME` pour que `pkexec` côté hôte les voie) fonctionnels. Le terminal SSH fonctionnait pour l'authentification par clé ; l'authentification par mot de passe a révélé la limitation ci-dessus lors d'un test ultérieur.
 
 ### ~~iperf3 — nouvel onglet dans Speed Test~~ — LIVRÉ en v1.7.8
 

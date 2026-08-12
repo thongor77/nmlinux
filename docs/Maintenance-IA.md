@@ -221,18 +221,11 @@ python -m build --wheel --no-isolation
 #     lit la version depuis pyproject.toml → dist/NMLinux-X.Y.Z-x86_64.AppImage
 bash packaging/build-appimage.sh
 
-# 4c. Build bundle Flatpak (KDE Linux — voir packaging/flatpak/README.md)
-#     nécessite org.kde.Platform//6.11 + org.kde.Sdk//6.11 + io.qt.PySide.BaseApp//6.11
-#     installés depuis flathub. Lit la version depuis pyproject.toml →
-#     dist/NMLinux-X.Y.Z-x86_64.flatpak
-bash packaging/flatpak/build-bundle.sh
-
-# 5. Push + GitHub Release (joindre wheel, AppImage ET bundle Flatpak)
+# 5. Push + GitHub Release (joindre wheel + AppImage)
 git push origin main --tags
 gh release create vX.Y.Z \
   dist/nmlinux-X.Y.Z-py3-none-any.whl \
   dist/NMLinux-X.Y.Z-x86_64.AppImage \
-  dist/NMLinux-X.Y.Z-x86_64.flatpak \
   --title "vX.Y.Z — titre" --notes "..."
 
 # 6. AUR
