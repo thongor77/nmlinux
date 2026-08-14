@@ -335,20 +335,6 @@ class _NodeItem(QGraphicsItem):
             parts.append(f'({vendor})')
         return '\n'.join(parts)
 
-    def contextMenuEvent(self, event) -> None:  # noqa: N802
-        ports = self.data.get('ports', [])
-        ip    = self.data.get('ip', '')
-        host  = self.data.get('hostname', '')
-        # Remonter à TopologyPage via la scène
-        scene = self.scene()
-        if scene:
-            views = scene.views()
-            if views:
-                page = views[0].property('topology_page')
-                if page is not None:
-                    page._show_node_menu(ip, host, ports, event.screenPos())
-        event.accept()
-
 
 # ── Custom view (zoom + pan + selection signal) ───────────────────────────────
 
@@ -366,10 +352,26 @@ class _TopoView(QGraphicsView):
         self._panning   = False
         self._pan_start = QPointF()
         scene.selectionChanged.connect(self._on_sel)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._on_context_menu)
 
     def _on_sel(self) -> None:
         items = [i for i in self.scene().selectedItems() if isinstance(i, _NodeItem)]
         self.node_selected.emit(items[0].data if items else None)
+
+    def _on_context_menu(self, pos) -> None:
+        item = self.itemAt(pos)
+        if not isinstance(item, _NodeItem):
+            return
+        page = self.property('topology_page')
+        if page is None:
+            return
+        page._show_node_menu(
+            item.data.get('ip', ''),
+            item.data.get('hostname', ''),
+            item.data.get('ports', []),
+            self.viewport().mapToGlobal(pos),
+        )
 
     def fit_all(self) -> None:
         r = self.scene().itemsBoundingRect().adjusted(-50, -50, 50, 50)
@@ -874,7 +876,7 @@ class TopologyPage(QWidget):
     def _show_node_menu(self, ip: str, host: str, ports: list[int], screen_pos) -> None:
         menu = HostActionMenu(ip, host, ports or None, parent=self)
         menu.action_chosen.connect(self.action_requested)
-        menu.exec(screen_pos.toPoint())
+        menu.exec(screen_pos)
 
     # ── load_hosts (inject from IP Scanner) ──────────────────────────────────
 
