@@ -41,6 +41,24 @@ mkdir -p \
 # Copy entire PyInstaller onedir output
 cp -r "$SCRIPT_DIR/dist/nmlinux" "$APPDIR/_app"
 
+# Drop shared libs that must come from the host, not be bundled. PyInstaller
+# collects whatever .so the build machine has; building on Arch (rolling
+# release, very recent glibc) ships copies that need glibc symbols (e.g.
+# GLIBC_ABI_DT_RELR) newer than older distros have, so the AppImage crashes
+# on startup elsewhere even though it links fine locally. These are part of
+# every desktop Linux's base X11/fontconfig stack that Qt already links
+# against at runtime, so removing the bundled copies just makes the AppImage
+# fall back to the host's own — standard practice for AppImages.
+BLACKLISTED_LIBS=(
+    libstdc++.so.6 libgcc_s.so.1
+    libX11.so.6 libX11-xcb.so.1
+    libfontconfig.so.1 libfreetype.so.6 libharfbuzz.so.0 libfribidi.so.0
+    libexpat.so.1 libuuid.so.1 libcom_err.so.2 libgmp.so.10 libz.so.1
+)
+for lib in "${BLACKLISTED_LIBS[@]}"; do
+    rm -f "$APPDIR/_app/_internal/$lib"
+done
+
 # Desktop file (Exec adjusted to bare binary name for AppImage spec)
 cp "$PROJECT_DIR/data/nmlinux.desktop" "$APPDIR/usr/share/applications/nmlinux.desktop"
 sed -i 's|^Exec=.*|Exec=nmlinux|; s|^Icon=.*|Icon=nmlinux|' \

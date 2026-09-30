@@ -325,3 +325,18 @@ Seul contournement testé et fonctionnel : `script -qec "ssh …" /dev/null`, qu
 **Alternatives rejetées :**
 - Forcer `QT_QPA_PLATFORM=xcb` (XWayland) pour contourner le bug plateforme : rejeté — imposerait une variable d'environnement à tous les utilisateurs Wayland pour une seule fonctionnalité, alors qu'un correctif applicatif propre existe.
 - Garder `contextMenuEvent` et ajouter un fallback sur `mousePressEvent`/`mouseReleaseEvent` pour détecter le clic droit manuellement : rejeté — réinventerait ce que `customContextMenuRequested` fait déjà nativement et de façon standard.
+
+## DT-23 — AppImage : ne pas embarquer les libs système (glibc trop récente de la machine de build)
+
+**Contexte :** Soumission au catalogue AppImageHub (PR `AppImage/appimage.github.io#9286`) rejetée par le CI : `ERROR: The application exited within 11 seconds instead of showing a window`. Log complet de la run CI (Ubuntu 22.04, glibc 2.35) : `/run/firejail/appimage/_app/nmlinux: /lib/x86_64-linux-gnu/libc.so.6: version 'GLIBC_ABI_DT_RELR' not found (required by /run/firejail/appimage/_app/_internal/libz.so.1)`. Le lint AppImage du même CI listait aussi comme « Blacklisted file » : `libstdc++.so.6`, `libX11.so.6`, `libX11-xcb.so.1`, `libfontconfig.so.1`, `libfreetype.so.6`, `libharfbuzz.so.0`, `libfribidi.so.0`, `libexpat.so.1`, `libuuid.so.1`, `libcom_err.so.2`, `libgmp.so.10`. Cause : `build-appimage.sh` tourne sur Arch Linux (rolling release), dont la glibc (2.44 au moment du build) est bien plus récente que celle des distributions cibles ; PyInstaller embarque telles quelles les `.so` système trouvées sur la machine de build dans `_internal/`, donc l'AppImage embarquait un `libz.so.1` lié contre des symboles glibc absents ailleurs — crash immédiat avant affichage de toute fenêtre, alors que ça fonctionnait sans problème en local (même glibc que le build).
+
+**Décision :** Après la copie du bundle PyInstaller dans l'AppDir, supprimer explicitement de `_internal/` les bibliothèques listées ci-dessus (`libz.so.1` inclus) pour que l'AppImage retombe sur les copies du système hôte au runtime, au lieu de ses propres copies embarquées.
+
+**Raisons :**
+- Ces bibliothèques font partie du socle X11/fontconfig/toolchain de toute distribution Linux de bureau — Qt (PySide6) s'appuie déjà dessus au runtime de façon dynamique, elles sont donc supposées présentes partout où l'app peut s'exécuter.
+- C'est la pratique standard des outils de packaging AppImage (linuxdeploy, etc.) : exclure ces libs d'une excludelist plutôt que de les embarquer, précisément pour éviter ce type de désaccord ABI entre machine de build et machine cible.
+- Correctif vérifié : rebuild local après le fix, `_internal/` ne contient plus aucune de ces libs, et l'AppImage démarre sans l'erreur `GLIBC_ABI_DT_RELR` (elle tourne jusqu'à extinction du timeout de test au lieu de planter en ~1s comme avant).
+
+**Alternatives rejetées :**
+- Builder dans un conteneur avec une glibc plus ancienne (Ubuntu 20.04/22.04, type « build sur la plus vieille distro encore supportée ») : plus robuste à long terme contre d'autres écarts ABI potentiels, mais ajoute une dépendance Docker/conteneur au script de build actuel (simple venv) ; à reconsidérer si d'autres libs blacklistées causent encore des soucis après ce correctif.
+- Ne retirer que `libz.so.1` (seule lib citée dans l'erreur de crash) : rejeté — les autres libs blacklistées par le lint auraient posé le même risque à la prochaine mise à jour de la glibc du système de build, autant les traiter toutes en une fois.
