@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build NMLinux-x.y.z-x86_64.AppImage
-# Requires: python3, pip, (optionally) rsvg-convert or inkscape for icon generation
+# Requires: podman, (optionally) rsvg-convert or inkscape for icon generation
 # appimagetool is downloaded automatically on first run.
 set -euo pipefail
 
@@ -13,23 +13,41 @@ APPIMAGETOOL="$SCRIPT_DIR/appimagetool-x86_64.AppImage"
 
 echo "==> Building NMLinux ${VERSION} AppImage"
 
-# ── 1. Python build env ───────────────────────────────────────────────────────
-VENV="$SCRIPT_DIR/.venv-build"
-if [ ! -d "$VENV" ]; then
-    python3 -m venv "$VENV"
-fi
-source "$VENV/bin/activate"
-pip install --quiet --upgrade pip
-pip install --quiet pyinstaller PySide6 ptyprocess tftpy
-pip install --quiet -e "$PROJECT_DIR"
-
-# ── 2. PyInstaller bundle ─────────────────────────────────────────────────────
-echo "==> Running PyInstaller..."
-pyinstaller --clean --noconfirm \
-    "$SCRIPT_DIR/nmlinux.spec" \
-    --distpath "$SCRIPT_DIR/dist" \
-    --workpath "$SCRIPT_DIR/build"
-deactivate
+# ── 1-2. PyInstaller bundle, built inside an old-glibc container ──────────────
+# The AppImage must run on distros older than this machine (Arch, rolling
+# release). Building locally links the Python interpreter and native
+# extensions against glibc symbols newer than what target systems have (e.g.
+# the AppImageHub catalog's test machine, Ubuntu 22.04 / glibc 2.35) -- see
+# DT-23/DT-24 in docs/Decisions-Techniques.md. Building inside ubuntu:22.04
+# itself (Python 3.11 from the deadsnakes PPA, since jammy ships 3.10) matches
+# the oldest still-supported Ubuntu LTS, as AppImageHub's own test recommends.
+BUILD_IMAGE="docker.io/library/ubuntu:22.04"
+echo "==> Running PyInstaller inside $BUILD_IMAGE (podman)..."
+podman run --rm \
+    -v "$PROJECT_DIR:/work" \
+    -w /work \
+    -e DEBIAN_FRONTEND=noninteractive \
+    "$BUILD_IMAGE" \
+    bash -c '
+        set -euo pipefail
+        apt-get update -qq
+        apt-get install -y -qq --no-install-recommends \
+            software-properties-common ca-certificates gnupg >/dev/null
+        add-apt-repository -y ppa:deadsnakes/ppa >/dev/null
+        apt-get update -qq
+        apt-get install -y -qq --no-install-recommends \
+            python3.11 python3.11-venv python3.11-dev libpython3.11 binutils \
+            libgl1 libegl1 libxkbcommon0 libfontconfig1 libdbus-1-3 >/dev/null
+        python3.11 -m venv /tmp/venv-build
+        . /tmp/venv-build/bin/activate
+        pip install --quiet --upgrade pip
+        pip install --quiet pyinstaller
+        pip install --quiet -e .
+        pyinstaller --clean --noconfirm \
+            packaging/nmlinux.spec \
+            --distpath packaging/dist \
+            --workpath packaging/build
+    '
 
 # ── 3. AppDir structure ───────────────────────────────────────────────────────
 echo "==> Preparing AppDir..."

@@ -219,6 +219,9 @@ python -m build --wheel --no-isolation
 
 # 4b. Build AppImage (NE PAS OUBLIER — asset de chaque release Linux)
 #     lit la version depuis pyproject.toml → dist/NMLinux-X.Y.Z-x86_64.AppImage
+#     Requiert podman : le bundle PyInstaller est construit dans un conteneur
+#     ubuntu:22.04 (pas sur l'hôte) pour éviter de lier contre une glibc plus
+#     récente que les distributions cibles — voir DT-23/DT-24.
 bash packaging/build-appimage.sh
 
 # 5. Push + GitHub Release (joindre wheel + AppImage)

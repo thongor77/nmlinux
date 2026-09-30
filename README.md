@@ -1,6 +1,6 @@
-# NMLinux · v1.7.13
+# NMLinux · v1.7.14
 
-[![Version](https://img.shields.io/badge/version-1.7.13-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.7.14-brightgreen.svg)](https://github.com/thongor77/nmlinux/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-orange.svg)](#installation)
@@ -66,9 +66,13 @@ Found a bug anyway? That's useful, not embarrassing — [open an issue](https://
 
 ## Changelog
 
+### v1.7.14 — 2026-09-30
+
+- **AppImage — fix startup crash, take 2**: v1.7.13's fix (stripping bundled system libraries) wasn't enough — the embedded Python interpreter itself (`libpython3.14.so.1.0`, built against the Arch Linux dev machine's glibc 2.44) still required glibc symbols newer than the AppImageHub catalog's test machine (Ubuntu 22.04, glibc 2.35) has, so the AppImage kept crashing right on launch. `build-appimage.sh` now builds the PyInstaller bundle inside an `ubuntu:22.04` container (via `podman`) instead of on the host, so every embedded binary is linked against exactly the glibc version the AppImage needs to support.
+
 ### v1.7.13 — 2026-09-30
 
-- **AppImage — fix startup crash**: `build-appimage.sh` was bundling shared libraries (`libz.so.1`, `libstdc++.so.6`, `libX11.so.6`, `libfontconfig.so.1`, and others) straight from the Arch Linux build machine's very recent glibc. On older distros the AppImage crashed immediately on launch (`GLIBC_ABI_DT_RELR' not found`), caught by the AppImageHub catalog's automated test. These libraries are now stripped from the bundle so the AppImage falls back to the host system's own copies, which is the standard approach for AppImages.
+- **AppImage — fix startup crash (incomplete, see v1.7.14)**: `build-appimage.sh` was bundling shared libraries (`libz.so.1`, `libstdc++.so.6`, `libX11.so.6`, `libfontconfig.so.1`, and others) straight from the Arch Linux build machine's very recent glibc. On older distros the AppImage crashed immediately on launch (`GLIBC_ABI_DT_RELR' not found`), caught by the AppImageHub catalog's automated test. These libraries are now stripped from the bundle so the AppImage falls back to the host system's own copies, which is the standard approach for AppImages.
 
 ### v1.7.12 — 2026-08-12
 
